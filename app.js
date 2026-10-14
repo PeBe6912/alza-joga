@@ -23,6 +23,8 @@ let adminLessons = [];
 let adminInstructors = [];
 let adminNews = [];
 let adminReservations = [];
+const LESSON_PAGE_SIZE = 6;
+let lessonDisplayLimit = LESSON_PAGE_SIZE;
 const classList = document.querySelector('#class-list');
 const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
@@ -47,19 +49,30 @@ function placesLabel(places) {
 }
 
 function renderLessons(filter = 'all') {
-  const visible = lessons.filter((lesson) => filter === 'all' || lesson.type === filter);
-  classList.innerHTML = visible.map((lesson) => {
+  const filtered = lessons.filter((lesson) => filter === 'all' || lesson.type === filter);
+  const visible = filtered.slice(0, lessonDisplayLimit);
+  const lessonRows = visible.map((lesson) => {
     const places = spotsLeft(lesson);
     const typeLabel = lesson.type === 'charity' ? 'Dobrovolný příspěvek' : 'Klasická lekce';
     const languageLabel = lesson.language === 'en' ? '<span class="language-badge">Lekce v angličtině</span>' : '';
     return `<article class="class-row">
       <div class="class-date"><strong>${lesson.day}</strong><span>${lesson.date}</span></div>
-      <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${escapeHtml(lesson.teacher)}</small><br><span>${typeLabel}</span>${languageLabel}</div>
+      <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${escapeHtml(lesson.teacher)}</small><b class="class-time-compact">${escapeHtml(lesson.time)}</b><br><span>${typeLabel}</span>${languageLabel}</div>
       <div class="class-meta"><b>${escapeHtml(lesson.time)}</b><span>HALL · 3. patro</span><span>${escapeHtml(lesson.price)}</span></div>
       <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${placesLabel(places)}</small></div>
     </article>`;
   }).join('');
+  const remaining = filtered.length - visible.length;
+  const moreButton = remaining > 0
+    ? `<div class="class-list-more"><button class="button button-small button-secondary" data-show-more>Zobrazit další lekce (${remaining})</button></div>`
+    : '';
+  classList.innerHTML = lessonRows || '<p class="class-list-empty">V této kategorii teď nejsou žádné vypsané lekce.</p>';
+  classList.insertAdjacentHTML('beforeend', moreButton);
   document.querySelectorAll('[data-book]').forEach((button) => button.addEventListener('click', () => openBooking(button.dataset.book)));
+  document.querySelector('[data-show-more]')?.addEventListener('click', () => {
+    lessonDisplayLimit += LESSON_PAGE_SIZE;
+    renderLessons(filter);
+  });
 }
 
 function renderNextClass() {
@@ -75,6 +88,7 @@ function renderNextClass() {
 document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
   document.querySelectorAll('.filter').forEach((item) => item.classList.remove('active'));
   button.classList.add('active');
+  lessonDisplayLimit = LESSON_PAGE_SIZE;
   renderLessons(button.dataset.filter);
 }));
 

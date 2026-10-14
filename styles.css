@@ -50,6 +50,13 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
   .admin-form-row{grid-template-columns:1fr}
 }
 
+/* Compact lesson list on tablets and phones. */
+.class-action small{text-align:center}
+.class-time-compact{display:none}
+.class-list-more{display:flex;justify-content:center;padding:28px 0 4px}
+.class-list-empty{padding:28px 8px;color:var(--muted);border-bottom:1px solid var(--line)}
+@media(max-width:900px){.class-time-compact{display:block;margin-top:7px;color:var(--ink);font-size:14px}}
+
 /* Full brand logo, lesson language and responsive administration. */
 .brand{display:flex;align-items:center}
 .brand-logo{width:auto;height:58px;object-fit:contain}
