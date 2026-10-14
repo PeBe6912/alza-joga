@@ -1,5 +1,33 @@
-const SUPABASE_URL = window.JOGA_CONFIG.supabaseUrl;
-const SUPABASE_PUBLISHABLE_KEY = window.JOGA_CONFIG.publishableKey;
+const SUPABASE_URL = 'https://zltcizbzckyazlxilzwq.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_X1KLjQkjhSe3Sl-McSQNBA_hz9d5HKR';
+const PUBLIC_SETTING_DEFAULTS = {
+  cancellation_hours: 24,
+  minimum_attendance: 5,
+  default_paid_price: 150,
+  studio_capacity: 20,
+};
+
+async function loadPublicSettings() {
+  try {
+    const query = new URLSearchParams({ select: 'key,value', is_public: 'eq.true' });
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/site_settings?${query}`, {
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+    });
+    if (!response.ok) throw new Error('SETTINGS_NOT_AVAILABLE');
+    const rows = await response.json();
+    return rows.reduce((settings, row) => ({ ...settings, [row.key]: row.value }), { ...PUBLIC_SETTING_DEFAULTS });
+  } catch (error) {
+    console.error(error);
+    return { ...PUBLIC_SETTING_DEFAULTS };
+  }
+}
+
+function applyPublicSettings(settings) {
+  document.querySelectorAll('[data-setting]').forEach((element) => {
+    const value = settings[element.dataset.setting];
+    if (value !== undefined && value !== null) element.textContent = String(value);
+  });
+}
 
 const fallbackLessons = [];
 
@@ -18,8 +46,8 @@ let adminLessons = [];
 let adminInstructors = [];
 let adminNews = [];
 let adminReservations = [];
-let publicSettings = { ...window.JOGA_CONFIG.defaults };
-let adminSettings = { ...window.JOGA_CONFIG.defaults };
+let publicSettings = { ...PUBLIC_SETTING_DEFAULTS };
+let adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let activeAdminTab = 'overview';
 const LESSON_PAGE_SIZE = 6;
 let lessonDisplayLimit = LESSON_PAGE_SIZE;
@@ -47,13 +75,13 @@ function placesLabel(places) {
 }
 
 function settingNumber(key) {
-  const value = Number(publicSettings[key] ?? window.JOGA_CONFIG.defaults[key]);
-  return Number.isFinite(value) ? value : Number(window.JOGA_CONFIG.defaults[key]);
+  const value = Number(publicSettings[key] ?? PUBLIC_SETTING_DEFAULTS[key]);
+  return Number.isFinite(value) ? value : Number(PUBLIC_SETTING_DEFAULTS[key]);
 }
 
 async function refreshPublicSettings() {
-  publicSettings = await window.JOGA_CONFIG.loadPublicSettings();
-  window.JOGA_CONFIG.applyPublicSettings(publicSettings);
+  publicSettings = await loadPublicSettings();
+  applyPublicSettings(publicSettings);
 }
 
 function renderLessons(filter = 'all') {
@@ -340,7 +368,7 @@ function clearAdminSession() {
   adminInstructors = [];
   adminNews = [];
   adminReservations = [];
-  adminSettings = { ...window.JOGA_CONFIG.defaults };
+  adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
   sessionStorage.removeItem('jogaAdminSession');
 }
 
@@ -412,7 +440,7 @@ async function loadAdminSettings() {
     headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
   });
   if (!response.ok) throw new Error('Nastavení se nepodařilo načíst.');
-  adminSettings = (await response.json()).reduce((settings, row) => ({ ...settings, [row.key]: row.value }), { ...window.JOGA_CONFIG.defaults });
+  adminSettings = (await response.json()).reduce((settings, row) => ({ ...settings, [row.key]: row.value }), { ...PUBLIC_SETTING_DEFAULTS });
 }
 
 async function loadAdminData() {

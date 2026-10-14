@@ -45,7 +45,12 @@
       <p class="legal-note">Tyto podmínky jsou účinné od 14. 10. 2026.</p>
     </article>
   </main>
-  <script src="site-settings.js"></script>
-  <script>window.JOGA_CONFIG.loadPublicSettings().then(window.JOGA_CONFIG.applyPublicSettings);</script>
+  <script>
+    fetch('https://zltcizbzckyazlxilzwq.supabase.co/rest/v1/site_settings?select=key,value&is_public=eq.true', {
+      headers: { apikey: 'sb_publishable_X1KLjQkjhSe3Sl-McSQNBA_hz9d5HKR' }
+    }).then((response) => response.ok ? response.json() : [])
+      .then((rows) => rows.forEach((row) => document.querySelectorAll(`[data-setting="${row.key}"]`).forEach((element) => { element.textContent = row.value; })))
+      .catch(() => {});
+  </script>
 </body>
 </html>
