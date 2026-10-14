@@ -94,14 +94,10 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
   .hero{min-height:640px;aspect-ratio:auto}
 }
 
-.whatsapp-qr{align-items:center}
-.whatsapp-qr>img{width:118px;height:210px;flex:0 0 auto;object-fit:cover;border-radius:8px}
-.whatsapp-qr div{gap:6px}
-.whatsapp-qr small{max-width:240px;line-height:1.45}
+.whatsapp-qr{width:174px;padding:0;border:0;background:transparent}
+.whatsapp-qr>img{width:174px;height:174px;object-fit:contain}
 
 @media(max-width:600px){
-  .whatsapp-qr{align-items:flex-start}
-  .whatsapp-qr>img{width:92px;height:164px}
-  .whatsapp-qr strong{margin-left:auto}
+  .whatsapp-qr,.whatsapp-qr>img{width:160px;height:160px}
 }
 
