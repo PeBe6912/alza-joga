@@ -50,6 +50,44 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
   .admin-form-row{grid-template-columns:1fr}
 }
 
+/* Full brand logo, lesson language and responsive administration. */
+.brand{display:flex;align-items:center}
+.brand-logo{width:auto;height:58px;object-fit:contain}
+.admin-brand .brand-logo{height:88px;filter:brightness(0) invert(1)}
+.booking-summary{gap:18px}
+.booking-summary small{display:inline-block;margin-top:6px;color:var(--muted)}
+.language-badge{display:inline-block!important;margin:7px 0 0 7px!important;padding:4px 9px!important;border-radius:100px!important;background:#dde8f4!important;color:#294f73!important;font-size:11px!important;font-weight:700}
+.form-hint{color:var(--muted);font-size:12px;line-height:1.5}
+.admin-topbar{gap:22px}
+.admin-topbar-actions,.lesson-actions{display:flex;align-items:center;gap:8px}
+.admin-topbar-actions .text-button{padding:10px;color:var(--muted)}
+footer .brand-logo{height:72px}
+
+@media(max-width:600px){
+  .brand-logo{height:52px}
+  .admin-shell{display:block}
+  .admin-sidebar{display:block;padding:14px 12px}
+  .admin-brand{display:none}
+  .admin-sidebar nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+  .admin-nav{flex:0 0 auto;padding:10px 13px;font-size:13px;white-space:nowrap}
+  .admin-nav:before{content:none}
+  .admin-back{display:block;margin:8px 0 0;padding:8px 13px;font-size:12px}
+  .admin-content{padding:22px 14px 40px}
+  .admin-topbar{align-items:flex-start;flex-direction:column;margin-bottom:24px}
+  .admin-topbar-actions{width:100%}
+  .admin-topbar-actions .button{flex:1;padding:11px 13px}
+  .admin-card{padding:18px}
+  .admin-table,.admin-table tbody{display:block;width:100%}
+  .admin-table thead{display:none}
+  .admin-table tr{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:18px 0;border-bottom:1px solid var(--line)}
+  .admin-table td,.admin-table td:nth-child(3){display:block;padding:0;border:0}
+  .admin-table td:before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase}
+  .admin-table .lesson-actions{grid-column:1/-1;display:flex;gap:8px;padding-top:4px}
+  .lesson-actions .button{flex:1;margin:0;white-space:nowrap}
+  .booking-panel{padding:36px 24px 28px}
+  .booking-summary{align-items:flex-start}
+}
+
 /* Preserve complete source framing while keeping the studio and lecturer cards compact. */
 .studio-grid{grid-template-columns:1.15fr .85fr;grid-template-rows:minmax(520px,auto) 180px}
 .studio-main{grid-row:1/3;min-height:0;background:var(--cream)}
@@ -103,10 +141,37 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
   .hero{min-height:640px;aspect-ratio:auto}
 }
 
-.whatsapp-qr{width:174px;padding:0;border:0;background:transparent}
-.whatsapp-qr>img{width:174px;height:174px;object-fit:contain}
+.whatsapp-card{max-width:520px;margin-top:38px;padding:22px;display:grid;grid-template-columns:minmax(0,1fr) 126px;align-items:center;gap:24px;background:#fff;border:1px solid var(--line)}
+.whatsapp-copy{min-width:0}
+.whatsapp-copy .whatsapp-label{margin:0 0 9px;color:var(--clay);font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+.whatsapp-copy h3{margin:0 0 8px;font-family:"Newsreader",serif;font-size:27px;font-weight:400;line-height:1.05}
+.whatsapp-copy>p:not(.whatsapp-label){margin:0;color:var(--muted);font-size:14px;line-height:1.55}
+.whatsapp-copy small{display:block;margin-top:12px;color:var(--sage-dark);font-size:12px;font-weight:700;line-height:1.4}
+.whatsapp-qr{width:126px;padding:10px;display:grid;gap:7px;justify-items:center;background:var(--paper);border:1px solid var(--line)}
+.whatsapp-qr>img{width:104px;height:104px;object-fit:contain}
+.whatsapp-qr>span{color:var(--muted);font-size:10px;text-align:center}
+
+.checkbox a,.legal-contact a,.legal-copy a{color:var(--sage-dark);text-decoration:underline;text-underline-offset:2px}
+.legal-page{min-height:100vh;background:var(--paper)}
+.legal-header{position:static}
+.legal-header .brand{margin-right:auto}
+.legal-main{width:min(860px,calc(100% - 44px));margin:0 auto;padding:72px 0 110px}
+.legal-main h1{margin:0 0 18px;font-family:"Newsreader",serif;font-size:clamp(44px,7vw,72px);font-weight:400;line-height:1}
+.legal-intro{margin:0 0 46px;color:var(--muted);font-size:17px;line-height:1.7}
+.legal-copy{padding:42px;background:#fff;border:1px solid var(--line)}
+.legal-copy h2{margin:38px 0 12px;font-family:"Newsreader",serif;font-size:30px;font-weight:400}
+.legal-copy h2:first-child{margin-top:0}
+.legal-copy p,.legal-copy li{color:var(--muted);line-height:1.7}
+.legal-copy ul{padding-left:22px}
+.legal-contact{padding:18px 20px;background:var(--paper);border-left:3px solid var(--clay)}
+.legal-note{font-size:13px}
 
 @media(max-width:600px){
-  .whatsapp-qr,.whatsapp-qr>img{width:160px;height:160px}
+  .whatsapp-card{grid-template-columns:1fr 112px;gap:16px;padding:18px}
+  .whatsapp-copy h3{font-size:24px}
+  .whatsapp-qr{width:112px;padding:9px}
+  .whatsapp-qr>img{width:92px;height:92px}
+  .legal-main{padding:50px 0 75px}
+  .legal-copy{padding:28px 22px}
 }
 

@@ -62,11 +62,40 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json(req, { error: 'METHOD_NOT_ALLOWED' }, 405);
   if (!isAllowedOrigin(req)) return json(req, { error: 'ORIGIN_NOT_ALLOWED' }, 403);
 
+  let requestedAction = '';
   try {
     await requireAdmin(req);
     const body = await req.json();
-    const lessonId = String(body.lessonId ?? '');
     const action = String(body.action ?? '');
+    requestedAction = action;
+    if (action === 'create') {
+      const instructorId = String(body.instructorId ?? '');
+      const title = String(body.title ?? '').trim();
+      const language = String(body.language ?? 'cs');
+      const startsAt = String(body.startsAt ?? '');
+      const endsAt = String(body.endsAt ?? '');
+      const capacity = Number(body.capacity);
+      const repeatCount = Number(body.repeatCount);
+      if (!/^[0-9a-f-]{36}$/i.test(instructorId)) throw new Error('INVALID_INSTRUCTOR');
+      if (title.length < 2 || title.length > 120) throw new Error('INVALID_TITLE');
+      if (!['cs', 'en'].includes(language)) throw new Error('INVALID_LANGUAGE');
+      if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100) throw new Error('INVALID_CAPACITY');
+      if (!Number.isInteger(repeatCount) || repeatCount < 1 || repeatCount > 52) throw new Error('INVALID_REPEAT_COUNT');
+      if (!Number.isFinite(Date.parse(startsAt)) || !Number.isFinite(Date.parse(endsAt)) || Date.parse(endsAt) <= Date.parse(startsAt)) throw new Error('INVALID_TIME');
+
+      const created = await callRpc<{ created: number; lesson_ids: string[] }>('admin_create_lessons', {
+        p_title: title,
+        p_instructor_id: instructorId,
+        p_starts_at: startsAt,
+        p_ends_at: endsAt,
+        p_capacity: capacity,
+        p_language: language,
+        p_repeat_count: repeatCount,
+      });
+      return json(req, { ok: true, action, created: created.created, lessonIds: created.lesson_ids });
+    }
+
+    const lessonId = String(body.lessonId ?? '');
     if (!/^[0-9a-f-]{36}$/i.test(lessonId)) throw new Error('INVALID_LESSON');
     if (!['reschedule', 'cancel'].includes(action)) throw new Error('INVALID_ACTION');
 
@@ -101,8 +130,15 @@ Deno.serve(async (req: Request) => {
     return json(req, { ok: true, action: change.action, notified, failed });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' ? 403 : code.startsWith('INVALID_') ? 400 : 500;
+    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' ? 403 : code.includes('LESSON_CONFLICT') ? 409 : code.includes('INVALID_') ? 400 : 500;
     console.error('manage-lesson failed', code);
-    return json(req, { error: code, message: status === 403 ? 'Tento účet nemá oprávnění správce.' : 'Změnu lekce se nepodařilo uložit.' }, status);
+    const message = status === 403
+      ? 'Tento účet nemá oprávnění správce.'
+      : status === 409
+        ? 'Ve zvoleném termínu už má tento lektor naplánovanou lekci.'
+        : requestedAction === 'create'
+          ? 'Nové lekce se nepodařilo vytvořit.'
+          : 'Změnu lekce se nepodařilo uložit.';
+    return json(req, { error: code, message }, status);
   }
 });

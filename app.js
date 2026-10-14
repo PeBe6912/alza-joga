@@ -19,6 +19,7 @@ const savedBookings = JSON.parse(localStorage.getItem('alzaYogaBookings') || '[]
 const settings = JSON.parse(localStorage.getItem('alzaYogaSettings') || '{"petrCharity":true,"capacity":20}');
 let adminSession = JSON.parse(sessionStorage.getItem('jogaAdminSession') || 'null');
 let adminLessons = [];
+let adminInstructors = [];
 const classList = document.querySelector('#class-list');
 const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
@@ -47,9 +48,10 @@ function renderLessons(filter = 'all') {
   classList.innerHTML = visible.map((lesson) => {
     const places = spotsLeft(lesson);
     const typeLabel = lesson.type === 'charity' ? 'Dobrovolný příspěvek' : 'Klasická lekce';
+    const languageLabel = lesson.language === 'en' ? '<span class="language-badge">Lekce v angličtině</span>' : '';
     return `<article class="class-row">
       <div class="class-date"><strong>${lesson.day}</strong><span>${lesson.date}</span></div>
-      <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${escapeHtml(lesson.teacher)}</small><br><span>${typeLabel}</span></div>
+      <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${escapeHtml(lesson.teacher)}</small><br><span>${typeLabel}</span>${languageLabel}</div>
       <div class="class-meta"><b>${escapeHtml(lesson.time)}</b><span>HALL · 3. patro</span><span>${escapeHtml(lesson.price)}</span></div>
       <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${placesLabel(places)}</small></div>
     </article>`;
@@ -76,14 +78,15 @@ document.querySelectorAll('.filter').forEach((button) => button.addEventListener
 function openBooking(id) {
   const lesson = lessons.find((item) => item.id === id);
   if (!lesson) return;
+  const languageNote = lesson.language === 'en' ? '<span class="language-badge">Lekce v angličtině</span>' : '';
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="booking-form">
     <p class="eyebrow">Rezervace místa</p><h2>${escapeHtml(lesson.title)}</h2>
-    <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${escapeHtml(lesson.time)}</span><span>${escapeHtml(lesson.price)}</span></div>
+    <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(lesson.teacher)}</small><br>${languageNote}</span><span>${escapeHtml(lesson.price)}</span></div>
     <div class="form-grid">
       <div class="field"><label for="name">Jméno a příjmení</label><input id="name" name="name" required autocomplete="name"></div>
       <div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" required autocomplete="email"></div>
       <div class="field full"><label for="relation">Jdu jako</label><select id="relation" name="relation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host / externista</option></select></div>
-      <label class="checkbox field full"><input type="checkbox" required><span>Souhlasím s podmínkami rezervace a beru na vědomí pravidlo zrušení nejpozději 24 hodin před začátkem.</span></label>
+      <label class="checkbox field full"><input type="checkbox" required><span>Souhlasím s <a href="podminky.html" target="_blank" rel="noopener">podmínkami rezervace</a> a potvrzuji, že jsem se seznámil/a s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>
     </div><button class="button" type="submit">Potvrdit rezervaci</button>
   </form>`;
   document.querySelector('#booking-form').addEventListener('submit', async (event) => {
@@ -144,12 +147,13 @@ function lessonFromDatabase(row) {
     capacity: row.capacity,
     booked: row.booked_count,
     status: row.status || 'published',
+    language: row.language || 'cs',
   };
 }
 
 async function loadLessons() {
   const query = new URLSearchParams({
-    select: 'id,title,starts_at,ends_at,capacity,booked_count,location,instructors(name,payment_mode,price_czk,payment_note)',
+    select: 'id,title,starts_at,ends_at,capacity,booked_count,location,language,instructors(name,payment_mode,price_czk,payment_note)',
     status: 'eq.published',
     starts_at: `gte.${new Date().toISOString()}`,
     order: 'starts_at.asc',
@@ -216,7 +220,7 @@ document.querySelector('#open-admin').addEventListener('click', async () => {
   document.querySelector('footer').hidden = true;
   adminView.hidden = false;
   if (adminSession && await isAdminSessionValid()) {
-    await loadAdminLessons();
+    await Promise.all([loadAdminLessons(), loadAdminInstructors()]);
     renderAdmin('overview');
   } else {
     clearAdminSession();
@@ -237,6 +241,7 @@ document.querySelector('#close-admin').addEventListener('click', () => {
 function clearAdminSession() {
   adminSession = null;
   adminLessons = [];
+  adminInstructors = [];
   sessionStorage.removeItem('jogaAdminSession');
 }
 
@@ -256,7 +261,7 @@ async function isAdminSessionValid() {
 
 async function loadAdminLessons() {
   const query = new URLSearchParams({
-    select: 'id,title,starts_at,ends_at,capacity,booked_count,status,location,instructors(name,payment_mode,price_czk,payment_note)',
+    select: 'id,title,starts_at,ends_at,capacity,booked_count,status,location,language,instructors(name,payment_mode,price_czk,payment_note)',
     starts_at: `gte.${new Date().toISOString()}`,
     order: 'starts_at.asc',
   });
@@ -270,10 +275,20 @@ async function loadAdminLessons() {
   adminLessons = (await response.json()).map(lessonFromDatabase);
 }
 
+async function loadAdminInstructors() {
+  const query = new URLSearchParams({ select: 'id,name', active: 'eq.true', order: 'sort_order.asc' });
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/instructors?${query}`, {
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
+  });
+  if (!response.ok) throw new Error('Lektory se nepodařilo načíst.');
+  adminInstructors = await response.json();
+}
+
 function renderAdminLogin(message = '') {
   document.querySelector('#admin-title').textContent = 'Přihlášení do správy';
   const addButton = document.querySelector('#add-lesson');
   addButton.hidden = true;
+  document.querySelector('#admin-logout').hidden = true;
   document.querySelector('#admin-panel').innerHTML = `<div class="admin-card"><h2>Správa lekcí</h2>
     <p>Přihlásit se může pouze účet s oprávněním administrátora.</p>
     ${message ? `<p><b>${escapeHtml(message)}</b></p>` : ''}
@@ -305,7 +320,7 @@ async function signInAdmin(event) {
     if (result.user?.app_metadata?.role !== 'admin') throw new Error('Tento účet nemá oprávnění správce.');
     adminSession = { access_token: result.access_token };
     sessionStorage.setItem('jogaAdminSession', JSON.stringify(adminSession));
-    await loadAdminLessons();
+    await Promise.all([loadAdminLessons(), loadAdminInstructors()]);
     renderAdmin('overview');
   } catch (error) {
     clearAdminSession();
@@ -316,7 +331,7 @@ async function signInAdmin(event) {
 function lessonTable() {
   const rows = adminLessons.map((lesson) => {
     const cancelled = lesson.status === 'cancelled';
-    return `<tr><td><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td>${escapeHtml(lesson.title)}</td><td>${escapeHtml(lesson.teacher)}</td><td>${lesson.booked}/${lesson.capacity}</td><td><span class="status-pill${cancelled ? ' warn' : ''}">${cancelled ? 'Zrušeno' : 'Otevřeno'}</span></td><td>${cancelled ? '' : `<button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button> <button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button>`}</td></tr>`;
+    return `<tr><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce">${escapeHtml(lesson.title)}${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}</td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno">${lesson.booked}/${lesson.capacity}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ''}">${cancelled ? 'Zrušeno' : 'Otevřeno'}</span></td><td class="lesson-actions" data-label="Akce">${cancelled ? '' : `<button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button>`}</td></tr>`;
   }).join('');
   return `<table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Obsazeno</th><th>Stav</th><th>Akce</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Nejsou naplánované žádné lekce.</td></tr>'}</tbody></table>`;
 }
@@ -348,7 +363,8 @@ function renderAdmin(tab) {
   const titles = { overview: 'Dobrý den, Petře', lessons: 'Lekce', teachers: 'Lektoři', people: 'Rezervace', content: 'Obsah webu', settings: 'Nastavení' };
   const addButton = document.querySelector('#add-lesson');
   addButton.hidden = false;
-  addButton.textContent = 'Odhlásit se';
+  document.querySelector('#admin-logout').hidden = false;
+  addButton.textContent = '+ Nová lekce';
   document.querySelector('#admin-title').textContent = titles[tab];
   if (tab === 'overview') panel.innerHTML = overviewPanel();
   if (tab === 'lessons') panel.innerHTML = `<div class="admin-card"><h2>Všechny naplánované lekce</h2>${lessonTable()}</div>`;
@@ -373,6 +389,68 @@ function dateTimeLocalValue(value) {
   const date = new Date(value);
   const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return shifted.toISOString().slice(0, 16);
+}
+
+function openNewLesson() {
+  if (!adminSession || !adminInstructors.length) {
+    showToast('Nejdřív se přihlas a načti seznam lektorů.');
+    return;
+  }
+  const starts = new Date();
+  starts.setDate(starts.getDate() + 1);
+  starts.setHours(17, 0, 0, 0);
+  const ends = new Date(starts.getTime() + 60 * 60 * 1000);
+  const instructorOptions = adminInstructors.map((instructor) => `<option value="${instructor.id}">${escapeHtml(instructor.name)}</option>`).join('');
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="new-lesson-form">
+    <p class="eyebrow">Nová lekce</p><h2>Vytvořit termín</h2>
+    <div class="form-grid">
+      <div class="field full"><label for="new-lesson-title">Název lekce</label><input id="new-lesson-title" name="title" maxlength="120" required></div>
+      <div class="field"><label for="new-lesson-instructor">Lektor</label><select id="new-lesson-instructor" name="instructorId" required>${instructorOptions}</select></div>
+      <div class="field"><label for="new-lesson-language">Jazyk</label><select id="new-lesson-language" name="language" required><option value="cs" selected>Čeština</option><option value="en">Angličtina</option></select></div>
+      <div class="field"><label for="new-lesson-start">Začátek</label><input id="new-lesson-start" name="startsAt" type="datetime-local" value="${dateTimeLocalValue(starts)}" required></div>
+      <div class="field"><label for="new-lesson-end">Konec</label><input id="new-lesson-end" name="endsAt" type="datetime-local" value="${dateTimeLocalValue(ends)}" required></div>
+      <div class="field"><label for="new-lesson-capacity">Kapacita</label><input id="new-lesson-capacity" name="capacity" type="number" min="1" max="100" value="20" required></div>
+      <div class="field"><label for="new-lesson-repeat">Počet lekcí v sérii</label><input id="new-lesson-repeat" name="repeatCount" type="number" min="1" max="52" value="1" required></div>
+    </div>
+    <p class="form-hint">Při vyšším počtu se další lekce vytvoří vždy ve stejný den a čas po jednom týdnu.</p>
+    <button class="button" type="submit">Vytvořit lekci</button>
+  </form>`;
+  document.querySelector('#new-lesson-form').addEventListener('submit', createLessons);
+  dialog.showModal();
+}
+
+async function createLessons(event) {
+  event.preventDefault();
+  const button = event.target.querySelector('[type="submit"]');
+  const data = new FormData(event.target);
+  const startsAt = new Date(data.get('startsAt'));
+  const endsAt = new Date(data.get('endsAt'));
+  if (endsAt <= startsAt) {
+    showToast('Konec lekce musí být později než začátek.');
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'Vytvářím…';
+  try {
+    const result = await manageLesson({
+      action: 'create',
+      title: data.get('title'),
+      instructorId: data.get('instructorId'),
+      language: data.get('language'),
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      capacity: Number(data.get('capacity')),
+      repeatCount: Number(data.get('repeatCount')),
+    });
+    dialog.close();
+    await Promise.all([loadLessons(), loadAdminLessons()]);
+    renderAdmin('lessons');
+    showToast(`Vytvořeno lekcí: ${result.created}.`);
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = 'Vytvořit lekci';
+    showToast(error.message);
+  }
 }
 
 function openLessonEditor(id) {
@@ -462,7 +540,8 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
   renderAdmin(button.dataset.adminTab);
 }));
 
-document.querySelector('#add-lesson').addEventListener('click', () => {
+document.querySelector('#add-lesson').addEventListener('click', openNewLesson);
+document.querySelector('#admin-logout').addEventListener('click', () => {
   clearAdminSession();
   renderAdminLogin('Byl/a jsi odhlášen/a.');
 });

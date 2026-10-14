@@ -14,8 +14,7 @@
   <div class="announcement">Nové termíny na příští týden jsou otevřené <a href="#lekce">Rezervovat místo →</a></div>
   <header class="site-header">
     <a class="brand" href="#top" aria-label="Jóga na HALLU – domů">
-      <span class="brand-mark">JH</span>
-      <span>Jóga na <em>HALLU</em></span>
+      <img class="brand-logo" src="assets/joga-na-hallu-logo.png" alt="Jóga na HALLU" />
     </a>
     <nav aria-label="Hlavní navigace">
       <a href="#lekce">Lekce</a>
@@ -134,9 +133,18 @@
       <div>
         <p class="eyebrow">Dobré vědět</p>
         <h2>Jednoduše přijď<br>a zacvič si</h2>
-        <a class="whatsapp whatsapp-qr" href="assets/whatsapp-joga-qr-only.png" target="_blank" rel="noopener" aria-label="Zobrazit QR kód WhatsApp skupiny">
-          <img src="assets/whatsapp-joga-qr-only.png" alt="QR kód WhatsApp skupiny" />
-        </a>
+        <div class="whatsapp-card">
+          <div class="whatsapp-copy">
+            <p class="whatsapp-label">WhatsApp skupina</p>
+            <h3>Aktuální informace k lekcím</h3>
+            <p>Nové termíny, případné změny a rychlá domluva na jednom místě.</p>
+            <small>Naskenuj QR kód a přidej se do skupiny.</small>
+          </div>
+          <a class="whatsapp-qr" href="assets/whatsapp-joga-qr-only.png" target="_blank" rel="noopener" aria-label="Zvětšit QR kód WhatsApp skupiny">
+            <img src="assets/whatsapp-joga-qr-only.png" alt="QR kód pro připojení do WhatsApp skupiny" />
+            <span>Klikni pro zvětšení</span>
+          </a>
+        </div>
       </div>
       <div class="accordion">
         <details open><summary>Kde lekce probíhají?</summary><p>V jógové místnosti ve 3. patře budovy HALL. Přesnou navigaci dostaneš také v potvrzení rezervace.</p></details>
@@ -149,7 +157,7 @@
 
   <main id="admin-view" class="admin-shell" hidden>
     <aside class="admin-sidebar">
-      <div class="brand admin-brand"><span class="brand-mark">JH</span><span>Jóga na <em>HALLU</em></span></div>
+      <div class="brand admin-brand"><img class="brand-logo" src="assets/joga-na-hallu-logo.png" alt="Jóga na HALLU" /></div>
       <nav>
         <button class="admin-nav active" data-admin-tab="overview">Přehled</button>
         <button class="admin-nav" data-admin-tab="lessons">Lekce</button>
@@ -161,15 +169,15 @@
       <button class="admin-back" id="close-admin">← Zpět na web</button>
     </aside>
     <section class="admin-content">
-      <div class="admin-topbar"><div><p class="eyebrow">Back office · ukázková data</p><h1 id="admin-title">Dobrý den, Petře</h1></div><button class="button" id="add-lesson">+ Nová lekce</button></div>
+      <div class="admin-topbar"><div><p class="eyebrow">Správa studia</p><h1 id="admin-title">Dobrý den, Petře</h1></div><div class="admin-topbar-actions"><button class="text-button" id="admin-logout">Odhlásit se</button><button class="button" id="add-lesson">+ Nová lekce</button></div></div>
       <div id="admin-panel"></div>
     </section>
   </main>
 
   <footer>
-    <div class="brand"><span class="brand-mark">JH</span><span>Jóga na <em>HALLU</em></span></div>
+    <div class="brand"><img class="brand-logo" src="assets/joga-na-hallu-logo.png" alt="Jóga na HALLU" /></div>
     <p>Jóga na HALLU · 3. patro · Pro zaměstnance Alzy a jejich hosty</p>
-    <div><a href="#">Podmínky</a><a href="#">Ochrana osobních údajů</a></div>
+    <div><a href="podminky.html">Podmínky</a><a href="ochrana-osobnich-udaju.html">Ochrana osobních údajů</a></div>
   </footer>
 
   <dialog id="booking-dialog">
