@@ -1,9 +1,14 @@
-const lessons = [
+const SUPABASE_URL = 'https://zltcizbzckyazlxilzwq.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_X1KLjQkjhSe3Sl-McSQNBA_hz9d5HKR';
+
+const fallbackLessons = [
   { id: 1, day: 'Út', date: '20. 10.', iso: '2026-10-20T08:00:00+02:00', time: '8:00–9:00', title: 'Ranní flow', teacher: 'Daniela Šťastná', type: 'paid', price: '150 Kč', capacity: 20, booked: 7 },
   { id: 2, day: 'Út', date: '20. 10.', iso: '2026-10-20T12:00:00+02:00', time: '12:00–13:00', title: 'Polední restart', teacher: 'Daniela Šťastná', type: 'paid', price: '150 Kč', capacity: 20, booked: 9 },
   { id: 3, day: 'Čt', date: '22. 10.', iso: '2026-10-22T16:45:00+02:00', time: '16:45–17:45', title: 'Strong slow flow', teacher: 'Petr Bena', type: 'charity', price: 'Dobrovolný příspěvek', capacity: 20, booked: 5 },
   { id: 4, day: 'Út', date: '27. 10.', iso: '2026-10-27T08:00:00+01:00', time: '8:00–9:00', title: 'Ranní flow', teacher: 'Daniela Šťastná', type: 'paid', price: '150 Kč', capacity: 20, booked: 4 }
 ];
+
+let lessons = fallbackLessons;
 
 const teachers = [
   { name: 'Daniela Šťastná', photo: 'assets/daniela-stastna.jpg', styles: 'Fyzio · Hatha · Power · Vinyasa', payment: '150 Kč · QR po skončení lekce', charity: false, bio: 'Jógu aktivně praktikuje od roku 2014. V roce 2023 dokončila akreditovaný 200hodinový kurz MŠMT od Yoga4Everybody.' },
@@ -17,7 +22,16 @@ const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
 
 function spotsLeft(lesson) {
-  return lesson.capacity - lesson.booked - savedBookings.filter((booking) => booking.lessonId === lesson.id).length;
+  return Math.max(lesson.capacity - lesson.booked, 0);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 function placesLabel(places) {
@@ -33,17 +47,22 @@ function renderLessons(filter = 'all') {
     const typeLabel = lesson.type === 'charity' ? 'Dobrovolný příspěvek' : 'Klasická lekce';
     return `<article class="class-row">
       <div class="class-date"><strong>${lesson.day}</strong><span>${lesson.date}</span></div>
-      <div class="class-teacher"><h3>${lesson.title}</h3><small>${lesson.teacher}</small><br><span>${typeLabel}</span></div>
-      <div class="class-meta"><b>${lesson.time}</b><span>HALL · 3. patro</span><span>${lesson.price}</span></div>
+      <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${escapeHtml(lesson.teacher)}</small><br><span>${typeLabel}</span></div>
+      <div class="class-meta"><b>${escapeHtml(lesson.time)}</b><span>HALL · 3. patro</span><span>${escapeHtml(lesson.price)}</span></div>
       <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${placesLabel(places)}</small></div>
     </article>`;
   }).join('');
-  document.querySelectorAll('[data-book]').forEach((button) => button.addEventListener('click', () => openBooking(Number(button.dataset.book))));
+  document.querySelectorAll('[data-book]').forEach((button) => button.addEventListener('click', () => openBooking(button.dataset.book)));
 }
 
 function renderNextClass() {
   const lesson = lessons[0];
-  document.querySelector('#next-class-card').innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${lesson.title}</h3><p>${lesson.time} · ${lesson.teacher}</p><div class="spots"><span>${placesLabel(spotsLeft(lesson))}</span><a href="#lekce">Rezervovat →</a></div>`;
+  const card = document.querySelector('#next-class-card');
+  if (!lesson) {
+    card.innerHTML = '<p>Nové termíny připravujeme.</p>';
+    return;
+  }
+  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)}</p><div class="spots"><span>${placesLabel(spotsLeft(lesson))}</span><a href="#lekce">Rezervovat →</a></div>`;
 }
 
 document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
@@ -54,25 +73,123 @@ document.querySelectorAll('.filter').forEach((button) => button.addEventListener
 
 function openBooking(id) {
   const lesson = lessons.find((item) => item.id === id);
+  if (!lesson) return;
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="booking-form">
-    <p class="eyebrow">Rezervace místa</p><h2>${lesson.title}</h2>
-    <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${lesson.time}</span><span>${lesson.price}</span></div>
+    <p class="eyebrow">Rezervace místa</p><h2>${escapeHtml(lesson.title)}</h2>
+    <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${escapeHtml(lesson.time)}</span><span>${escapeHtml(lesson.price)}</span></div>
     <div class="form-grid">
       <div class="field"><label for="name">Jméno a příjmení</label><input id="name" name="name" required autocomplete="name"></div>
       <div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" required autocomplete="email"></div>
-      <div class="field full"><label for="relation">Jdu jako</label><select id="relation" name="relation"><option>Zaměstnanec Alzy</option><option>Host / externista</option></select></div>
+      <div class="field full"><label for="relation">Jdu jako</label><select id="relation" name="relation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host / externista</option></select></div>
       <label class="checkbox field full"><input type="checkbox" required><span>Souhlasím s podmínkami rezervace a beru na vědomí pravidlo zrušení nejpozději 24 hodin před začátkem.</span></label>
     </div><button class="button" type="submit">Potvrdit rezervaci</button>
   </form>`;
-  document.querySelector('#booking-form').addEventListener('submit', (event) => {
+  document.querySelector('#booking-form').addEventListener('submit', async (event) => {
     event.preventDefault();
+    const submitButton = event.target.querySelector('[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Ukládám…';
     const data = new FormData(event.target);
-    savedBookings.push({ lessonId: id, name: data.get('name'), email: data.get('email'), created: new Date().toISOString() });
-    localStorage.setItem('alzaYogaBookings', JSON.stringify(savedBookings));
-    dialog.close();
-    renderLessons(document.querySelector('.filter.active').dataset.filter);
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/book-lesson`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lessonId: id,
+          name: data.get('name'),
+          email: data.get('email'),
+          relation: data.get('relation'),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Rezervaci se nepodařilo uložit.');
+
+      const fallbackLink = result.cancelUrl
+        ? `<p>E-mail zatím není nastavený. Ulož si proto tento odkaz: <a href="${escapeHtml(result.cancelUrl)}">zrušit rezervaci</a>.</p>`
+        : '<p>Potvrzení a odkaz pro případné zrušení najdeš v e-mailu.</p>';
+      document.querySelector('#booking-content').innerHTML = `<div class="booking-panel"><p class="eyebrow">Hotovo</p><h2>Místo je tvoje</h2>${fallbackLink}<button class="button" type="button" data-dialog-done>Zavřít</button></div>`;
+      document.querySelector('[data-dialog-done]').addEventListener('click', () => dialog.close());
+      await loadLessons();
+      showToast(result.emailSent ? 'Místo je rezervované. Potvrzení jsme poslali e-mailem.' : 'Místo je rezervované. Ulož si odkaz pro zrušení.');
+    } catch (error) {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Potvrdit rezervaci';
+      showToast(error.message);
+    }
+  });
+  dialog.showModal();
+}
+
+function lessonFromDatabase(row) {
+  const starts = new Date(row.starts_at);
+  const ends = new Date(row.ends_at);
+  const dateParts = new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', timeZone: 'Europe/Prague' }).format(starts);
+  const day = new Intl.DateTimeFormat('cs-CZ', { weekday: 'short', timeZone: 'Europe/Prague' }).format(starts).replace('.', '');
+  const time = `${new Intl.DateTimeFormat('cs-CZ', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Prague' }).format(starts)}–${new Intl.DateTimeFormat('cs-CZ', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Prague' }).format(ends)}`;
+  const instructor = row.instructors;
+  const donation = instructor.payment_mode === 'donation';
+  return {
+    id: row.id,
+    day: day.charAt(0).toUpperCase() + day.slice(1),
+    date: dateParts,
+    iso: row.starts_at,
+    time,
+    title: row.title,
+    teacher: instructor.name,
+    type: donation ? 'charity' : 'paid',
+    price: donation ? 'Dobrovolný příspěvek' : `${instructor.price_czk} Kč`,
+    capacity: row.capacity,
+    booked: row.booked_count,
+  };
+}
+
+async function loadLessons() {
+  const query = new URLSearchParams({
+    select: 'id,title,starts_at,ends_at,capacity,booked_count,location,instructors(name,payment_mode,price_czk,payment_note)',
+    status: 'eq.published',
+    starts_at: `gte.${new Date().toISOString()}`,
+    order: 'starts_at.asc',
+  });
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/lessons?${query}`, {
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+    });
+    if (!response.ok) throw new Error('Termíny se nepodařilo načíst.');
+    lessons = (await response.json()).map(lessonFromDatabase);
+    renderLessons(document.querySelector('.filter.active')?.dataset.filter || 'all');
     renderNextClass();
-    showToast('Místo je rezervované. Potvrzení jsme připravili k odeslání.');
+  } catch (error) {
+    console.error(error);
+    showToast('Živé termíny se nepodařilo načíst. Zobrazuji poslední dostupný přehled.');
+  }
+}
+
+function openCancellation(token) {
+  document.querySelector('#booking-content').innerHTML = `<div class="booking-panel">
+    <p class="eyebrow">Zrušení rezervace</p><h2>Opravdu chceš rezervaci zrušit?</h2>
+    <p>Zrušení je bezplatné nejpozději 24 hodin před začátkem lekce.</p>
+    <button class="button" type="button" data-confirm-cancel>Zrušit rezervaci</button>
+  </div>`;
+  document.querySelector('[data-confirm-cancel]').addEventListener('click', async (event) => {
+    event.target.disabled = true;
+    event.target.textContent = 'Ruším…';
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/cancel-reservation`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Rezervaci se nepodařilo zrušit.');
+      document.querySelector('#booking-content').innerHTML = `<div class="booking-panel"><p class="eyebrow">Hotovo</p><h2>${result.alreadyCancelled ? 'Rezervace už byla zrušená' : 'Rezervace je zrušená'}</h2><button class="button" type="button" data-dialog-done>Zavřít</button></div>`;
+      document.querySelector('[data-dialog-done]').addEventListener('click', () => dialog.close());
+      history.replaceState({}, '', `${location.pathname}${location.hash}`);
+      await loadLessons();
+    } catch (error) {
+      event.target.disabled = false;
+      event.target.textContent = 'Zrušit rezervaci';
+      showToast(error.message);
+    }
   });
   dialog.showModal();
 }
@@ -156,3 +273,6 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
 document.querySelector('#add-lesson').addEventListener('click', () => showToast('Formulář nové lekce bude napojený na Supabase.'));
 renderLessons();
 renderNextClass();
+loadLessons();
+const cancellationToken = new URLSearchParams(location.search).get('cancel');
+if (cancellationToken) openCancellation(cancellationToken);
