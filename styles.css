@@ -49,3 +49,34 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
   .admin-form-row{grid-template-columns:1fr}
 }
 
+/* Preserve complete source framing while keeping the studio and lecturer cards compact. */
+.studio-grid{grid-template-columns:1.15fr .85fr;grid-template-rows:520px 180px}
+.studio-main{grid-row:1/3;min-height:0;background:#ded8cc}
+.studio-main img{object-fit:contain}
+.studio-copy{padding:42px 5vw 30px}
+.studio-copy h2{font-size:56px}
+.studio-copy .feature-list{margin:20px 0}
+.studio-copy .feature-list li{padding:11px 0}
+.studio-detail{height:180px}
+
+.teacher-card{grid-template-columns:60% 40%;height:600px}
+.teacher-card.reverse{grid-template-columns:60% 40%}
+.teacher-card img{height:100%;min-height:0;object-fit:contain;object-position:center;background:#ded8cc}
+.teacher-card-copy{padding:34px 4vw}
+.teacher-card h3{font-size:48px;margin:8px 0 20px}
+.teacher-card p:not(.teacher-kicker){line-height:1.5}
+.teacher-card blockquote{margin-top:18px;padding-left:18px;font-size:18px;line-height:1.35}
+.charity-note{margin-top:16px;padding:9px 12px}
+
+@media(max-width:900px){
+  .studio-grid{grid-template-columns:1fr;grid-template-rows:auto}
+  .studio-main{grid-row:auto;height:560px}
+  .teacher-card,.teacher-card.reverse{grid-template-columns:1fr;height:auto}
+  .teacher-card img{height:auto;max-height:560px;min-height:0}
+}
+
+@media(max-width:600px){
+  .studio-main{height:480px}
+  .teacher-card img{height:auto;max-height:520px;min-height:0}
+}
+
