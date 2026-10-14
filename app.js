@@ -10,16 +10,20 @@ const fallbackLessons = [
 
 let lessons = fallbackLessons;
 
-const teachers = [
+const fallbackTeachers = [
   { name: 'Daniela Šťastná', photo: 'assets/daniela-stastna.jpg', styles: 'Fyzio · Hatha · Power · Vinyasa', payment: '150 Kč · QR po skončení lekce', charity: false, bio: 'Jógu aktivně praktikuje od roku 2014. V roce 2023 dokončila akreditovaný 200hodinový kurz MŠMT od Yoga4Everybody.' },
   { name: 'Petr Bena', photo: 'assets/petr-bena.jpeg', styles: 'Power · Vinyasa · Strong slow flow', payment: 'Dobrovolně · Dobrý anděl', charity: true, bio: 'Od prosince 2023 praktikuje jógu denně. V roce 2026 dokončil 200hodinový kurz pro učitele power a vinyasa jógy v Ubudu na Bali.' }
 ];
+let teachers = fallbackTeachers;
+let newsItems = [];
 
 const savedBookings = JSON.parse(localStorage.getItem('alzaYogaBookings') || '[]');
 const settings = JSON.parse(localStorage.getItem('alzaYogaSettings') || '{"petrCharity":true,"capacity":20}');
 let adminSession = JSON.parse(sessionStorage.getItem('jogaAdminSession') || 'null');
 let adminLessons = [];
 let adminInstructors = [];
+let adminNews = [];
+let adminReservations = [];
 const classList = document.querySelector('#class-list');
 const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
@@ -172,6 +176,69 @@ async function loadLessons() {
   }
 }
 
+function instructorFromDatabase(row) {
+  const donation = row.payment_mode === 'donation';
+  return {
+    id: row.id,
+    name: row.name,
+    photo: row.photo_url || '',
+    styles: (row.styles || []).join(' · '),
+    payment: donation ? (row.payment_note || 'Dobrovolný příspěvek') : `${row.price_czk || 0} Kč · ${row.payment_note || 'QR po skončení lekce'}`,
+    charity: donation,
+    bio: row.bio || '',
+    paymentMode: row.payment_mode,
+    priceCzk: row.price_czk,
+    paymentNote: row.payment_note || '',
+  };
+}
+
+function renderPublicTeachers() {
+  const grid = document.querySelector('#teachers-grid');
+  if (!grid) return;
+  grid.innerHTML = teachers.map((teacher, index) => `<article class="teacher-card${index % 2 ? ' reverse' : ''}">
+    <img src="${escapeHtml(teacher.photo)}" alt="Lektor jógy ${escapeHtml(teacher.name)}">
+    <div class="teacher-card-copy">
+      <p class="teacher-kicker">${escapeHtml(teacher.styles)}</p>
+      <h3>${escapeHtml(teacher.name)}</h3>
+      <p>${escapeHtml(teacher.bio)}</p>
+      <span class="charity-note">${escapeHtml(teacher.payment)}</span>
+    </div>
+  </article>`).join('');
+}
+
+function renderPublicNews() {
+  const grid = document.querySelector('#news-grid');
+  if (!grid) return;
+  if (!newsItems.length) {
+    grid.innerHTML = '<p class="news-empty">Nové zprávy ze studia právě připravujeme.</p>';
+    return;
+  }
+  const displayItems = [...newsItems].sort((a, b) => Number(Boolean(b.image_url)) - Number(Boolean(a.image_url)));
+  grid.innerHTML = displayItems.map((item, index) => item.image_url
+    ? `<article class="news-card featured"><img src="${escapeHtml(item.image_url)}" alt=""><div><span>Ze studia</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></div></article>`
+    : `<article class="news-card text-card${index % 2 ? ' warm' : ''}"><span>Novinka</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></article>`).join('');
+}
+
+async function loadPublicContent() {
+  try {
+    const [instructorsResponse, newsResponse] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/instructors?select=id,name,bio,styles,photo_url,payment_mode,price_czk,payment_note&active=eq.true&order=sort_order.asc`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY } }),
+      fetch(`${SUPABASE_URL}/rest/v1/news_items?select=id,title,summary,body,image_url,published_at&published_at=not.is.null&order=published_at.desc`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY } }),
+    ]);
+    if (instructorsResponse.ok) {
+      const rows = await instructorsResponse.json();
+      if (rows.length) teachers = rows.map(instructorFromDatabase);
+      renderPublicTeachers();
+    }
+    if (newsResponse.ok) {
+      newsItems = await newsResponse.json();
+      renderPublicNews();
+    }
+  } catch (error) {
+    console.error('Veřejný obsah se nepodařilo načíst.', error);
+  }
+}
+
 function openCancellation(token) {
   document.querySelector('#booking-content').innerHTML = `<div class="booking-panel">
     <p class="eyebrow">Zrušení rezervace</p><h2>Opravdu chceš rezervaci zrušit?</h2>
@@ -213,21 +280,23 @@ function showToast(message) {
 const publicView = document.querySelector('#public-view');
 const adminView = document.querySelector('#admin-view');
 
-document.querySelector('#open-admin').addEventListener('click', async () => {
+async function openAdmin() {
   publicView.hidden = true;
   document.querySelector('.site-header').hidden = true;
   document.querySelector('.announcement').hidden = true;
   document.querySelector('footer').hidden = true;
   adminView.hidden = false;
   if (adminSession && await isAdminSessionValid()) {
-    await Promise.all([loadAdminLessons(), loadAdminInstructors()]);
+    await loadAdminData();
     renderAdmin('overview');
   } else {
     clearAdminSession();
     renderAdminLogin();
   }
   window.scrollTo(0, 0);
-});
+}
+
+document.querySelectorAll('[data-open-admin]').forEach((button) => button.addEventListener('click', openAdmin));
 
 document.querySelector('#close-admin').addEventListener('click', () => {
   adminView.hidden = true;
@@ -242,6 +311,8 @@ function clearAdminSession() {
   adminSession = null;
   adminLessons = [];
   adminInstructors = [];
+  adminNews = [];
+  adminReservations = [];
   sessionStorage.removeItem('jogaAdminSession');
 }
 
@@ -278,12 +349,36 @@ async function loadAdminLessons() {
 }
 
 async function loadAdminInstructors() {
-  const query = new URLSearchParams({ select: 'id,name', active: 'eq.true', order: 'sort_order.asc' });
+  const query = new URLSearchParams({ select: 'id,name,bio,styles,photo_url,payment_mode,price_czk,payment_note,active,sort_order', order: 'sort_order.asc' });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/instructors?${query}`, {
     headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
   });
   if (!response.ok) throw new Error('Lektory se nepodařilo načíst.');
   adminInstructors = await response.json();
+}
+
+async function loadAdminNews() {
+  const query = new URLSearchParams({ select: 'id,title,summary,body,image_url,published_at,created_at', order: 'created_at.desc' });
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/news_items?${query}`, {
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
+  });
+  if (!response.ok) throw new Error('Novinky se nepodařilo načíst.');
+  adminNews = await response.json();
+}
+
+async function loadAdminReservations() {
+  const now = new Date().toISOString();
+  const select = 'id,attendee_name,attendee_email,status,payment_email_sent_at,lessons!inner(id,title,starts_at,ends_at,status,instructors(name))';
+  const query = new URLSearchParams({ select, status: 'in.(confirmed,attended,no_show)', 'lessons.starts_at': `gte.${now}` });
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/reservations?${query}`, {
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
+  });
+  if (!response.ok) throw new Error('Účastníky se nepodařilo načíst.');
+  adminReservations = (await response.json()).sort((a, b) => new Date(a.lessons.starts_at) - new Date(b.lessons.starts_at));
+}
+
+async function loadAdminData() {
+  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations()]);
 }
 
 function renderAdminLogin(message = '') {
@@ -322,7 +417,7 @@ async function signInAdmin(event) {
     if (result.user?.app_metadata?.role !== 'admin') throw new Error('Tento účet nemá oprávnění správce.');
     adminSession = { access_token: result.access_token };
     sessionStorage.setItem('jogaAdminSession', JSON.stringify(adminSession));
-    await Promise.all([loadAdminLessons(), loadAdminInstructors()]);
+    await loadAdminData();
     renderAdmin('overview');
   } catch (error) {
     clearAdminSession();
@@ -352,11 +447,26 @@ function overviewPanel() {
 }
 
 function teachersPanel() {
-  return `<div class="admin-card"><h2>Profily lektorů</h2>${teachers.map((teacher) => `<article class="admin-teacher"><img src="${teacher.photo}" alt="${teacher.name}"><div><h3>${teacher.name}</h3><p><b>${teacher.styles}</b></p><p>${teacher.bio}</p><p>${teacher.payment}</p></div><button class="button button-small" data-edit-teacher="${teacher.name}">Upravit profil</button></article>`).join('')}</div>`;
+  return `<div class="admin-card"><h2>Profily lektorů</h2>${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(teacher.name)}"><div><h3>${escapeHtml(teacher.name)}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.bio)}</p><p>${escapeHtml(teacher.payment_note)}</p></div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
 }
 
 function bookingsPanel() {
-  return `<div class="admin-card"><h2>Účastníci nejbližších lekcí</h2><table class="admin-table"><thead><tr><th>Jméno</th><th>Lekce</th><th>E-mail</th><th>Platba</th></tr></thead><tbody><tr><td>Ukázkový účastník</td><td>Ranní flow</td><td>ucastnik@example.cz</td><td><span class="status-pill warn">Po lekci</span></td></tr>${savedBookings.map((booking) => `<tr><td>${booking.name}</td><td>${lessons.find((lesson) => lesson.id === booking.lessonId)?.title}</td><td>${booking.email}</td><td><span class="status-pill warn">Po lekci</span></td></tr>`).join('')}</tbody></table></div>`;
+  if (!adminReservations.length) return '<div class="admin-card"><h2>Účastníci nejbližších lekcí</h2><p>V nejbližších lekcích zatím nejsou žádné aktivní rezervace.</p></div>';
+  const grouped = adminReservations.reduce((groups, reservation) => {
+    const lessonId = reservation.lessons.id;
+    if (!groups.has(lessonId)) groups.set(lessonId, { lesson: reservation.lessons, reservations: [] });
+    groups.get(lessonId).reservations.push(reservation);
+    return groups;
+  }, new Map());
+  return `<div class="admin-card"><h2>Účastníci nejbližších lekcí</h2><div class="reservation-groups">${Array.from(grouped.values()).map(({ lesson, reservations }) => `<section class="reservation-group">
+    <div class="reservation-lesson"><div><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(formatAdminDate(lesson.starts_at))}–${escapeHtml(new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Prague' }).format(new Date(lesson.ends_at)))}</p></div><div><b>${escapeHtml(lesson.instructors.name)}</b><span>${reservations.length} přihlášených</span></div></div>
+    <table class="admin-table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Stav platby</th></tr></thead><tbody>${reservations.map((reservation) => `<tr><td data-label="Jméno">${escapeHtml(reservation.attendee_name)}</td><td data-label="E-mail">${escapeHtml(reservation.attendee_email)}</td><td data-label="Stav platby"><span class="status-pill${reservation.payment_email_sent_at ? ' done' : ' warn'}">${reservation.payment_email_sent_at ? 'Odesláno' : 'Po lekci'}</span></td></tr>`).join('')}</tbody></table>
+  </section>`).join('')}</div></div>`;
+}
+
+function newsPanel() {
+  const items = adminNews.map((item) => `<article class="admin-news-item"><div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p><span class="status-pill${item.published_at ? '' : ' done'}">${item.published_at ? 'Zveřejněná' : 'Skrytá'}</span></div><div class="admin-news-actions"><button class="button button-small" data-edit-news="${item.id}">Upravit</button><button class="button button-small button-secondary" data-toggle-news="${item.id}">${item.published_at ? 'Skrýt' : 'Zveřejnit'}</button><button class="text-button danger" data-delete-news="${item.id}">Smazat</button></div></article>`).join('');
+  return `<div class="admin-grid"><div class="admin-card"><div class="admin-card-heading"><h2>Novinky</h2><button class="button button-small" data-add-news>+ Přidat novinku</button></div>${items || '<p>Zatím nejsou vytvořené žádné novinky.</p>'}</div><div class="admin-card"><h2>Rychlé odkazy</h2><p>WhatsApp skupina</p><p>Podmínky rezervace</p><p>Ochrana osobních údajů</p></div></div>`;
 }
 
 function settingsPanel() {
@@ -371,7 +481,7 @@ function renderAdmin(tab) {
   const panel = document.querySelector('#admin-panel');
   const titles = { overview: 'Dobrý den, Petře', lessons: 'Lekce', teachers: 'Lektoři', people: 'Rezervace', content: 'Obsah webu', settings: 'Nastavení' };
   const addButton = document.querySelector('#add-lesson');
-  addButton.hidden = false;
+  addButton.hidden = tab !== 'lessons';
   document.querySelector('#admin-logout').hidden = false;
   addButton.textContent = '+ Nová lekce';
   document.querySelector('#admin-title').textContent = titles[tab];
@@ -384,10 +494,14 @@ function renderAdmin(tab) {
   }
   if (tab === 'teachers') panel.innerHTML = teachersPanel();
   if (tab === 'people') panel.innerHTML = bookingsPanel();
-  if (tab === 'content') panel.innerHTML = `<div class="admin-grid"><div class="admin-card"><h2>Novinky</h2><p>Večerní lekce v novém světle</p><p>Cvičením pomáháme</p><button class="button">+ Přidat novinku</button></div><div class="admin-card"><h2>Rychlé odkazy</h2><p>WhatsApp skupina</p><p>Podmínky rezervace</p><p>Ochrana osobních údajů</p></div></div>`;
+  if (tab === 'content') panel.innerHTML = newsPanel();
   if (tab === 'settings') panel.innerHTML = settingsPanel();
 
-  document.querySelectorAll('[data-edit-teacher]').forEach((button) => button.addEventListener('click', () => showToast(`Profil „${button.dataset.editTeacher}“ bude možné upravit po napojení databáze.`)));
+  document.querySelectorAll('[data-edit-teacher]').forEach((button) => button.addEventListener('click', () => openTeacherEditor(button.dataset.editTeacher)));
+  document.querySelector('[data-add-news]')?.addEventListener('click', () => openNewsEditor());
+  document.querySelectorAll('[data-edit-news]').forEach((button) => button.addEventListener('click', () => openNewsEditor(button.dataset.editNews)));
+  document.querySelectorAll('[data-toggle-news]').forEach((button) => button.addEventListener('click', () => toggleNews(button.dataset.toggleNews)));
+  document.querySelectorAll('[data-delete-news]').forEach((button) => button.addEventListener('click', () => deleteNews(button.dataset.deleteNews)));
   const charityToggle = document.querySelector('#petr-charity');
   if (charityToggle) charityToggle.addEventListener('change', () => {
     settings.petrCharity = charityToggle.checked;
@@ -398,6 +512,141 @@ function renderAdmin(tab) {
   document.querySelectorAll('[data-edit-lesson]').forEach((button) => button.addEventListener('click', () => openLessonEditor(button.dataset.editLesson)));
   document.querySelectorAll('[data-cancel-lesson]').forEach((button) => button.addEventListener('click', () => cancelLesson(button.dataset.cancelLesson)));
   document.querySelectorAll('[data-payment-lesson]').forEach((button) => button.addEventListener('click', () => openPaymentEmails(button.dataset.paymentLesson)));
+}
+
+async function adminRest(path, method = 'GET', body) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method,
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${adminSession.access_token}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (response.status === 401 || response.status === 403) {
+    clearAdminSession();
+    renderAdminLogin('Přihlášení vypršelo. Přihlas se prosím znovu.');
+  }
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    throw new Error(details.message || 'Změnu se nepodařilo uložit.');
+  }
+}
+
+function openTeacherEditor(id) {
+  const teacher = adminInstructors.find((item) => item.id === id);
+  if (!teacher) return;
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="teacher-form">
+    <p class="eyebrow">Profil lektora</p><h2>${escapeHtml(teacher.name)}</h2>
+    <div class="form-grid">
+      <div class="field full"><label for="teacher-name">Jméno</label><input id="teacher-name" name="name" value="${escapeHtml(teacher.name)}" maxlength="120" required></div>
+      <div class="field full"><label for="teacher-styles">Styly jógy</label><input id="teacher-styles" name="styles" value="${escapeHtml((teacher.styles || []).join(', '))}" placeholder="Power, Vinyasa, Hatha"></div>
+      <div class="field full"><label for="teacher-bio">Medailonek</label><textarea id="teacher-bio" name="bio" rows="7" required>${escapeHtml(teacher.bio)}</textarea></div>
+      <div class="field full"><label for="teacher-photo">Adresa fotografie</label><input id="teacher-photo" name="photoUrl" value="${escapeHtml(teacher.photo_url || '')}"></div>
+      <div class="field"><label for="teacher-payment-mode">Typ lekce</label><select id="teacher-payment-mode" name="paymentMode"><option value="paid" ${teacher.payment_mode === 'paid' ? 'selected' : ''}>Placená</option><option value="donation" ${teacher.payment_mode === 'donation' ? 'selected' : ''}>Dobrovolný příspěvek</option></select></div>
+      <div class="field"><label for="teacher-price">Cena v Kč</label><input id="teacher-price" name="priceCzk" type="number" min="0" value="${teacher.price_czk ?? ''}"></div>
+      <div class="field full"><label for="teacher-payment-note">Informace k platbě</label><input id="teacher-payment-note" name="paymentNote" value="${escapeHtml(teacher.payment_note || '')}"></div>
+    </div>
+    <button class="button" type="submit">Uložit profil</button>
+  </form>`;
+  document.querySelector('#teacher-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const data = new FormData(event.target);
+    const paymentMode = data.get('paymentMode');
+    const price = data.get('priceCzk');
+    button.disabled = true;
+    button.textContent = 'Ukládám…';
+    try {
+      await adminRest(`instructors?id=eq.${encodeURIComponent(id)}`, 'PATCH', {
+        name: data.get('name').trim(),
+        styles: String(data.get('styles')).split(',').map((item) => item.trim()).filter(Boolean),
+        bio: data.get('bio').trim(),
+        photo_url: data.get('photoUrl').trim() || null,
+        payment_mode: paymentMode,
+        price_czk: paymentMode === 'paid' ? Number(price) : null,
+        payment_note: data.get('paymentNote').trim(),
+      });
+      dialog.close();
+      await Promise.all([loadAdminInstructors(), loadPublicContent()]);
+      renderAdmin('teachers');
+      showToast('Profil lektora byl uložen.');
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = 'Uložit profil';
+      showToast(error.message);
+    }
+  });
+  dialog.showModal();
+}
+
+function openNewsEditor(id = null) {
+  const item = id ? adminNews.find((news) => news.id === id) : null;
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="news-form">
+    <p class="eyebrow">${item ? 'Úprava novinky' : 'Nová novinka'}</p><h2>${item ? escapeHtml(item.title) : 'Přidat novinku'}</h2>
+    <div class="form-grid">
+      <div class="field full"><label for="news-title">Název</label><input id="news-title" name="title" maxlength="160" value="${escapeHtml(item?.title || '')}" required></div>
+      <div class="field full"><label for="news-summary">Krátké shrnutí</label><textarea id="news-summary" name="summary" rows="3" required>${escapeHtml(item?.summary || '')}</textarea></div>
+      <div class="field full"><label for="news-body">Delší text</label><textarea id="news-body" name="body" rows="6">${escapeHtml(item?.body || '')}</textarea></div>
+      <div class="field full"><label for="news-image">Adresa obrázku (nepovinné)</label><input id="news-image" name="imageUrl" value="${escapeHtml(item?.image_url || '')}" placeholder="assets/studio-lamps.jpeg"></div>
+      <label class="checkbox field full"><input type="checkbox" name="published" ${item?.published_at || !item ? 'checked' : ''}><span>Zobrazovat novinku na veřejném webu</span></label>
+    </div>
+    <button class="button" type="submit">${item ? 'Uložit změny' : 'Přidat novinku'}</button>
+  </form>`;
+  document.querySelector('#news-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const data = new FormData(event.target);
+    const payload = {
+      title: data.get('title').trim(),
+      summary: data.get('summary').trim(),
+      body: data.get('body').trim(),
+      image_url: data.get('imageUrl').trim() || null,
+      published_at: data.get('published') ? (item?.published_at || new Date().toISOString()) : null,
+    };
+    button.disabled = true;
+    button.textContent = 'Ukládám…';
+    try {
+      await adminRest(item ? `news_items?id=eq.${encodeURIComponent(item.id)}` : 'news_items', item ? 'PATCH' : 'POST', payload);
+      dialog.close();
+      await Promise.all([loadAdminNews(), loadPublicContent()]);
+      renderAdmin('content');
+      showToast(item ? 'Novinka byla upravena.' : 'Novinka byla přidána.');
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = item ? 'Uložit změny' : 'Přidat novinku';
+      showToast(error.message);
+    }
+  });
+  dialog.showModal();
+}
+
+async function toggleNews(id) {
+  const item = adminNews.find((news) => news.id === id);
+  if (!item) return;
+  try {
+    await adminRest(`news_items?id=eq.${encodeURIComponent(id)}`, 'PATCH', { published_at: item.published_at ? null : new Date().toISOString() });
+    await Promise.all([loadAdminNews(), loadPublicContent()]);
+    renderAdmin('content');
+    showToast(item.published_at ? 'Novinka je skrytá.' : 'Novinka je zveřejněná.');
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function deleteNews(id) {
+  const item = adminNews.find((news) => news.id === id);
+  if (!item || !confirm(`Opravdu trvale smazat novinku „${item.title}“?`)) return;
+  try {
+    await adminRest(`news_items?id=eq.${encodeURIComponent(id)}`, 'DELETE');
+    await Promise.all([loadAdminNews(), loadPublicContent()]);
+    renderAdmin('content');
+    showToast('Novinka byla smazána.');
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 async function openPaymentEmails(lessonId) {
@@ -496,6 +745,11 @@ function openNewLesson() {
     <p class="form-hint">Při vyšším počtu se další lekce vytvoří vždy ve stejný den a čas po jednom týdnu.</p>
     <button class="button" type="submit">Vytvořit lekci</button>
   </form>`;
+  document.querySelector('#new-lesson-start').addEventListener('change', (event) => {
+    const start = new Date(event.target.value);
+    if (Number.isNaN(start.getTime())) return;
+    document.querySelector('#new-lesson-end').value = dateTimeLocalValue(new Date(start.getTime() + 60 * 60 * 1000));
+  });
   document.querySelector('#new-lesson-form').addEventListener('submit', createLessons);
   dialog.showModal();
 }
@@ -614,11 +868,20 @@ async function manageLesson(payload) {
   return result;
 }
 
-document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListener('click', () => {
+document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListener('click', async () => {
   if (!adminSession) return;
   document.querySelectorAll('.admin-nav').forEach((item) => item.classList.remove('active'));
   button.classList.add('active');
-  renderAdmin(button.dataset.adminTab);
+  const tab = button.dataset.adminTab;
+  try {
+    if (tab === 'overview' || tab === 'lessons') await loadAdminLessons();
+    if (tab === 'teachers') await loadAdminInstructors();
+    if (tab === 'people') await loadAdminReservations();
+    if (tab === 'content') await loadAdminNews();
+    renderAdmin(tab);
+  } catch (error) {
+    showToast(error.message);
+  }
 }));
 
 document.querySelector('#add-lesson').addEventListener('click', openNewLesson);
@@ -626,8 +889,21 @@ document.querySelector('#admin-logout').addEventListener('click', () => {
   clearAdminSession();
   renderAdminLogin('Byl/a jsi odhlášen/a.');
 });
+const menuToggle = document.querySelector('.menu-toggle');
+const mainMenu = document.querySelector('#main-menu');
+menuToggle.addEventListener('click', () => {
+  const open = mainMenu.classList.toggle('is-open');
+  menuToggle.setAttribute('aria-expanded', String(open));
+  menuToggle.setAttribute('aria-label', open ? 'Zavřít hlavní menu' : 'Otevřít hlavní menu');
+});
+mainMenu.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
+  mainMenu.classList.remove('is-open');
+  menuToggle.setAttribute('aria-expanded', 'false');
+  menuToggle.setAttribute('aria-label', 'Otevřít hlavní menu');
+}));
 renderLessons();
 renderNextClass();
 loadLessons();
+loadPublicContent();
 const cancellationToken = new URLSearchParams(location.search).get('cancel');
 if (cancellationToken) openCancellation(cancellationToken);

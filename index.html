@@ -16,7 +16,7 @@
     <a class="brand" href="#top" aria-label="Jóga na HALLU – domů">
       <img class="brand-logo" src="assets/joga-na-hallu-logo.png" alt="Jóga na HALLU" />
     </a>
-    <nav aria-label="Hlavní navigace">
+    <nav id="main-menu" aria-label="Hlavní navigace">
       <a href="#lekce">Lekce</a>
       <a href="#lektori">Lektoři</a>
       <a href="#studio">Studio</a>
@@ -24,8 +24,8 @@
       <a href="#informace">Informace</a>
     </nav>
     <div class="header-actions">
-      <button class="text-button" id="open-admin">Správa</button>
       <a class="button button-small" href="#lekce">Vybrat lekci</a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-menu" aria-label="Otevřít hlavní menu"><span></span><span></span><span></span></button>
     </div>
   </header>
 
@@ -82,7 +82,7 @@
         <div><p class="eyebrow">Kdo tě lekcí provede</p><h2>Naši lektoři</h2></div>
         <p>Dva rozdílné přístupy, jeden společný cíl: vytvořit bezpečný prostor pro pohyb, soustředění a radost z praxe.</p>
       </div>
-      <div class="teachers-grid">
+      <div class="teachers-grid" id="teachers-grid">
         <article class="teacher-card">
           <img src="assets/daniela-stastna.jpg" alt="Lektorka jógy Daniela Šťastná" />
           <div class="teacher-card-copy">
@@ -113,7 +113,7 @@
         </div>
         <a class="inline-link" href="#">Všechny novinky →</a>
       </div>
-      <div class="news-grid">
+      <div class="news-grid" id="news-grid">
         <article class="news-card featured">
           <img src="assets/studio-lamps.jpeg" alt="Rozsvícené lampy v jógovém studiu" />
           <div><span>Ze studia</span><h3>Večerní lekce v novém světle</h3><p>Přidáváme podvečerní termíny. Přijď uzavřít pracovní den v klidném tempu.</p></div>
@@ -177,7 +177,7 @@
   <footer>
     <div class="brand"><img class="brand-logo" src="assets/joga-na-hallu-logo.png" alt="Jóga na HALLU" /></div>
     <p>Jóga na HALLU · 3. patro · Pro zaměstnance Alzy a jejich hosty</p>
-    <div><a href="podminky.html">Podmínky</a><a href="ochrana-osobnich-udaju.html">Ochrana osobních údajů</a></div>
+    <div><a href="podminky.html">Podmínky</a><a href="ochrana-osobnich-udaju.html">Ochrana osobních údajů</a><button class="footer-admin-link" type="button" data-open-admin>Správa</button></div>
   </footer>
 
   <dialog id="booking-dialog">
