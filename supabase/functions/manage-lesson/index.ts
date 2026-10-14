@@ -28,6 +28,7 @@ type PaymentEmailBatch = {
   payment_mode: 'paid' | 'donation';
   price_czk: number | null;
   payment_note: string;
+  payment_qr_url: string | null;
   participants: PaymentParticipant[];
 };
 
@@ -79,6 +80,19 @@ async function requireAdmin(req: Request): Promise<void> {
   if (!response.ok || user?.app_metadata?.role !== 'admin') throw new Error('FORBIDDEN');
 }
 
+async function getInstructorPayment(instructorId: string): Promise<{ payment_mode: 'paid' | 'donation'; price_czk: number | null; payment_note: string }> {
+  const { url, secretKey } = supabaseConfig();
+  const query = new URLSearchParams({ select: 'payment_mode,price_czk,payment_note', id: `eq.${instructorId}`, limit: '1' });
+  const response = await fetch(`${url}/rest/v1/instructors?${query}`, { headers: { apikey: secretKey } });
+  const rows = await response.json();
+  if (!response.ok || !rows[0]) throw new Error('INVALID_INSTRUCTOR');
+  return rows[0];
+}
+
+function publicAssetUrl(siteUrl: string, path: string): string {
+  return /^https?:\/\//i.test(path) ? path : `${siteUrl}/${path.replace(/^\/+/, '')}`;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: headers(req) });
   if (req.method !== 'POST') return json(req, { error: 'METHOD_NOT_ALLOWED' }, 405);
@@ -90,6 +104,21 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const action = String(body.action ?? '');
     requestedAction = action;
+    if (action === 'update-settings') {
+      const cancellationHours = Number(body.cancellationHours);
+      const minimumAttendance = Number(body.minimumAttendance);
+      const defaultPaidPrice = Number(body.defaultPaidPrice);
+      if (!Number.isInteger(cancellationHours) || cancellationHours < 0 || cancellationHours > 168) throw new Error('INVALID_CANCELLATION_HOURS');
+      if (!Number.isInteger(minimumAttendance) || minimumAttendance < 1 || minimumAttendance > 100) throw new Error('INVALID_MINIMUM_ATTENDANCE');
+      if (!Number.isInteger(defaultPaidPrice) || defaultPaidPrice < 0 || defaultPaidPrice > 10000) throw new Error('INVALID_DEFAULT_PRICE');
+      const settings = await callRpc<Record<string, number>>('admin_update_booking_settings', {
+        p_cancellation_hours: cancellationHours,
+        p_minimum_attendance: minimumAttendance,
+        p_default_paid_price: defaultPaidPrice,
+      });
+      return json(req, { ok: true, action, settings });
+    }
+
     if (action === 'payment-preview') {
       const lessonId = String(body.lessonId ?? '');
       if (!/^[0-9a-f-]{36}$/i.test(lessonId)) throw new Error('INVALID_LESSON');
@@ -123,12 +152,13 @@ Deno.serve(async (req: Request) => {
       const teacherFirstName = batch.teacher.trim().split(/\s+/)[0] || 'Tým';
       const publicSiteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
       const donation = batch.payment_mode === 'donation';
-      const qrUrl = `${publicSiteUrl}/assets/${donation ? 'qr-dobry-andel.jpg' : 'qr-daniela-150.jpg'}`;
+      if (!batch.payment_qr_url) throw new Error('PAYMENT_QR_MISSING');
+      const qrUrl = publicAssetUrl(publicSiteUrl, batch.payment_qr_url);
       const results = await Promise.all(batch.participants.map(async (participant) => {
         const recipientEmail = recipientById.get(participant.reservation_id) || participant.email;
         const paymentCopy = donation
-          ? 'Pokud chceš, můžeš dobrovolně přispět organizaci Dobrý anděl pomocí QR kódu níže.'
-          : `Prosíme o úhradu ${batch.price_czk ?? 150} Kč pomocí QR kódu níže.`;
+          ? batch.payment_note
+          : `Prosíme o úhradu ${batch.price_czk ?? 0} Kč pomocí QR kódu níže.`;
         const result = await sendBrevoEmail({
           toEmail: recipientEmail,
           toName: participant.name,
@@ -137,7 +167,7 @@ Deno.serve(async (req: Request) => {
             <p>Ahoj ${escapeHtml(participant.name)},</p>
             <p>děkujeme za účast na lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}).</p>
             <p>${escapeHtml(paymentCopy)}</p>
-            <p style="text-align:center;margin:28px 0"><a href="${qrUrl}"><img src="${qrUrl}" width="280" alt="${donation ? 'QR kód pro dobrovolný příspěvek organizaci Dobrý anděl' : 'QR kód pro platbu 150 Kč Daniele'}" style="max-width:100%;height:auto;border:0"></a></p>
+            <p style="text-align:center;margin:28px 0"><a href="${qrUrl}"><img src="${qrUrl}" width="280" alt="${donation ? 'QR kód pro dobrovolný příspěvek' : `QR kód pro platbu ${batch.price_czk ?? 0} Kč – ${escapeHtml(batch.teacher)}`}" style="max-width:100%;height:auto;border:0"></a></p>
             <p style="font-size:13px;color:#66706b">Pokud se obrázek v e-mailu nezobrazí, <a href="${qrUrl}">otevři QR kód v prohlížeči</a>.</p>
             <p>Děkujeme.<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU</p>
           </div>`,
@@ -167,17 +197,23 @@ Deno.serve(async (req: Request) => {
       const capacity = Number(body.capacity);
       const repeatCount = Number(body.repeatCount);
       const paymentMode = String(body.paymentMode ?? '');
-      const priceCzk = paymentMode === 'paid' ? 150 : null;
-      const paymentNote = paymentMode === 'paid'
-        ? 'QR kód k platbě bude odeslán po skončení lekce.'
-        : 'Dobrovolný příspěvek směřuje organizaci Dobrý anděl.';
+      const priceCzk = paymentMode === 'paid' ? Number(body.priceCzk) : null;
+      const minimumAttendance = Number(body.minimumAttendance);
       if (!/^[0-9a-f-]{36}$/i.test(instructorId)) throw new Error('INVALID_INSTRUCTOR');
       if (title.length < 2 || title.length > 120) throw new Error('INVALID_TITLE');
       if (!['cs', 'en'].includes(language)) throw new Error('INVALID_LANGUAGE');
       if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100) throw new Error('INVALID_CAPACITY');
       if (!Number.isInteger(repeatCount) || repeatCount < 1 || repeatCount > 52) throw new Error('INVALID_REPEAT_COUNT');
       if (!['paid', 'donation'].includes(paymentMode)) throw new Error('INVALID_PAYMENT_MODE');
+      if (paymentMode === 'paid' && (!Number.isInteger(priceCzk) || priceCzk < 0 || priceCzk > 10000)) throw new Error('INVALID_PRICE');
+      if (!Number.isInteger(minimumAttendance) || minimumAttendance < 1 || minimumAttendance > capacity) throw new Error('INVALID_MINIMUM_ATTENDANCE');
       if (!Number.isFinite(Date.parse(startsAt)) || !Number.isFinite(Date.parse(endsAt)) || Date.parse(endsAt) <= Date.parse(startsAt)) throw new Error('INVALID_TIME');
+      const instructorPayment = await getInstructorPayment(instructorId);
+      const paymentNote = instructorPayment.payment_mode === paymentMode && instructorPayment.payment_note
+        ? instructorPayment.payment_note
+        : paymentMode === 'paid'
+          ? `Platba ${priceCzk} Kč. QR kód bude odeslán po skončení lekce.`
+          : 'Dobrovolný příspěvek. QR kód bude odeslán po skončení lekce.';
 
       const created = await callRpc<{ created: number; lesson_ids: string[] }>('admin_create_lessons', {
         p_title: title,
@@ -190,7 +226,7 @@ Deno.serve(async (req: Request) => {
         p_payment_mode: paymentMode,
         p_price_czk: priceCzk,
         p_payment_note: paymentNote,
-        p_minimum_attendance: 5,
+        p_minimum_attendance: minimumAttendance,
       });
       return json(req, { ok: true, action, created: created.created, lessonIds: created.lesson_ids });
     }
@@ -236,7 +272,7 @@ Deno.serve(async (req: Request) => {
     return json(req, { ok: true, action: change.action, notified, failed });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') ? 400 : 500;
+    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') ? 400 : 500;
     console.error('manage-lesson failed', code);
     const message = status === 403
       ? 'Tento účet nemá oprávnění správce.'
@@ -245,7 +281,9 @@ Deno.serve(async (req: Request) => {
           ? 'Platební e-maily lze odeslat až po skončení lekce.'
           : 'Ve zvoleném termínu už má tento lektor naplánovanou lekci.'
         : requestedAction.startsWith('payment-')
-          ? 'Platební e-maily se nepodařilo připravit nebo odeslat.'
+          ? code.includes('PAYMENT_QR_MISSING') ? 'V profilu lektora chybí QR kód pro tento typ platby.' : 'Platební e-maily se nepodařilo připravit nebo odeslat.'
+        : requestedAction === 'update-settings'
+          ? 'Nastavení se nepodařilo uložit.'
         : requestedAction === 'create'
           ? 'Nové lekce se nepodařilo vytvořit.'
           : requestedAction === 'confirm-low-attendance'

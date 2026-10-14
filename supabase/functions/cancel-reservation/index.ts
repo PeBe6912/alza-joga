@@ -20,7 +20,7 @@ type Cancellation = {
 const errors: Record<string, [number, string]> = {
   RESERVATION_NOT_FOUND: [404, 'Rezervaci se nepodařilo najít.'],
   CANCELLATION_NOT_ALLOWED: [409, 'Tuto rezervaci už není možné zrušit.'],
-  CANCELLATION_DEADLINE_PASSED: [409, 'Bezplatné zrušení bylo možné nejpozději 24 hodin před lekcí.'],
+  CANCELLATION_DEADLINE_PASSED: [409, 'Lhůta pro bezplatné zrušení této rezervace už uplynula.'],
 };
 
 Deno.serve(async (req: Request) => {

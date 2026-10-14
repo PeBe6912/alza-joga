@@ -36,7 +36,7 @@
       <div class="hero-copy">
         <p class="eyebrow light">Jóga na HALLU · 3. patro</p>
         <h1>Na hodinu zpomal.<br><i>A pak zase můžeš naplno.</i></h1>
-        <p>Lekce jógy pro zaměstnance Alzy i jejich hosty. Dva lektoři, příjemné studio a kapacita 20 lidí.</p>
+        <p>Lekce jógy pro zaměstnance Alzy i jejich hosty. Dva lektoři, příjemné studio a kapacita <span data-setting="studio_capacity">20</span> lidí.</p>
         <div class="hero-actions">
           <a class="button button-light" href="#lekce">Zobrazit lekce</a>
           <a class="button button-ghost" href="#informace">Jak to funguje</a>
@@ -51,7 +51,7 @@
           <p class="eyebrow">Nejbližší termíny</p>
           <h2>Vyber si svou chvíli</h2>
         </div>
-        <p>Rezervace zabere pár vteřin. Lekce se standardně koná při alespoň 5 přihlášených; lektor ji může potvrdit i v menším počtu. Zrušit rezervaci můžeš zdarma nejpozději 24 hodin před začátkem.</p>
+        <p>Rezervace zabere pár vteřin. Lekce se standardně koná při alespoň <span data-setting="minimum_attendance">5</span> přihlášených; lektor ji může potvrdit i v menším počtu. Zrušit rezervaci můžeš zdarma nejpozději <span data-setting="cancellation_hours">24</span> hodin před začátkem.</p>
       </div>
       <div class="filter-row" role="group" aria-label="Filtr lekcí">
         <button class="filter active" data-filter="all">Všechny</button>
@@ -68,7 +68,7 @@
         <h2>Klidné místo uprostřed HALLU</h2>
         <p>Najdeš nás v jógové místnosti ve 3. patře. Čeká tě krásný jógový prostor, příjemné světlo a dost prostoru pro vlastní podložku.</p>
         <ul class="feature-list">
-          <li><span>01</span> Kapacita 20 lidí</li>
+          <li><span>01</span> Kapacita <span data-setting="studio_capacity">20</span> lidí</li>
           <li><span>02</span> Vlastní podložka na cvičení</li>
           <li><span>03</span> V docházce zvol „Relax pauza“</li>
         </ul>
@@ -99,7 +99,7 @@
             <h3>Petr Bena</h3>
             <p>Jeho jógová cesta je poměrně krátká, ale velmi intenzivní. Od prosince 2023 se jóga proměnila ze způsobu, jak se zotavit z běžeckého zranění, v každodenní praxi trvající 1 000 dní v řadě. Z fyzického cvičení se postupně stala cesta k větší přítomnosti, stabilitě a poznávání toho, jak lze filozofii jógy přenášet i do života mimo podložku.</p>
             <blockquote>„V roce 2026 jsem v Ubudu na Bali dokončil 200hodinový kurz pro učitele power a vinyasa jógy. Chci vytvářet lekce, na kterých se lidé cítí podporováni a zároveň přiměřeně vyzváni. Nejbližší je mi strong slow flow.“</blockquote>
-            <span class="charity-note">Příspěvek za Petrovy lekce je dobrovolný a směřuje organizaci Dobrý anděl.</span>
+            <span class="charity-note">Cena nebo dobrovolný příspěvek se řídí konkrétním termínem.</span>
           </div>
         </article>
       </div>
@@ -149,9 +149,9 @@
       <div class="accordion">
         <details open><summary>Kde lekce probíhají?</summary><p>V jógové místnosti ve 3. patře budovy HALL. Přesnou navigaci dostaneš také v potvrzení rezervace.</p></details>
         <details><summary>Co si mám přinést?</summary><p>Vlastní podložku, pohodlné oblečení a láhev s vodou. Na místě buď ideálně pět minut před začátkem.</p></details>
-        <details><summary>Jak funguje zrušení?</summary><p>Rezervaci můžeš bezplatně zrušit do 24 hodin před lekcí. Později je lekce účtována, můžeš ale poslat náhradníka.</p></details>
-        <details><summary>Kdy se lekce koná?</summary><p>Lekce se standardně koná při alespoň 5 přihlášených. Lektor ji může nechat proběhnout i v menším počtu. Pokud ji zruší, všichni přihlášení dostanou e-mail.</p></details>
-        <details><summary>Jak probíhá platba?</summary><p>Po placené lekci dostaneš e-mailem QR kód pro platbu 150 Kč. U benefiční lekce přijde QR kód pro dobrovolný příspěvek organizaci Dobrý anděl.</p></details>
+        <details><summary>Jak funguje zrušení?</summary><p>Rezervaci můžeš bezplatně zrušit do <span data-setting="cancellation_hours">24</span> hodin před lekcí. Později je lekce účtována, můžeš ale poslat náhradníka.</p></details>
+        <details><summary>Kdy se lekce koná?</summary><p>Lekce se standardně koná při alespoň <span data-setting="minimum_attendance">5</span> přihlášených. Lektor ji může nechat proběhnout i v menším počtu. Pokud ji zruší, všichni přihlášení dostanou e-mail.</p></details>
+        <details><summary>Jak probíhá platba?</summary><p>Cena i způsob platby jsou uvedené u konkrétní lekce. Po placené nebo benefiční lekci přijde příslušný QR kód e-mailem.</p></details>
       </div>
     </section>
   </main>
@@ -159,12 +159,14 @@
   <main id="admin-view" class="admin-shell" hidden>
     <aside class="admin-sidebar">
       <div class="brand admin-brand"><img class="brand-logo" src="assets/joga-na-hallu-logo.png" alt="Jóga na HALLU" /></div>
-      <nav>
-        <button class="admin-nav active" data-admin-tab="overview">Přehled</button>
-        <button class="admin-nav" data-admin-tab="lessons">Lekce</button>
-        <button class="admin-nav" data-admin-tab="teachers">Lektoři</button>
-        <button class="admin-nav" data-admin-tab="people">Rezervace</button>
-        <button class="admin-nav" data-admin-tab="content">Obsah webu</button>
+      <button class="admin-menu-toggle" id="admin-menu-toggle" type="button" aria-expanded="false" aria-controls="admin-menu">☰ Menu správy</button>
+      <nav id="admin-menu">
+        <button class="admin-nav active" data-admin-tab="overview">Nejbližší lekce</button>
+        <button class="admin-nav" data-admin-tab="lessons">Naplánované lekce</button>
+        <button class="admin-nav" data-admin-tab="completed">Proběhlé lekce a platby</button>
+        <button class="admin-nav" data-admin-tab="people">Účastníci</button>
+        <button class="admin-nav" data-admin-tab="content">Novinky</button>
+        <button class="admin-nav" data-admin-tab="teachers">Profily lektorů</button>
         <button class="admin-nav" data-admin-tab="settings">Nastavení</button>
       </nav>
       <button class="admin-back" id="close-admin">← Zpět na web</button>
@@ -186,6 +188,7 @@
     <div id="booking-content"></div>
   </dialog>
   <div class="toast" id="toast" role="status"></div>
+  <script src="site-settings.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

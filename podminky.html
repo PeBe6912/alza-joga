@@ -32,10 +32,10 @@
       <p>Cena nebo informace o dobrovolném příspěvku je uvedena u konkrétní lekce. Typ platby se určuje pro každý termín samostatně bez ohledu na osobu lektora. U benefiční lekce je příspěvek dobrovolný a směřuje na uvedený dobročinný účel. U placené lekce náleží platba přímo jejímu pořadateli.</p>
 
       <h2>4. Zrušení rezervace</h2>
-      <p>Rezervaci lze zrušit nejpozději 24 hodin před začátkem lekce prostřednictvím odkazu v potvrzení rezervace. Pokud se účastník nemůže dostavit později, může po domluvě poslat náhradníka. Podmínky případné úhrady při pozdním zrušení placené lekce určuje její pořadatel.</p>
+      <p>Rezervaci lze zrušit nejpozději <span data-setting="cancellation_hours">24</span> hodin před začátkem lekce prostřednictvím odkazu v potvrzení rezervace. Pokud se účastník nemůže dostavit později, může po domluvě poslat náhradníka. Podmínky případné úhrady při pozdním zrušení placené lekce určuje její pořadatel.</p>
 
       <h2>5. Změna nebo zrušení lekce</h2>
-      <p>Lekce se standardně koná při nejméně 5 přihlášených účastnících. Lektor může podle svého uvážení potvrdit její konání i v menším počtu. Pokud minimální počet není naplněn, může pořadatel lekci zrušit. Pořadatel může lekci změnit či zrušit také z vážných provozních nebo zdravotních důvodů. Registrované účastníky o změně nebo zrušení informuje e-mailem.</p>
+      <p>Lekce se standardně koná při nejméně <span data-setting="minimum_attendance">5</span> přihlášených účastnících. Lektor může podle svého uvážení potvrdit její konání i v menším počtu. Pokud minimální počet není naplněn, může pořadatel lekci zrušit. Pořadatel může lekci změnit či zrušit také z vážných provozních nebo zdravotních důvodů. Registrované účastníky o změně nebo zrušení informuje e-mailem.</p>
 
       <h2>6. Zdraví a bezpečnost</h2>
       <p>Účastník cvičí s ohledem na svůj aktuální zdravotní stav, respektuje pokyny lektora a přizpůsobí intenzitu svým možnostem. Při pochybnostech o vhodnosti cvičení by se měl předem poradit s lékařem. Toto ustanovení neomezuje odpovědnost, kterou podle právních předpisů nelze vyloučit.</p>
@@ -45,5 +45,7 @@
       <p class="legal-note">Tyto podmínky jsou účinné od 14. 10. 2026.</p>
     </article>
   </main>
+  <script src="site-settings.js"></script>
+  <script>window.JOGA_CONFIG.loadPublicSettings().then(window.JOGA_CONFIG.applyPublicSettings);</script>
 </body>
 </html>
