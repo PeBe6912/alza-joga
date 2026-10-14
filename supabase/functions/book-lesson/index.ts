@@ -55,7 +55,7 @@ Deno.serve(async (req: Request) => {
       p_cancellation_token_hash: tokenHash,
     });
 
-    const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joganahallu.cz').replace(/\/$/, '');
+    const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://alza-joga-i7pk.vercel.app').replace(/\/$/, '');
     const cancelUrl = `${siteUrl}/?cancel=${encodeURIComponent(token)}`;
     const emailResult = await sendBrevoEmail({
       toEmail: reservation.attendee_email,
