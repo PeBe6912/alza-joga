@@ -80,3 +80,16 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
   .teacher-card img{height:auto;max-height:520px;min-height:0}
 }
 
+/* Keep photographic compositions stable instead of stretching them on wide screens. */
+.hero,.studio-grid,.teachers-grid,.news-grid,.gallery{
+  width:min(100%,1600px);
+  margin-left:auto;
+  margin-right:auto;
+}
+.hero{min-height:0;aspect-ratio:16/9}
+.image-frame:hover img{transform:none}
+
+@media(max-width:900px){
+  .hero{min-height:640px;aspect-ratio:auto}
+}
+
