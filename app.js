@@ -260,9 +260,11 @@ async function isAdminSessionValid() {
 }
 
 async function loadAdminLessons() {
+  const historyStart = new Date();
+  historyStart.setDate(historyStart.getDate() - 90);
   const query = new URLSearchParams({
     select: 'id,title,starts_at,ends_at,capacity,booked_count,status,location,language,instructors(name,payment_mode,price_czk,payment_note)',
-    starts_at: `gte.${new Date().toISOString()}`,
+    starts_at: `gte.${historyStart.toISOString()}`,
     order: 'starts_at.asc',
   });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/lessons?${query}`, {
@@ -328,18 +330,25 @@ async function signInAdmin(event) {
   }
 }
 
-function lessonTable() {
-  const rows = adminLessons.map((lesson) => {
+function lessonTable(sourceLessons = adminLessons) {
+  const rows = sourceLessons.map((lesson) => {
     const cancelled = lesson.status === 'cancelled';
-    return `<tr><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce">${escapeHtml(lesson.title)}${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}</td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno">${lesson.booked}/${lesson.capacity}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ''}">${cancelled ? 'Zrušeno' : 'Otevřeno'}</span></td><td class="lesson-actions" data-label="Akce">${cancelled ? '' : `<button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button>`}</td></tr>`;
+    const ended = new Date(lesson.endsAt) <= new Date();
+    const status = cancelled ? 'Zrušeno' : ended ? 'Proběhla' : 'Otevřeno';
+    const actions = cancelled
+      ? ''
+      : ended
+        ? `<button class="button button-small" data-payment-lesson="${lesson.id}">Platby a příspěvky</button>`
+        : `<button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button>`;
+    return `<tr><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce">${escapeHtml(lesson.title)}${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}</td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno">${lesson.booked}/${lesson.capacity}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span></td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
   }).join('');
   return `<table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Obsazeno</th><th>Stav</th><th>Akce</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Nejsou naplánované žádné lekce.</td></tr>'}</tbody></table>`;
 }
 
 function overviewPanel() {
-  const openLessons = adminLessons.filter((lesson) => lesson.status === 'published');
+  const openLessons = adminLessons.filter((lesson) => lesson.status === 'published' && new Date(lesson.endsAt) > new Date());
   const nextLesson = openLessons[0];
-  return `<div class="stats"><div class="stat-card"><span>AKTIVNÍ REZERVACE</span><strong>${openLessons.reduce((sum, lesson) => sum + lesson.booked, 0)}</strong><small>v budoucích lekcích</small></div><div class="stat-card"><span>NEJBLIŽŠÍ LEKCE</span><strong>${nextLesson ? `${nextLesson.booked} / ${nextLesson.capacity}` : '—'}</strong><small>${nextLesson ? `${escapeHtml(nextLesson.date)} v ${escapeHtml(nextLesson.time.split('–')[0])}` : 'Bez termínu'}</small></div><div class="stat-card"><span>NAPLÁNOVANÉ LEKCE</span><strong>${openLessons.length}</strong><small>${adminLessons.filter((lesson) => lesson.status === 'cancelled').length} zrušených</small></div></div><div class="admin-grid"><div class="admin-card"><h2>Nejbližší lekce</h2>${lessonTable()}</div><div class="admin-card"><h2>Obsazenost</h2>${openLessons.slice(0, 3).map((lesson) => `<div class="progress-item"><div class="progress-label"><span>${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)}</span><b>${lesson.booked}/${lesson.capacity}</b></div><div class="progress-bar"><i style="width:${lesson.booked / lesson.capacity * 100}%"></i></div></div>`).join('') || '<p>Zatím nejsou naplánované žádné lekce.</p>'}</div></div>`;
+  return `<div class="stats"><div class="stat-card"><span>AKTIVNÍ REZERVACE</span><strong>${openLessons.reduce((sum, lesson) => sum + lesson.booked, 0)}</strong><small>v budoucích lekcích</small></div><div class="stat-card"><span>NEJBLIŽŠÍ LEKCE</span><strong>${nextLesson ? `${nextLesson.booked} / ${nextLesson.capacity}` : '—'}</strong><small>${nextLesson ? `${escapeHtml(nextLesson.date)} v ${escapeHtml(nextLesson.time.split('–')[0])}` : 'Bez termínu'}</small></div><div class="stat-card"><span>NAPLÁNOVANÉ LEKCE</span><strong>${openLessons.length}</strong><small>${adminLessons.filter((lesson) => lesson.status === 'cancelled').length} zrušených</small></div></div><div class="admin-grid"><div class="admin-card"><h2>Nejbližší lekce</h2>${lessonTable(openLessons.slice(0, 4))}</div><div class="admin-card"><h2>Obsazenost</h2>${openLessons.slice(0, 3).map((lesson) => `<div class="progress-item"><div class="progress-label"><span>${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)}</span><b>${lesson.booked}/${lesson.capacity}</b></div><div class="progress-bar"><i style="width:${lesson.booked / lesson.capacity * 100}%"></i></div></div>`).join('') || '<p>Zatím nejsou naplánované žádné lekce.</p>'}</div></div>`;
 }
 
 function teachersPanel() {
@@ -351,7 +360,7 @@ function bookingsPanel() {
 }
 
 function settingsPanel() {
-  return `<div class="admin-grid"><div class="admin-card"><h2>Platby podle lektora</h2><div class="admin-setting"><b>Daniela Šťastná</b><br>150 Kč · QR po skončení lekce</div><div class="admin-setting" style="margin-top:10px"><label><input id="petr-charity" type="checkbox" ${settings.petrCharity ? 'checked' : ''}> <b>Petr Bena – dobrovolný příspěvek na Dobrého anděla</b></label><br>QR kód se odešle automaticky po lekci.</div></div><div class="admin-card"><h2>Pravidla rezervací</h2><div class="admin-form-row"><div class="admin-setting">Bezplatné zrušení<br><b>24 hodin</b></div><div class="admin-setting">Kapacita studia<br><b>20 míst · bude potvrzeno</b></div></div></div></div>`;
+  return `<div class="admin-grid"><div class="admin-card"><h2>Platby podle lektora</h2><div class="admin-setting"><b>Daniela Šťastná</b><br>150 Kč · QR kód se odešle ručně po kontrole účastníků.</div><div class="admin-setting" style="margin-top:10px"><label><input id="petr-charity" type="checkbox" ${settings.petrCharity ? 'checked' : ''}> <b>Petr Bena – dobrovolný příspěvek na Dobrého anděla</b></label><br>QR kód se odešle ručně po skončení lekce.</div></div><div class="admin-card"><h2>Pravidla rezervací</h2><div class="admin-form-row"><div class="admin-setting">Bezplatné zrušení<br><b>24 hodin</b></div><div class="admin-setting">Kapacita studia<br><b>20 míst · bude potvrzeno</b></div></div></div></div>`;
 }
 
 function renderAdmin(tab) {
@@ -367,7 +376,12 @@ function renderAdmin(tab) {
   addButton.textContent = '+ Nová lekce';
   document.querySelector('#admin-title').textContent = titles[tab];
   if (tab === 'overview') panel.innerHTML = overviewPanel();
-  if (tab === 'lessons') panel.innerHTML = `<div class="admin-card"><h2>Všechny naplánované lekce</h2>${lessonTable()}</div>`;
+  if (tab === 'lessons') {
+    const now = new Date();
+    const futureLessons = adminLessons.filter((lesson) => new Date(lesson.endsAt) > now);
+    const pastLessons = adminLessons.filter((lesson) => new Date(lesson.endsAt) <= now).reverse();
+    panel.innerHTML = `<div class="admin-card"><h2>Naplánované lekce</h2>${lessonTable(futureLessons)}</div><div class="admin-card admin-card-spaced"><h2>Proběhlé lekce a platby</h2><p class="admin-help">Po skončení lekce zkontroluj adresáty a ručně odešli platební nebo příspěvkový QR kód.</p>${lessonTable(pastLessons)}</div>`;
+  }
   if (tab === 'teachers') panel.innerHTML = teachersPanel();
   if (tab === 'people') panel.innerHTML = bookingsPanel();
   if (tab === 'content') panel.innerHTML = `<div class="admin-grid"><div class="admin-card"><h2>Novinky</h2><p>Večerní lekce v novém světle</p><p>Cvičením pomáháme</p><button class="button">+ Přidat novinku</button></div><div class="admin-card"><h2>Rychlé odkazy</h2><p>WhatsApp skupina</p><p>Podmínky rezervace</p><p>Ochrana osobních údajů</p></div></div>`;
@@ -383,6 +397,73 @@ function renderAdmin(tab) {
 
   document.querySelectorAll('[data-edit-lesson]').forEach((button) => button.addEventListener('click', () => openLessonEditor(button.dataset.editLesson)));
   document.querySelectorAll('[data-cancel-lesson]').forEach((button) => button.addEventListener('click', () => cancelLesson(button.dataset.cancelLesson)));
+  document.querySelectorAll('[data-payment-lesson]').forEach((button) => button.addEventListener('click', () => openPaymentEmails(button.dataset.paymentLesson)));
+}
+
+async function openPaymentEmails(lessonId) {
+  document.querySelector('#booking-content').innerHTML = '<div class="booking-panel"><p>Načítám účastníky…</p></div>';
+  dialog.showModal();
+  try {
+    const preview = await manageLesson({ lessonId, action: 'payment-preview' });
+    const donation = preview.payment_mode === 'donation';
+    const qrPath = donation ? 'assets/qr-dobry-andel.jpg' : 'assets/qr-daniela-150.jpg';
+    const paymentText = donation ? 'Dobrovolný příspěvek organizaci Dobrý anděl' : `Platba ${preview.price_czk || 150} Kč Daniele`;
+    const participantRows = preview.participants.map((participant) => {
+      const sent = Boolean(participant.payment_email_sent_at);
+      const sentLabel = sent ? `<span class="payment-sent">Odesláno ${new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(participant.payment_email_sent_at))}</span>` : '';
+      return `<label class="payment-recipient${sent ? ' is-sent' : ''}">
+        <input type="checkbox" name="paymentRecipient" value="${participant.reservation_id}" ${sent ? 'disabled' : 'checked'}>
+        <span class="payment-person"><b>${escapeHtml(participant.name)}</b>${sentLabel}</span>
+        <input type="email" data-payment-email="${participant.reservation_id}" value="${escapeHtml(participant.payment_email_recipient || participant.email)}" ${sent ? 'disabled' : ''} required>
+      </label>`;
+    }).join('');
+    const unsentCount = preview.participants.filter((participant) => !participant.payment_email_sent_at).length;
+    document.querySelector('#booking-content').innerHTML = `<form class="booking-panel payment-panel" id="payment-email-form">
+      <p class="eyebrow">E-mail po lekci</p><h2>${escapeHtml(preview.title)}</h2>
+      <p><b>${escapeHtml(preview.teacher)}</b> · ${escapeHtml(formatAdminDate(preview.starts_at))}</p>
+      <div class="payment-preview"><img src="${qrPath}" alt="${escapeHtml(paymentText)}"><div><b>${escapeHtml(paymentText)}</b><p>${escapeHtml(preview.payment_note || '')}</p></div></div>
+      <div class="payment-list-heading"><b>Komu e-mail odeslat</b><span>${unsentCount} neodeslaných</span></div>
+      <div class="payment-recipient-list">${participantRows || '<p>Na této lekci nejsou žádní aktivní účastníci.</p>'}</div>
+      <p class="form-hint">Adresu můžeš před odesláním opravit. Odškrtnutému účastníkovi e-mail nepřijde.</p>
+      <button class="button" type="submit" ${unsentCount ? '' : 'disabled'}>Zkontrolovat a odeslat</button>
+    </form>`;
+    document.querySelectorAll('[name="paymentRecipient"]').forEach((checkbox) => checkbox.addEventListener('change', () => {
+      document.querySelector(`[data-payment-email="${checkbox.value}"]`).disabled = !checkbox.checked;
+    }));
+    document.querySelector('#payment-email-form').addEventListener('submit', (event) => sendPaymentEmails(event, lessonId));
+  } catch (error) {
+    dialog.close();
+    showToast(error.message);
+  }
+}
+
+function formatAdminDate(value) {
+  return new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Prague' }).format(new Date(value));
+}
+
+async function sendPaymentEmails(event, lessonId) {
+  event.preventDefault();
+  const recipients = Array.from(event.target.querySelectorAll('[name="paymentRecipient"]:checked')).map((checkbox) => ({
+    reservationId: checkbox.value,
+    email: event.target.querySelector(`[data-payment-email="${checkbox.value}"]`).value.trim(),
+  }));
+  if (!recipients.length) {
+    showToast('Vyber alespoň jednoho účastníka.');
+    return;
+  }
+  if (!confirm(`Odeslat platební e-mail ${recipients.length} vybraným účastníkům?`)) return;
+  const button = event.target.querySelector('[type="submit"]');
+  button.disabled = true;
+  button.textContent = 'Odesílám…';
+  try {
+    const result = await manageLesson({ lessonId, action: 'payment-send', recipients });
+    dialog.close();
+    showToast(result.failed ? `Odesláno: ${result.sent}. Neúspěšné: ${result.failed}.` : `Platební e-maily byly odeslány: ${result.sent}.`);
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = 'Zkontrolovat a odeslat';
+    showToast(error.message);
+  }
 }
 
 function dateTimeLocalValue(value) {
