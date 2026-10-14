@@ -57,6 +57,7 @@ Deno.serve(async (req: Request) => {
 
     const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
     const cancelUrl = `${siteUrl}/?cancel=${encodeURIComponent(token)}`;
+    const teacherFirstName = reservation.teacher.trim().split(/\s+/)[0] || 'Tým';
     const emailResult = await sendBrevoEmail({
       toEmail: reservation.attendee_email,
       toName: reservation.attendee_name,
@@ -67,7 +68,7 @@ Deno.serve(async (req: Request) => {
         ${escapeHtml(reservation.location)}<br>Lektor: ${escapeHtml(reservation.teacher)}</p>
         <p>${escapeHtml(reservation.payment_note)}</p>
         <p>Rezervaci můžeš zrušit nejpozději 24 hodin před začátkem: <a href="${escapeHtml(cancelUrl)}">zrušit rezervaci</a>.</p>
-        <p>Těšíme se na podložce.<br>Jóga na HALLU</p>`,
+        <p>Těšíme se na podložce.<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU</p>`,
     });
 
     try {

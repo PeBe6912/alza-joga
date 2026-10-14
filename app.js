@@ -17,6 +17,8 @@ const teachers = [
 
 const savedBookings = JSON.parse(localStorage.getItem('alzaYogaBookings') || '[]');
 const settings = JSON.parse(localStorage.getItem('alzaYogaSettings') || '{"petrCharity":true,"capacity":20}');
+let adminSession = JSON.parse(sessionStorage.getItem('jogaAdminSession') || 'null');
+let adminLessons = [];
 const classList = document.querySelector('#class-list');
 const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
@@ -133,6 +135,7 @@ function lessonFromDatabase(row) {
     day: day.charAt(0).toUpperCase() + day.slice(1),
     date: dateParts,
     iso: row.starts_at,
+    endsAt: row.ends_at,
     time,
     title: row.title,
     teacher: instructor.name,
@@ -140,6 +143,7 @@ function lessonFromDatabase(row) {
     price: donation ? 'Dobrovolný příspěvek' : `${instructor.price_czk} Kč`,
     capacity: row.capacity,
     booked: row.booked_count,
+    status: row.status || 'published',
   };
 }
 
@@ -205,13 +209,19 @@ function showToast(message) {
 const publicView = document.querySelector('#public-view');
 const adminView = document.querySelector('#admin-view');
 
-document.querySelector('#open-admin').addEventListener('click', () => {
+document.querySelector('#open-admin').addEventListener('click', async () => {
   publicView.hidden = true;
   document.querySelector('.site-header').hidden = true;
   document.querySelector('.announcement').hidden = true;
   document.querySelector('footer').hidden = true;
   adminView.hidden = false;
-  renderAdmin('overview');
+  if (adminSession && await isAdminSessionValid()) {
+    await loadAdminLessons();
+    renderAdmin('overview');
+  } else {
+    clearAdminSession();
+    renderAdminLogin();
+  }
   window.scrollTo(0, 0);
 });
 
@@ -224,12 +234,97 @@ document.querySelector('#close-admin').addEventListener('click', () => {
   window.scrollTo(0, 0);
 });
 
+function clearAdminSession() {
+  adminSession = null;
+  adminLessons = [];
+  sessionStorage.removeItem('jogaAdminSession');
+}
+
+async function isAdminSessionValid() {
+  if (!adminSession?.access_token) return false;
+  try {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
+    });
+    if (!response.ok) return false;
+    const user = await response.json();
+    return user.app_metadata?.role === 'admin';
+  } catch {
+    return false;
+  }
+}
+
+async function loadAdminLessons() {
+  const query = new URLSearchParams({
+    select: 'id,title,starts_at,ends_at,capacity,booked_count,status,location,instructors(name,payment_mode,price_czk,payment_note)',
+    starts_at: `gte.${new Date().toISOString()}`,
+    order: 'starts_at.asc',
+  });
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/lessons?${query}`, {
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${adminSession.access_token}`,
+    },
+  });
+  if (!response.ok) throw new Error('Lekce pro správu se nepodařilo načíst.');
+  adminLessons = (await response.json()).map(lessonFromDatabase);
+}
+
+function renderAdminLogin(message = '') {
+  document.querySelector('#admin-title').textContent = 'Přihlášení do správy';
+  const addButton = document.querySelector('#add-lesson');
+  addButton.hidden = true;
+  document.querySelector('#admin-panel').innerHTML = `<div class="admin-card"><h2>Správa lekcí</h2>
+    <p>Přihlásit se může pouze účet s oprávněním administrátora.</p>
+    ${message ? `<p><b>${escapeHtml(message)}</b></p>` : ''}
+    <form id="admin-login-form" class="booking-panel">
+      <div class="form-grid">
+        <div class="field full"><label for="admin-email">E-mail</label><input id="admin-email" name="email" type="email" required autocomplete="username"></div>
+        <div class="field full"><label for="admin-password">Heslo</label><input id="admin-password" name="password" type="password" required autocomplete="current-password"></div>
+      </div>
+      <button class="button" type="submit">Přihlásit se</button>
+    </form>
+  </div>`;
+  document.querySelector('#admin-login-form').addEventListener('submit', signInAdmin);
+}
+
+async function signInAdmin(event) {
+  event.preventDefault();
+  const button = event.target.querySelector('[type="submit"]');
+  const data = new FormData(event.target);
+  button.disabled = true;
+  button.textContent = 'Přihlašuji…';
+  try {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: data.get('email'), password: data.get('password') }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error('Přihlášení se nezdařilo. Zkontroluj e-mail a heslo.');
+    if (result.user?.app_metadata?.role !== 'admin') throw new Error('Tento účet nemá oprávnění správce.');
+    adminSession = { access_token: result.access_token };
+    sessionStorage.setItem('jogaAdminSession', JSON.stringify(adminSession));
+    await loadAdminLessons();
+    renderAdmin('overview');
+  } catch (error) {
+    clearAdminSession();
+    renderAdminLogin(error.message);
+  }
+}
+
 function lessonTable() {
-  return `<table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Obsazeno</th><th>Stav</th></tr></thead><tbody>${lessons.map((lesson) => `<tr><td><b>${lesson.date}</b><br>${lesson.time}</td><td>${lesson.title}</td><td>${lesson.teacher}</td><td>${lesson.booked}/${lesson.capacity}</td><td><span class="status-pill">Otevřeno</span></td></tr>`).join('')}</tbody></table>`;
+  const rows = adminLessons.map((lesson) => {
+    const cancelled = lesson.status === 'cancelled';
+    return `<tr><td><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td>${escapeHtml(lesson.title)}</td><td>${escapeHtml(lesson.teacher)}</td><td>${lesson.booked}/${lesson.capacity}</td><td><span class="status-pill${cancelled ? ' warn' : ''}">${cancelled ? 'Zrušeno' : 'Otevřeno'}</span></td><td>${cancelled ? '' : `<button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button> <button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button>`}</td></tr>`;
+  }).join('');
+  return `<table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Obsazeno</th><th>Stav</th><th>Akce</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Nejsou naplánované žádné lekce.</td></tr>'}</tbody></table>`;
 }
 
 function overviewPanel() {
-  return `<div class="stats"><div class="stat-card"><span>REZERVACE TENTO MĚSÍC</span><strong>${36 + savedBookings.length}</strong><small>↑ 8 oproti září</small></div><div class="stat-card"><span>NEJBLIŽŠÍ LEKCE</span><strong>7 / 20</strong><small>Út 20. 10. v 8:00</small></div><div class="stat-card"><span>LEKCE TENTO MĚSÍC</span><strong>12</strong><small>2 lektoři</small></div><div class="stat-card"><span>K POZDĚJŠÍ PLATBĚ</span><strong>7</strong><small>QR se odešle po lekci</small></div></div><div class="admin-grid"><div class="admin-card"><h2>Nejbližší lekce</h2>${lessonTable()}</div><div class="admin-card"><h2>Obsazenost</h2>${lessons.slice(0, 3).map((lesson) => `<div class="progress-item"><div class="progress-label"><span>${lesson.date} · ${lesson.time}</span><b>${lesson.booked}/${lesson.capacity}</b></div><div class="progress-bar"><i style="width:${lesson.booked / lesson.capacity * 100}%"></i></div></div>`).join('')}</div></div>`;
+  const openLessons = adminLessons.filter((lesson) => lesson.status === 'published');
+  const nextLesson = openLessons[0];
+  return `<div class="stats"><div class="stat-card"><span>AKTIVNÍ REZERVACE</span><strong>${openLessons.reduce((sum, lesson) => sum + lesson.booked, 0)}</strong><small>v budoucích lekcích</small></div><div class="stat-card"><span>NEJBLIŽŠÍ LEKCE</span><strong>${nextLesson ? `${nextLesson.booked} / ${nextLesson.capacity}` : '—'}</strong><small>${nextLesson ? `${escapeHtml(nextLesson.date)} v ${escapeHtml(nextLesson.time.split('–')[0])}` : 'Bez termínu'}</small></div><div class="stat-card"><span>NAPLÁNOVANÉ LEKCE</span><strong>${openLessons.length}</strong><small>${adminLessons.filter((lesson) => lesson.status === 'cancelled').length} zrušených</small></div></div><div class="admin-grid"><div class="admin-card"><h2>Nejbližší lekce</h2>${lessonTable()}</div><div class="admin-card"><h2>Obsazenost</h2>${openLessons.slice(0, 3).map((lesson) => `<div class="progress-item"><div class="progress-label"><span>${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)}</span><b>${lesson.booked}/${lesson.capacity}</b></div><div class="progress-bar"><i style="width:${lesson.booked / lesson.capacity * 100}%"></i></div></div>`).join('') || '<p>Zatím nejsou naplánované žádné lekce.</p>'}</div></div>`;
 }
 
 function teachersPanel() {
@@ -245,8 +340,15 @@ function settingsPanel() {
 }
 
 function renderAdmin(tab) {
+  if (!adminSession) {
+    renderAdminLogin();
+    return;
+  }
   const panel = document.querySelector('#admin-panel');
   const titles = { overview: 'Dobrý den, Petře', lessons: 'Lekce', teachers: 'Lektoři', people: 'Rezervace', content: 'Obsah webu', settings: 'Nastavení' };
+  const addButton = document.querySelector('#add-lesson');
+  addButton.hidden = false;
+  addButton.textContent = 'Odhlásit se';
   document.querySelector('#admin-title').textContent = titles[tab];
   if (tab === 'overview') panel.innerHTML = overviewPanel();
   if (tab === 'lessons') panel.innerHTML = `<div class="admin-card"><h2>Všechny naplánované lekce</h2>${lessonTable()}</div>`;
@@ -262,15 +364,108 @@ function renderAdmin(tab) {
     localStorage.setItem('alzaYogaSettings', JSON.stringify(settings));
     showToast('Nastavení Petrovy benefiční lekce bylo uloženo.');
   });
+
+  document.querySelectorAll('[data-edit-lesson]').forEach((button) => button.addEventListener('click', () => openLessonEditor(button.dataset.editLesson)));
+  document.querySelectorAll('[data-cancel-lesson]').forEach((button) => button.addEventListener('click', () => cancelLesson(button.dataset.cancelLesson)));
+}
+
+function dateTimeLocalValue(value) {
+  const date = new Date(value);
+  const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return shifted.toISOString().slice(0, 16);
+}
+
+function openLessonEditor(id) {
+  const lesson = adminLessons.find((item) => item.id === id);
+  if (!lesson) return;
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="lesson-time-form">
+    <p class="eyebrow">Úprava lekce</p><h2>${escapeHtml(lesson.title)}</h2>
+    <div class="form-grid">
+      <div class="field"><label for="lesson-start">Začátek</label><input id="lesson-start" name="startsAt" type="datetime-local" value="${dateTimeLocalValue(lesson.iso)}" required></div>
+      <div class="field"><label for="lesson-end">Konec</label><input id="lesson-end" name="endsAt" type="datetime-local" value="${dateTimeLocalValue(lesson.endsAt)}" required></div>
+    </div>
+    <p><button class="button button-small" type="button" data-shift="-15">− 15 minut</button> <button class="button button-small" type="button" data-shift="15">+ 15 minut</button></p>
+    <p>Po uložení dostanou všichni přihlášení e-mail s novým časem.</p>
+    <button class="button" type="submit">Uložit nový čas</button>
+  </form>`;
+  document.querySelectorAll('[data-shift]').forEach((button) => button.addEventListener('click', () => {
+    const minutes = Number(button.dataset.shift);
+    ['lesson-start', 'lesson-end'].forEach((fieldId) => {
+      const field = document.querySelector(`#${fieldId}`);
+      const value = new Date(field.value);
+      value.setMinutes(value.getMinutes() + minutes);
+      field.value = dateTimeLocalValue(value);
+    });
+  }));
+  document.querySelector('#lesson-time-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const data = new FormData(event.target);
+    button.disabled = true;
+    button.textContent = 'Ukládám…';
+    try {
+      const result = await manageLesson({
+        lessonId: id,
+        action: 'reschedule',
+        startsAt: new Date(data.get('startsAt')).toISOString(),
+        endsAt: new Date(data.get('endsAt')).toISOString(),
+      });
+      dialog.close();
+      await Promise.all([loadLessons(), loadAdminLessons()]);
+      renderAdmin('lessons');
+      showToast(result.failed ? `Čas je změněný. ${result.failed} e-mailů se nepodařilo odeslat.` : `Čas je změněný. Odesláno e-mailů: ${result.notified}.`);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = 'Uložit nový čas';
+      showToast(error.message);
+    }
+  });
+  dialog.showModal();
+}
+
+async function cancelLesson(id) {
+  const lesson = adminLessons.find((item) => item.id === id);
+  if (!lesson || !confirm(`Opravdu zrušit lekci „${lesson.title}“ ${lesson.date} v ${lesson.time}? Přihlášení dostanou e-mail.`)) return;
+  try {
+    const result = await manageLesson({ lessonId: id, action: 'cancel' });
+    await Promise.all([loadLessons(), loadAdminLessons()]);
+    renderAdmin('lessons');
+    showToast(result.failed ? `Lekce je zrušená. ${result.failed} e-mailů se nepodařilo odeslat.` : `Lekce je zrušená. Odesláno e-mailů: ${result.notified}.`);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function manageLesson(payload) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-lesson`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${adminSession.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+  if (response.status === 401 || response.status === 403) {
+    clearAdminSession();
+    renderAdminLogin(result.message || 'Přihlášení vypršelo. Přihlas se prosím znovu.');
+  }
+  if (!response.ok) throw new Error(result.message || 'Změnu se nepodařilo uložit.');
+  return result;
 }
 
 document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListener('click', () => {
+  if (!adminSession) return;
   document.querySelectorAll('.admin-nav').forEach((item) => item.classList.remove('active'));
   button.classList.add('active');
   renderAdmin(button.dataset.adminTab);
 }));
 
-document.querySelector('#add-lesson').addEventListener('click', () => showToast('Formulář nové lekce bude napojený na Supabase.'));
+document.querySelector('#add-lesson').addEventListener('click', () => {
+  clearAdminSession();
+  renderAdminLogin('Byl/a jsi odhlášen/a.');
+});
 renderLessons();
 renderNextClass();
 loadLessons();
