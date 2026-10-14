@@ -1,0 +1,5 @@
+.vercel/
+outputs/
+work/
+Thumbs.db
+.DS_Store

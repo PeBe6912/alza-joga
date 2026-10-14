@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Alza Jóga – lekce jógy v moderním studiu na HALLU." />
+  <title>Alza Jóga</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="announcement">Nové termíny na příští týden jsou otevřené <a href="#lekce">Rezervovat místo →</a></div>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Alza Jóga – domů">
+      <span class="brand-mark">AJ</span>
+      <span>Alza <em>Jóga</em></span>
+    </a>
+    <nav aria-label="Hlavní navigace">
+      <a href="#lekce">Lekce</a>
+      <a href="#lektori">Lektoři</a>
+      <a href="#studio">Studio</a>
+      <a href="#novinky">Novinky</a>
+      <a href="#informace">Informace</a>
+    </nav>
+    <div class="header-actions">
+      <button class="text-button" id="open-admin">Správa</button>
+      <a class="button button-small" href="#lekce">Vybrat lekci</a>
+    </div>
+  </header>
+
+  <main id="public-view">
+    <section class="hero" id="top">
+      <img src="assets/studio-evening.jpeg" alt="Jógové studio s rozsvícenými proutěnými lampami" />
+      <div class="hero-shade"></div>
+      <div class="hero-copy">
+        <p class="eyebrow light">Jóga na HALLU · 3. patro</p>
+        <h1>Na hodinu zpomal.<br><i>A pak zase můžeš naplno.</i></h1>
+        <p>Komorní lekce pro zaměstnance Alzy i jejich hosty. Dva lektoři, příjemné studio a kapacita přibližně 20 lidí.</p>
+        <div class="hero-actions">
+          <a class="button button-light" href="#lekce">Zobrazit lekce</a>
+          <a class="button button-ghost" href="#informace">Jak to funguje</a>
+        </div>
+      </div>
+      <div class="next-class" id="next-class-card"></div>
+    </section>
+
+    <section class="section classes-section" id="lekce">
+      <div class="section-heading split">
+        <div>
+          <p class="eyebrow">Nejbližší termíny</p>
+          <h2>Vyber si svou chvíli</h2>
+        </div>
+        <p>Rezervace zabere pár vteřin. Zrušit ji můžeš zdarma nejpozději 24 hodin před začátkem.</p>
+      </div>
+      <div class="filter-row" role="group" aria-label="Filtr lekcí">
+        <button class="filter active" data-filter="all">Všechny</button>
+        <button class="filter" data-filter="paid">Klasická lekce</button>
+        <button class="filter" data-filter="charity">Dobrovolný příspěvek</button>
+      </div>
+      <div class="class-list" id="class-list"></div>
+    </section>
+
+    <section class="studio-grid" id="studio">
+      <div class="studio-main image-frame"><img src="assets/studio-daylight.jpeg" alt="Světlé jógové studio s podlahou v dekoru dřeva" /></div>
+      <div class="studio-copy">
+        <p class="eyebrow">Naše studio</p>
+        <h2>Klidné místo uprostřed HALLU</h2>
+        <p>Najdeš nás v jógové místnosti ve 3. patře. Čeká tě příjemné světlo, lino v dekoru dřeva a dost prostoru pro vlastní podložku.</p>
+        <ul class="feature-list">
+          <li><span>01</span> Kapacita přibližně 20 lidí (bude potvrzeno)</li>
+          <li><span>02</span> Vlastní podložka na cvičení</li>
+          <li><span>03</span> V docházce zvol „Relax pauza“</li>
+        </ul>
+        <a class="inline-link" href="#galerie">Prohlédnout studio →</a>
+      </div>
+      <div class="studio-detail image-frame"><img src="assets/studio-hooks.jpeg" alt="Dřevěné držáky na podložky v jógovém studiu" /></div>
+    </section>
+
+    <section class="section teachers-section" id="lektori">
+      <div class="section-heading split">
+        <div><p class="eyebrow">Kdo tě lekcí provede</p><h2>Naši lektoři</h2></div>
+        <p>Dva rozdílné přístupy, jeden společný cíl: vytvořit bezpečný prostor pro pohyb, soustředění a radost z praxe.</p>
+      </div>
+      <div class="teachers-grid">
+        <article class="teacher-card">
+          <img src="assets/daniela-stastna.jpg" alt="Lektorka jógy Daniela Šťastná" />
+          <div class="teacher-card-copy">
+            <p class="teacher-kicker">Fyzio · Hatha · Power · Vinyasa</p>
+            <h3>Daniela Šťastná</h3>
+            <p>Jógu aktivně praktikuje od roku 2014. V dubnu 2023 dokončila akreditovaný 200hodinový kurz MŠMT od Yoga4Everybody se specializací na fyzio jógu, hatha jógu, power jógu, vinyasa jógu, těhotenskou a restorativní jógu.</p>
+            <blockquote>„Ve svých lekcích aktivně asistuji cvičícím, využívám éterické oleje a zpěv manter. Jsem zvědavá na vaši jógovou cestu a budu se na vás těšit.“</blockquote>
+          </div>
+        </article>
+        <article class="teacher-card reverse">
+          <img src="assets/petr-bena.jpeg" alt="Lektor jógy Petr Bena" />
+          <div class="teacher-card-copy">
+            <p class="teacher-kicker">Power · Vinyasa · Strong slow flow</p>
+            <h3>Petr Bena</h3>
+            <p>Jeho jógová cesta je poměrně krátká, ale velmi intenzivní. Od prosince 2023 se jóga proměnila ze způsobu, jak se zotavit z běžeckého zranění, v každodenní praxi trvající 1 000 dní v řadě. Z fyzického cvičení se postupně stala cesta k větší přítomnosti, stabilitě a poznávání toho, jak lze filozofii jógy přenášet i do života mimo podložku.</p>
+            <blockquote>„V roce 2026 jsem v Ubudu na Bali dokončil 200hodinový kurz pro učitele power a vinyasa jógy. Chci vytvářet lekce, na kterých se lidé cítí podporováni a zároveň přiměřeně vyzváni. Nejbližší je mi strong slow flow.“</blockquote>
+            <span class="charity-note">Příspěvek za Petrovy lekce je dobrovolný a směřuje organizaci Dobrý anděl.</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section news-section" id="novinky">
+      <div class="section-heading split">
+        <div>
+          <p class="eyebrow">Co je nového</p>
+          <h2>Ze studia</h2>
+        </div>
+        <a class="inline-link" href="#">Všechny novinky →</a>
+      </div>
+      <div class="news-grid">
+        <article class="news-card featured">
+          <img src="assets/studio-lamps.jpeg" alt="Rozsvícené lampy v jógovém studiu" />
+          <div><span>Ze studia</span><h3>Večerní lekce v novém světle</h3><p>Přidáváme podvečerní termíny. Přijď uzavřít pracovní den v klidném tempu.</p></div>
+        </article>
+        <article class="news-card text-card"><span>Dobrá věc</span><h3>Cvičením pomáháme</h3><p>U vybraných lekcí můžeš místo vstupného dobrovolně přispět organizaci Dobrý anděl.</p><a href="#lekce">Najít benefiční lekci →</a></article>
+        <article class="news-card text-card warm"><span>Tip</span><h3>Poprvé na józe?</h3><p>Nemusíš umět vůbec nic. Vezmi si pohodlné oblečení, podložku a přijď o pět minut dřív.</p><a href="#informace">Praktické informace →</a></article>
+      </div>
+    </section>
+
+    <section class="gallery" id="galerie" aria-label="Fotografie studia">
+      <img src="assets/studio-art.jpeg" alt="Obrazy na stěně jógového studia" />
+      <img src="assets/studio-evening.jpeg" alt="Večerní atmosféra jógového studia" />
+      <div class="gallery-quote"><p>„Nejde o to dotknout se prstů u nohou. Jde o to, co objevíš cestou dolů.“</p></div>
+    </section>
+
+    <section class="section info-section" id="informace">
+      <div>
+        <p class="eyebrow">Dobré vědět</p>
+        <h2>Jednoduše přijď<br>a zacvič si</h2>
+        <a class="whatsapp" href="#" id="whatsapp-link" aria-label="Připojit se do WhatsApp skupiny"><span>WA</span><div><b>WhatsApp skupina</b><small>Domluva a rychlé novinky</small></div><strong>→</strong></a>
+      </div>
+      <div class="accordion">
+        <details open><summary>Kde lekce probíhají?</summary><p>V jógové místnosti ve 3. patře budovy HALL. Přesnou navigaci dostaneš také v potvrzení rezervace.</p></details>
+        <details><summary>Co si mám přinést?</summary><p>Vlastní podložku, pohodlné oblečení a láhev s vodou. Na místě buď ideálně pět minut před začátkem.</p></details>
+        <details><summary>Jak funguje zrušení?</summary><p>Rezervaci můžeš bezplatně zrušit do 24 hodin před lekcí. Později je lekce účtována, můžeš ale poslat náhradníka.</p></details>
+        <details><summary>Jak probíhá platba?</summary><p>Po placené lekci dostaneš e-mailem QR kód pro platbu 150 Kč. U benefiční lekce přijde QR kód pro dobrovolný příspěvek organizaci Dobrý anděl.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <main id="admin-view" class="admin-shell" hidden>
+    <aside class="admin-sidebar">
+      <div class="brand admin-brand"><span class="brand-mark">AJ</span><span>Alza <em>Jóga</em></span></div>
+      <nav>
+        <button class="admin-nav active" data-admin-tab="overview">Přehled</button>
+        <button class="admin-nav" data-admin-tab="lessons">Lekce</button>
+        <button class="admin-nav" data-admin-tab="teachers">Lektoři</button>
+        <button class="admin-nav" data-admin-tab="people">Rezervace</button>
+        <button class="admin-nav" data-admin-tab="content">Obsah webu</button>
+        <button class="admin-nav" data-admin-tab="settings">Nastavení</button>
+      </nav>
+      <button class="admin-back" id="close-admin">← Zpět na web</button>
+    </aside>
+    <section class="admin-content">
+      <div class="admin-topbar"><div><p class="eyebrow">Back office · ukázková data</p><h1 id="admin-title">Dobrý den, Petře</h1></div><button class="button" id="add-lesson">+ Nová lekce</button></div>
+      <div id="admin-panel"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="brand"><span class="brand-mark">AJ</span><span>Alza <em>Jóga</em></span></div>
+    <p>Jóga na HALLU · 3. patro · Pro zaměstnance Alzy a jejich hosty</p>
+    <div><a href="#">Podmínky</a><a href="#">Ochrana osobních údajů</a></div>
+  </footer>
+
+  <dialog id="booking-dialog">
+    <button class="dialog-close" aria-label="Zavřít">×</button>
+    <div id="booking-content"></div>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
