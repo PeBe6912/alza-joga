@@ -50,8 +50,8 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 }
 
 /* Preserve complete source framing while keeping the studio and lecturer cards compact. */
-.studio-grid{grid-template-columns:1.15fr .85fr;grid-template-rows:520px 180px}
-.studio-main{grid-row:1/3;min-height:0;background:#ded8cc}
+.studio-grid{grid-template-columns:1.15fr .85fr;grid-template-rows:minmax(520px,auto) 180px}
+.studio-main{grid-row:1/3;min-height:0;background:var(--cream)}
 .studio-main img{object-fit:contain}
 .studio-copy{padding:42px 5vw 30px}
 .studio-copy h2{font-size:56px}
@@ -61,7 +61,7 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 
 .teacher-card{grid-template-columns:60% 40%;height:600px}
 .teacher-card.reverse{grid-template-columns:60% 40%}
-.teacher-card img{height:100%;min-height:0;object-fit:contain;object-position:center;background:#ded8cc}
+.teacher-card img{height:100%;min-height:0;object-fit:contain;object-position:center;background:var(--paper)}
 .teacher-card-copy{padding:34px 4vw}
 .teacher-card h3{font-size:48px;margin:8px 0 20px}
 .teacher-card p:not(.teacher-kicker){line-height:1.5}
