@@ -26,6 +26,7 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 .admin-teacher{display:grid;grid-template-columns:92px 1fr auto;gap:20px;align-items:center}
 .admin-teacher+.admin-teacher{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
 .admin-teacher img{width:92px;height:110px;border-radius:6px;object-position:center top}
+.admin-teacher img[alt="Petr Bena"]{object-position:center bottom}
 .admin-teacher h3{margin:0 0 5px;font-family:"Newsreader",serif;font-size:25px;font-weight:400}
 .admin-teacher p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
 .admin-form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
