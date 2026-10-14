@@ -8,16 +8,16 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 /* Lecturer profiles and stabilized lower-page layout. */
 .teachers-section{background:#fff}
 .teachers-grid{display:grid;gap:28px;margin-top:55px}
-.teacher-card{display:grid;grid-template-columns:minmax(280px,.72fr) 1.28fr;min-height:560px;background:var(--paper);overflow:hidden}
+.teacher-card{display:grid;grid-template-columns:minmax(280px,.72fr) 1.28fr;height:620px;background:var(--paper);overflow:hidden}
 .teacher-card.reverse{grid-template-columns:1.28fr minmax(280px,.72fr)}
 .teacher-card.reverse img{order:2}
-.teacher-card img{height:100%;min-height:560px;object-position:center top}
-.teacher-card-copy{align-self:center;padding:55px 7vw}
+.teacher-card img{height:100%;min-height:0;object-position:center top}
+.teacher-card-copy{align-self:center;padding:38px 5vw}
 .teacher-kicker{color:var(--clay);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
 .teacher-card h3{font-family:"Newsreader",serif;font-size:52px;font-weight:400;margin:10px 0 24px}
-.teacher-card p:not(.teacher-kicker){color:var(--muted);line-height:1.72}
-.teacher-card blockquote{margin:28px 0 0;padding-left:20px;border-left:2px solid var(--clay);font-family:"Newsreader",serif;font-size:21px;line-height:1.45}
-.charity-note{display:inline-block;margin-top:26px;padding:10px 14px;border-radius:3px;background:#e4eee5;color:#31513c;font-size:12px;font-weight:700}
+.teacher-card p:not(.teacher-kicker){color:var(--muted);line-height:1.58}
+.teacher-card blockquote{margin:22px 0 0;padding-left:20px;border-left:2px solid var(--clay);font-family:"Newsreader",serif;font-size:19px;line-height:1.4}
+.charity-note{display:inline-block;margin-top:20px;padding:10px 14px;border-radius:3px;background:#e4eee5;color:#31513c;font-size:12px;font-weight:700}
 .gallery{height:auto;min-height:500px;overflow:hidden;position:relative;isolation:isolate}
 .gallery img{height:500px}
 .gallery-quote{min-height:500px}
@@ -32,7 +32,7 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 .admin-setting{padding:14px;background:var(--paper);border-radius:5px;font-size:13px}
 
 @media(max-width:900px){
-  .teacher-card,.teacher-card.reverse{grid-template-columns:1fr}
+  .teacher-card,.teacher-card.reverse{grid-template-columns:1fr;height:auto}
   .teacher-card.reverse img{order:0}
   .teacher-card img{height:560px}
 }
