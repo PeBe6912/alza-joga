@@ -83,9 +83,18 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 
 /* Keep photographic compositions stable instead of stretching them on wide screens. */
 .hero,.studio-grid,.teachers-grid,.news-grid,.gallery{
-  width:min(100%,1600px);
+  width:min(100%,1440px);
   margin-left:auto;
   margin-right:auto;
+}
+.section>*{
+  width:min(100%,1440px);
+  margin-left:auto;
+  margin-right:auto;
+}
+.site-header{
+  padding-left:max(4vw,calc((100vw - 1440px)/2));
+  padding-right:max(4vw,calc((100vw - 1440px)/2));
 }
 .hero{min-height:0;aspect-ratio:16/9}
 .image-frame:hover img{transform:none}
