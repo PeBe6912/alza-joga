@@ -1,6 +1,7 @@
 const allowedOrigins = new Set([
   'http://127.0.0.1:4173',
   'http://localhost:4173',
+  'https://joga-na-hallu.pages.dev',
   'https://alza-joga-i7pk.vercel.app',
   'https://joganahallu.cz',
   'https://www.joganahallu.cz',
