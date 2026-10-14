@@ -38,7 +38,7 @@ create table public.lessons (
   description text not null default '',
   starts_at timestamptz not null,
   ends_at timestamptz not null,
-  cancel_before timestamptz generated always as (starts_at - interval '24 hours') stored,
+  cancel_before timestamptz not null,
   capacity smallint not null default 20 check (capacity between 1 and 100),
   status public.lesson_status not null default 'draft',
   location text not null default 'Jógová místnost, 3. patro, HALL',
@@ -132,6 +132,20 @@ $$;
 
 revoke all on function private.set_updated_at() from public, anon, authenticated;
 
+create or replace function private.set_lesson_cancel_before()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  new.cancel_before = new.starts_at - interval '24 hours';
+  return new;
+end;
+$$;
+
+revoke all on function private.set_lesson_cancel_before() from public, anon, authenticated;
+
 create trigger instructors_set_updated_at
 before update on public.instructors
 for each row execute function private.set_updated_at();
@@ -139,6 +153,10 @@ for each row execute function private.set_updated_at();
 create trigger lessons_set_updated_at
 before update on public.lessons
 for each row execute function private.set_updated_at();
+
+create trigger lessons_set_cancel_before
+before insert or update of starts_at on public.lessons
+for each row execute function private.set_lesson_cancel_before();
 
 create trigger reservations_set_updated_at
 before update on public.reservations
