@@ -85,11 +85,6 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove('show'), 3800);
 }
 
-document.querySelector('#whatsapp-link').addEventListener('click', (event) => {
-  event.preventDefault();
-  showToast('Sem se doplní odkaz na WhatsApp skupinu.');
-});
-
 const publicView = document.querySelector('#public-view');
 const adminView = document.querySelector('#admin-view');
 
