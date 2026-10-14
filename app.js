@@ -18,7 +18,6 @@ let teachers = fallbackTeachers;
 let newsItems = [];
 
 const savedBookings = JSON.parse(localStorage.getItem('alzaYogaBookings') || '[]');
-const settings = JSON.parse(localStorage.getItem('alzaYogaSettings') || '{"petrCharity":true,"capacity":20}');
 let adminSession = JSON.parse(sessionStorage.getItem('jogaAdminSession') || 'null');
 let adminLessons = [];
 let adminInstructors = [];
@@ -136,7 +135,7 @@ function lessonFromDatabase(row) {
   const day = new Intl.DateTimeFormat('cs-CZ', { weekday: 'short', timeZone: 'Europe/Prague' }).format(starts).replace('.', '');
   const time = `${new Intl.DateTimeFormat('cs-CZ', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Prague' }).format(starts)}–${new Intl.DateTimeFormat('cs-CZ', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Prague' }).format(ends)}`;
   const instructor = row.instructors;
-  const donation = instructor.payment_mode === 'donation';
+  const donation = row.payment_mode === 'donation';
   return {
     id: row.id,
     day: day.charAt(0).toUpperCase() + day.slice(1),
@@ -147,17 +146,20 @@ function lessonFromDatabase(row) {
     title: row.title,
     teacher: instructor.name,
     type: donation ? 'charity' : 'paid',
-    price: donation ? 'Dobrovolný příspěvek' : `${instructor.price_czk} Kč`,
+    price: donation ? 'Dobrovolný příspěvek' : `${row.price_czk} Kč`,
     capacity: row.capacity,
     booked: row.booked_count,
     status: row.status || 'published',
     language: row.language || 'cs',
+    paymentMode: row.payment_mode,
+    minimumAttendance: row.minimum_attendance || 5,
+    lowAttendanceConfirmedAt: row.low_attendance_confirmed_at || null,
   };
 }
 
 async function loadLessons() {
   const query = new URLSearchParams({
-    select: 'id,title,starts_at,ends_at,capacity,booked_count,location,language,instructors(name,payment_mode,price_czk,payment_note)',
+    select: 'id,title,starts_at,ends_at,capacity,booked_count,location,language,payment_mode,price_czk,payment_note,minimum_attendance,low_attendance_confirmed_at,instructors(name)',
     status: 'eq.published',
     starts_at: `gte.${new Date().toISOString()}`,
     order: 'starts_at.asc',
@@ -201,7 +203,7 @@ function renderPublicTeachers() {
       <p class="teacher-kicker">${escapeHtml(teacher.styles)}</p>
       <h3>${escapeHtml(teacher.name)}</h3>
       <p>${escapeHtml(teacher.bio)}</p>
-      <span class="charity-note">${escapeHtml(teacher.payment)}</span>
+      <span class="charity-note">Cena nebo dobrovolný příspěvek se řídí konkrétním termínem.</span>
     </div>
   </article>`).join('');
 }
@@ -334,7 +336,7 @@ async function loadAdminLessons() {
   const historyStart = new Date();
   historyStart.setDate(historyStart.getDate() - 90);
   const query = new URLSearchParams({
-    select: 'id,title,starts_at,ends_at,capacity,booked_count,status,location,language,instructors(name,payment_mode,price_czk,payment_note)',
+    select: 'id,title,starts_at,ends_at,capacity,booked_count,status,location,language,payment_mode,price_czk,payment_note,minimum_attendance,low_attendance_confirmed_at,instructors(name)',
     starts_at: `gte.${historyStart.toISOString()}`,
     order: 'starts_at.asc',
   });
@@ -429,13 +431,21 @@ function lessonTable(sourceLessons = adminLessons) {
   const rows = sourceLessons.map((lesson) => {
     const cancelled = lesson.status === 'cancelled';
     const ended = new Date(lesson.endsAt) <= new Date();
+    const belowMinimum = !cancelled && !ended && lesson.booked < lesson.minimumAttendance;
+    const attendanceStatus = belowMinimum
+      ? lesson.lowAttendanceConfirmedAt
+        ? '<br><span class="attendance-note confirmed">Koná se i v menším počtu</span>'
+        : `<br><span class="attendance-note">Chybí ${lesson.minimumAttendance - lesson.booked} do minima</span>`
+      : !cancelled && !ended
+        ? '<br><span class="attendance-note confirmed">Minimum splněno</span>'
+        : '';
     const status = cancelled ? 'Zrušeno' : ended ? 'Proběhla' : 'Otevřeno';
     const actions = cancelled
       ? ''
       : ended
         ? `<button class="button button-small" data-payment-lesson="${lesson.id}">Platby a příspěvky</button>`
-        : `<button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button>`;
-    return `<tr><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce">${escapeHtml(lesson.title)}${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}</td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno">${lesson.booked}/${lesson.capacity}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span></td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
+        : `${belowMinimum && !lesson.lowAttendanceConfirmedAt ? `<button class="button button-small button-secondary" data-confirm-lesson="${lesson.id}">Lekce se koná</button>` : ''}<button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button>`;
+    return `<tr><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce">${escapeHtml(lesson.title)}${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}<br><small>${lesson.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : '150 Kč'}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno">${lesson.booked}/${lesson.capacity}${attendanceStatus}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span></td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
   }).join('');
   return `<table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Obsazeno</th><th>Stav</th><th>Akce</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Nejsou naplánované žádné lekce.</td></tr>'}</tbody></table>`;
 }
@@ -470,7 +480,7 @@ function newsPanel() {
 }
 
 function settingsPanel() {
-  return `<div class="admin-grid"><div class="admin-card"><h2>Platby podle lektora</h2><div class="admin-setting"><b>Daniela Šťastná</b><br>150 Kč · QR kód se odešle ručně po kontrole účastníků.</div><div class="admin-setting" style="margin-top:10px"><label><input id="petr-charity" type="checkbox" ${settings.petrCharity ? 'checked' : ''}> <b>Petr Bena – dobrovolný příspěvek na Dobrého anděla</b></label><br>QR kód se odešle ručně po skončení lekce.</div></div><div class="admin-card"><h2>Pravidla rezervací</h2><div class="admin-form-row"><div class="admin-setting">Bezplatné zrušení<br><b>24 hodin</b></div><div class="admin-setting">Kapacita studia<br><b>20 míst · bude potvrzeno</b></div></div></div></div>`;
+  return `<div class="admin-grid"><div class="admin-card"><h2>Platba u nové lekce</h2><div class="admin-setting"><b>Výchozí podle lektora</b><br>U Daniely se předvolí 150 Kč, u Petra dobrovolný příspěvek. Při vytvoření každé lekce lze volbu změnit.</div><div class="admin-setting" style="margin-top:10px"><b>Po skončení lekce</b><br>Správný platební nebo příspěvkový QR kód se odešle ručně po kontrole účastníků.</div></div><div class="admin-card"><h2>Pravidla rezervací</h2><div class="admin-form-row"><div class="admin-setting">Bezplatné zrušení<br><b>24 hodin</b></div><div class="admin-setting">Standardní minimum<br><b>5 přihlášených</b><br>Lektor může potvrdit konání i v menším počtu.</div></div></div></div>`;
 }
 
 function renderAdmin(tab) {
@@ -502,15 +512,9 @@ function renderAdmin(tab) {
   document.querySelectorAll('[data-edit-news]').forEach((button) => button.addEventListener('click', () => openNewsEditor(button.dataset.editNews)));
   document.querySelectorAll('[data-toggle-news]').forEach((button) => button.addEventListener('click', () => toggleNews(button.dataset.toggleNews)));
   document.querySelectorAll('[data-delete-news]').forEach((button) => button.addEventListener('click', () => deleteNews(button.dataset.deleteNews)));
-  const charityToggle = document.querySelector('#petr-charity');
-  if (charityToggle) charityToggle.addEventListener('change', () => {
-    settings.petrCharity = charityToggle.checked;
-    localStorage.setItem('alzaYogaSettings', JSON.stringify(settings));
-    showToast('Nastavení Petrovy benefiční lekce bylo uloženo.');
-  });
-
   document.querySelectorAll('[data-edit-lesson]').forEach((button) => button.addEventListener('click', () => openLessonEditor(button.dataset.editLesson)));
   document.querySelectorAll('[data-cancel-lesson]').forEach((button) => button.addEventListener('click', () => cancelLesson(button.dataset.cancelLesson)));
+  document.querySelectorAll('[data-confirm-lesson]').forEach((button) => button.addEventListener('click', () => confirmLowAttendance(button.dataset.confirmLesson)));
   document.querySelectorAll('[data-payment-lesson]').forEach((button) => button.addEventListener('click', () => openPaymentEmails(button.dataset.paymentLesson)));
 }
 
@@ -731,6 +735,7 @@ function openNewLesson() {
   starts.setHours(17, 0, 0, 0);
   const ends = new Date(starts.getTime() + 60 * 60 * 1000);
   const instructorOptions = adminInstructors.map((instructor) => `<option value="${instructor.id}">${escapeHtml(instructor.name)}</option>`).join('');
+  const initialPaymentMode = adminInstructors[0].payment_mode === 'donation' ? 'donation' : 'paid';
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="new-lesson-form">
     <p class="eyebrow">Nová lekce</p><h2>Vytvořit termín</h2>
     <div class="form-grid">
@@ -741,6 +746,10 @@ function openNewLesson() {
       <div class="field"><label for="new-lesson-end">Konec</label><input id="new-lesson-end" name="endsAt" type="datetime-local" value="${dateTimeLocalValue(ends)}" required></div>
       <div class="field"><label for="new-lesson-capacity">Kapacita</label><input id="new-lesson-capacity" name="capacity" type="number" min="1" max="100" value="20" required></div>
       <div class="field"><label for="new-lesson-repeat">Počet lekcí v sérii</label><input id="new-lesson-repeat" name="repeatCount" type="number" min="1" max="52" value="1" required></div>
+      <fieldset class="field full payment-choice"><legend>Platba za lekci</legend>
+        <label><input type="radio" name="paymentMode" value="paid" ${initialPaymentMode === 'paid' ? 'checked' : ''}> <span><b>Placená lekce · 150 Kč</b><small>Po lekci přijde QR kód pro platbu.</small></span></label>
+        <label><input type="radio" name="paymentMode" value="donation" ${initialPaymentMode === 'donation' ? 'checked' : ''}> <span><b>Dobrovolný příspěvek</b><small>Příspěvek směřuje organizaci Dobrý anděl.</small></span></label>
+      </fieldset>
     </div>
     <p class="form-hint">Při vyšším počtu se další lekce vytvoří vždy ve stejný den a čas po jednom týdnu.</p>
     <button class="button" type="submit">Vytvořit lekci</button>
@@ -749,6 +758,11 @@ function openNewLesson() {
     const start = new Date(event.target.value);
     if (Number.isNaN(start.getTime())) return;
     document.querySelector('#new-lesson-end').value = dateTimeLocalValue(new Date(start.getTime() + 60 * 60 * 1000));
+  });
+  document.querySelector('#new-lesson-instructor').addEventListener('change', (event) => {
+    const instructor = adminInstructors.find((item) => item.id === event.target.value);
+    const mode = instructor?.payment_mode === 'donation' ? 'donation' : 'paid';
+    document.querySelector(`input[name="paymentMode"][value="${mode}"]`).checked = true;
   });
   document.querySelector('#new-lesson-form').addEventListener('submit', createLessons);
   dialog.showModal();
@@ -776,6 +790,7 @@ async function createLessons(event) {
       endsAt: endsAt.toISOString(),
       capacity: Number(data.get('capacity')),
       repeatCount: Number(data.get('repeatCount')),
+      paymentMode: data.get('paymentMode'),
     });
     dialog.close();
     await Promise.all([loadLessons(), loadAdminLessons()]);
@@ -844,6 +859,19 @@ async function cancelLesson(id) {
     await Promise.all([loadLessons(), loadAdminLessons()]);
     renderAdmin('lessons');
     showToast(result.failed ? `Lekce je zrušená. ${result.failed} e-mailů se nepodařilo odeslat.` : `Lekce je zrušená. Odesláno e-mailů: ${result.notified}.`);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function confirmLowAttendance(id) {
+  const lesson = adminLessons.find((item) => item.id === id);
+  if (!lesson || !confirm(`Potvrdit, že lekce „${lesson.title}“ se koná i s ${lesson.booked} přihlášenými?`)) return;
+  try {
+    await manageLesson({ lessonId: id, action: 'confirm-low-attendance' });
+    await loadAdminLessons();
+    renderAdmin('lessons');
+    showToast('Uloženo: lekce se koná i v menším počtu.');
   } catch (error) {
     showToast(error.message);
   }

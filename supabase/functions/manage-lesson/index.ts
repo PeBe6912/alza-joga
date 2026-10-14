@@ -166,11 +166,17 @@ Deno.serve(async (req: Request) => {
       const endsAt = String(body.endsAt ?? '');
       const capacity = Number(body.capacity);
       const repeatCount = Number(body.repeatCount);
+      const paymentMode = String(body.paymentMode ?? '');
+      const priceCzk = paymentMode === 'paid' ? 150 : null;
+      const paymentNote = paymentMode === 'paid'
+        ? 'QR kód k platbě bude odeslán po skončení lekce.'
+        : 'Dobrovolný příspěvek směřuje organizaci Dobrý anděl.';
       if (!/^[0-9a-f-]{36}$/i.test(instructorId)) throw new Error('INVALID_INSTRUCTOR');
       if (title.length < 2 || title.length > 120) throw new Error('INVALID_TITLE');
       if (!['cs', 'en'].includes(language)) throw new Error('INVALID_LANGUAGE');
       if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100) throw new Error('INVALID_CAPACITY');
       if (!Number.isInteger(repeatCount) || repeatCount < 1 || repeatCount > 52) throw new Error('INVALID_REPEAT_COUNT');
+      if (!['paid', 'donation'].includes(paymentMode)) throw new Error('INVALID_PAYMENT_MODE');
       if (!Number.isFinite(Date.parse(startsAt)) || !Number.isFinite(Date.parse(endsAt)) || Date.parse(endsAt) <= Date.parse(startsAt)) throw new Error('INVALID_TIME');
 
       const created = await callRpc<{ created: number; lesson_ids: string[] }>('admin_create_lessons', {
@@ -181,12 +187,22 @@ Deno.serve(async (req: Request) => {
         p_capacity: capacity,
         p_language: language,
         p_repeat_count: repeatCount,
+        p_payment_mode: paymentMode,
+        p_price_czk: priceCzk,
+        p_payment_note: paymentNote,
+        p_minimum_attendance: 5,
       });
       return json(req, { ok: true, action, created: created.created, lessonIds: created.lesson_ids });
     }
 
     const lessonId = String(body.lessonId ?? '');
     if (!/^[0-9a-f-]{36}$/i.test(lessonId)) throw new Error('INVALID_LESSON');
+    if (action === 'confirm-low-attendance') {
+      const confirmation = await callRpc<{ booked_count: number; minimum_attendance: number }>('admin_confirm_low_attendance', {
+        p_lesson_id: lessonId,
+      });
+      return json(req, { ok: true, action, ...confirmation });
+    }
     if (!['reschedule', 'cancel'].includes(action)) throw new Error('INVALID_ACTION');
 
     const change = await callRpc<LessonChange>('admin_change_lesson', {
@@ -232,6 +248,8 @@ Deno.serve(async (req: Request) => {
           ? 'Platební e-maily se nepodařilo připravit nebo odeslat.'
         : requestedAction === 'create'
           ? 'Nové lekce se nepodařilo vytvořit.'
+          : requestedAction === 'confirm-low-attendance'
+            ? 'Potvrzení konání lekce se nepodařilo uložit.'
           : 'Změnu lekce se nepodařilo uložit.';
     return json(req, { error: code, message }, status);
   }

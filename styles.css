@@ -60,6 +60,7 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 .form-hint{color:var(--muted);font-size:12px;line-height:1.5}
 .admin-topbar{gap:22px}
 .admin-topbar-actions,.lesson-actions{display:flex;align-items:center;gap:8px}
+.lesson-actions{flex-wrap:wrap}.attendance-note{display:inline-block;margin-top:5px;color:#9a5d20;font-size:11px;line-height:1.25}.attendance-note.confirmed{color:#30583b}.payment-choice{border:0;padding:0;margin:4px 0 0}.payment-choice legend{font-size:12px;font-weight:700;margin-bottom:8px}.payment-choice label{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--line);background:#fff}.payment-choice input{margin-top:3px}.payment-choice span{display:grid;gap:3px}.payment-choice small{color:var(--muted);font-weight:400}
 .admin-topbar-actions .text-button{padding:10px;color:var(--muted)}
 footer .brand-logo{height:72px}
 
@@ -83,7 +84,7 @@ footer .brand-logo{height:72px}
   .admin-table td,.admin-table td:nth-child(3){display:block;padding:0;border:0}
   .admin-table td:before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase}
   .admin-table .lesson-actions{grid-column:1/-1;display:flex;gap:8px;padding-top:4px}
-  .lesson-actions .button{flex:1;margin:0;white-space:nowrap}
+  .lesson-actions .button{flex:1 1 100%;margin:0;white-space:nowrap}
   .booking-panel{padding:36px 24px 28px}
   .booking-summary{align-items:flex-start}
 }
