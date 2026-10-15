@@ -66,6 +66,30 @@ export function escapeHtml(value: unknown): string {
     .replaceAll("'", '&#039;');
 }
 
+const CZECH_VOCATIVES: Record<string, string> = {
+  adam: 'Adame', ales: 'Aleši', 'aleš': 'Aleši', aneta: 'Aneto', anna: 'Anno', barbora: 'Barboro',
+  daniela: 'Danielo', david: 'Davide', dominik: 'Dominiku', dominika: 'Dominiko', eliska: 'Eliško', 'eliška': 'Eliško',
+  eva: 'Evo', filip: 'Filipe', frantisek: 'Františku', 'františek': 'Františku', hana: 'Hano', jakub: 'Jakube',
+  jan: 'Jane', jana: 'Jano', jaroslav: 'Jaroslave', jiri: 'Jiří', 'jiří': 'Jiří', jitka: 'Jitko', josef: 'Josefe',
+  karel: 'Karle', karolina: 'Karolíno', 'karolína': 'Karolíno', katerina: 'Kateřino', 'kateřina': 'Kateřino',
+  klara: 'Kláro', 'klára': 'Kláro', kristyna: 'Kristýno', 'kristýna': 'Kristýno', lenka: 'Lenko', lucie: 'Lucie',
+  lukas: 'Lukáši', 'lukáš': 'Lukáši', magdalena: 'Magdaléno', 'magdaléna': 'Magdaléno', marek: 'Marku', marie: 'Marie',
+  martin: 'Martine', martina: 'Martino', matej: 'Matěji', 'matěj': 'Matěji', michal: 'Michale', michaela: 'Michaelo',
+  milan: 'Milane', monika: 'Moniko', nikola: 'Nikolo', ondrej: 'Ondřeji', 'ondřej': 'Ondřeji', patrik: 'Patriku',
+  pavel: 'Pavle', petr: 'Petře', petra: 'Petro', radek: 'Radku', richard: 'Richarde', roman: 'Romane',
+  simona: 'Simono', sona: 'Soňo', 'soňa': 'Soňo', sarka: 'Šárko', 'šárka': 'Šárko', tereza: 'Terezo',
+  tomas: 'Tomáši', 'tomáš': 'Tomáši', vaclav: 'Václave', 'václav': 'Václave', veronika: 'Veroniko',
+  vojta: 'Vojto', vojtech: 'Vojtěchu', 'vojtěch': 'Vojtěchu', zdenek: 'Zdeňku', 'zdeněk': 'Zdeňku',
+  zuzana: 'Zuzano',
+};
+
+export function czechSalutation(fullName: unknown): string {
+  const nameParts = String(fullName ?? '').trim().split(/\s+/).map((part) => part.replace(/[,.]+$/g, '')).filter(Boolean);
+  const matchedName = nameParts.find((part) => CZECH_VOCATIVES[part.toLocaleLowerCase('cs-CZ')]);
+  const vocative = matchedName ? CZECH_VOCATIVES[matchedName.toLocaleLowerCase('cs-CZ')] : undefined;
+  return vocative ? `Ahoj ${vocative}` : 'Dobrý den';
+}
+
 export function formatLessonDate(value: string): string {
   return new Intl.DateTimeFormat('cs-CZ', {
     dateStyle: 'full',

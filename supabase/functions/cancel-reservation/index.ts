@@ -1,6 +1,7 @@
 import {
   callRpc,
   corsHeaders,
+  czechSalutation,
   escapeHtml,
   formatLessonDate,
   isAllowedOrigin,
@@ -42,7 +43,7 @@ Deno.serve(async (req: Request) => {
         toEmail: cancellation.attendee_email,
         toName: cancellation.attendee_name,
         subject: `Rezervace zrušena: ${cancellation.title}`,
-        htmlContent: `<p>Ahoj ${escapeHtml(cancellation.attendee_name)},</p>
+        htmlContent: `<p>${escapeHtml(czechSalutation(cancellation.attendee_name))},</p>
           <p>rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong> (${escapeHtml(formatLessonDate(cancellation.starts_at))}) byla zrušena.</p>
           <p>Jóga na HALLU</p>`,
       });
