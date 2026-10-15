@@ -189,6 +189,7 @@ function lessonFromDatabase(row) {
   const donation = row.payment_mode === 'donation';
   return {
     id: row.id,
+    instructorId: row.instructor_id,
     day: day.charAt(0).toUpperCase() + day.slice(1),
     date: dateParts,
     iso: row.starts_at,
@@ -212,7 +213,7 @@ function lessonFromDatabase(row) {
 
 async function loadLessons() {
   const query = new URLSearchParams({
-    select: 'id,title,starts_at,ends_at,capacity,booked_count,location,language,payment_mode,price_czk,payment_note,minimum_attendance,low_attendance_confirmed_at,instructors(name)',
+    select: 'id,instructor_id,title,starts_at,ends_at,capacity,booked_count,location,language,payment_mode,price_czk,payment_note,minimum_attendance,low_attendance_confirmed_at,instructors(name)',
     status: 'eq.published',
     starts_at: `gte.${new Date().toISOString()}`,
     order: 'starts_at.asc',
@@ -270,9 +271,11 @@ function renderPublicNews() {
     return;
   }
   const displayItems = [...newsItems].sort((a, b) => Number(Boolean(b.image_url)) - Number(Boolean(a.image_url)));
-  grid.innerHTML = displayItems.map((item, index) => item.image_url
-    ? `<article class="news-card featured"><img src="${escapeHtml(item.image_url)}" alt=""><div><span>Ze studia</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></div></article>`
-    : `<article class="news-card text-card${index % 2 ? ' warm' : ''}"><span>Novinka</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></article>`).join('');
+  grid.innerHTML = displayItems.map((item, index) => {
+    const charityStory = item.title.trim().toLocaleLowerCase('cs-CZ') === 'cvičením pomáháme';
+    if (item.image_url) return `<article class="news-card featured"><img src="${escapeHtml(item.image_url)}" alt=""><div><span>Ze studia</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></div></article>`;
+    return `<article class="news-card text-card${charityStory ? ' charity-card' : index % 2 ? ' warm' : ''}">${charityStory ? '<img class="charity-logo" src="assets/dobry-andel-logo.svg" alt="Dobrý Anděl">' : ''}<span>${charityStory ? 'Dobrá věc' : 'Novinka'}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></article>`;
+  }).join('');
 }
 
 async function loadPublicContent() {
@@ -391,7 +394,7 @@ async function loadAdminLessons() {
   const historyStart = new Date();
   historyStart.setMonth(historyStart.getMonth() - 12);
   const query = new URLSearchParams({
-    select: 'id,title,starts_at,ends_at,capacity,booked_count,status,location,language,payment_mode,price_czk,payment_note,minimum_attendance,low_attendance_confirmed_at,instructors(name)',
+    select: 'id,instructor_id,title,starts_at,ends_at,capacity,booked_count,status,location,language,payment_mode,price_czk,payment_note,minimum_attendance,low_attendance_confirmed_at,instructors(name)',
     starts_at: `gte.${historyStart.toISOString()}`,
     order: 'starts_at.asc',
   });
@@ -1027,15 +1030,26 @@ async function createLessons(event) {
 function openLessonEditor(id) {
   const lesson = adminLessons.find((item) => item.id === id);
   if (!lesson) return;
-  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="lesson-time-form">
-    <p class="eyebrow">Úprava lekce</p><h2>${escapeHtml(lesson.title)}</h2>
+  const instructorOptions = adminInstructors.map((instructor) => `<option value="${instructor.id}" ${instructor.id === lesson.instructorId ? 'selected' : ''}>${escapeHtml(instructor.name)}</option>`).join('');
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="lesson-edit-form">
+    <p class="eyebrow">Úprava lekce</p><h2>Upravit vypsanou lekci</h2>
     <div class="form-grid">
+      <div class="field full"><label for="lesson-title">Název lekce</label><input id="lesson-title" name="title" maxlength="120" value="${escapeHtml(lesson.title)}" required></div>
+      <div class="field"><label for="lesson-instructor">Lektor</label><select id="lesson-instructor" name="instructorId" required>${instructorOptions}</select></div>
+      <div class="field"><label for="lesson-language">Jazyk</label><select id="lesson-language" name="language" required><option value="cs" ${lesson.language === 'cs' ? 'selected' : ''}>Čeština</option><option value="en" ${lesson.language === 'en' ? 'selected' : ''}>Angličtina</option></select></div>
       <div class="field"><label for="lesson-start">Začátek</label><input id="lesson-start" name="startsAt" type="datetime-local" value="${dateTimeLocalValue(lesson.iso)}" required></div>
       <div class="field"><label for="lesson-end">Konec</label><input id="lesson-end" name="endsAt" type="datetime-local" value="${dateTimeLocalValue(lesson.endsAt)}" required></div>
+      <div class="field"><label for="lesson-capacity">Kapacita</label><input id="lesson-capacity" name="capacity" type="number" min="${Math.max(1, lesson.booked)}" max="100" value="${lesson.capacity}" required></div>
+      <div class="field"><label for="lesson-minimum">Minimum přihlášených</label><input id="lesson-minimum" name="minimumAttendance" type="number" min="1" max="100" value="${lesson.minimumAttendance}" required></div>
+      <fieldset class="field full payment-choice"><legend>Platba za lekci</legend>
+        <label><input type="radio" name="editPaymentMode" value="paid" ${lesson.paymentMode === 'paid' ? 'checked' : ''}> <span><b>Placená lekce</b><small>Po lekci přijde QR kód zvoleného lektora pro platbu.</small></span></label>
+        <label><input type="radio" name="editPaymentMode" value="donation" ${lesson.paymentMode === 'donation' ? 'checked' : ''}> <span><b>Dobrovolný příspěvek</b><small>Použije se příspěvkový QR kód zvoleného lektora.</small></span></label>
+      </fieldset>
+      <div class="field"><label for="lesson-price">Cena placené lekce v Kč</label><input id="lesson-price" name="priceCzk" type="number" min="0" max="10000" value="${lesson.priceCzk ?? Number(adminSettings.default_paid_price)}" required></div>
     </div>
     <p><button class="button button-small" type="button" data-shift="-15">− 15 minut</button> <button class="button button-small" type="button" data-shift="15">+ 15 minut</button></p>
-    <p>Po uložení dostanou všichni přihlášení e-mail s novým časem.</p>
-    <button class="button" type="submit">Uložit nový čas</button>
+    <p class="form-hint">Po uložení dostanou všichni přihlášení e-mail s aktuálními údaji lekce.</p>
+    <button class="button" type="submit">Uložit změny</button>
   </form>`;
   document.querySelectorAll('[data-shift]').forEach((button) => button.addEventListener('click', () => {
     const minutes = Number(button.dataset.shift);
@@ -1046,26 +1060,55 @@ function openLessonEditor(id) {
       field.value = dateTimeLocalValue(value);
     });
   }));
-  document.querySelector('#lesson-time-form').addEventListener('submit', async (event) => {
+  const syncEditorPaymentFields = () => {
+    const paid = document.querySelector('[name="editPaymentMode"]:checked')?.value === 'paid';
+    const price = document.querySelector('#lesson-price');
+    price.disabled = !paid;
+    price.required = paid;
+  };
+  document.querySelector('#lesson-instructor').addEventListener('change', (event) => {
+    const instructor = adminInstructors.find((item) => item.id === event.target.value);
+    const mode = instructor?.payment_mode === 'donation' ? 'donation' : 'paid';
+    document.querySelector(`[name="editPaymentMode"][value="${mode}"]`).checked = true;
+    document.querySelector('#lesson-price').value = instructor?.price_czk ?? Number(adminSettings.default_paid_price);
+    syncEditorPaymentFields();
+  });
+  document.querySelectorAll('[name="editPaymentMode"]').forEach((input) => input.addEventListener('change', syncEditorPaymentFields));
+  syncEditorPaymentFields();
+  document.querySelector('#lesson-edit-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const button = event.target.querySelector('[type="submit"]');
     const data = new FormData(event.target);
+    const startsAt = new Date(data.get('startsAt'));
+    const endsAt = new Date(data.get('endsAt'));
+    if (endsAt <= startsAt) {
+      showToast('Konec lekce musí být později než začátek.');
+      return;
+    }
+    const paymentMode = data.get('editPaymentMode');
     button.disabled = true;
     button.textContent = 'Ukládám…';
     try {
       const result = await manageLesson({
         lessonId: id,
-        action: 'reschedule',
-        startsAt: new Date(data.get('startsAt')).toISOString(),
-        endsAt: new Date(data.get('endsAt')).toISOString(),
+        action: 'update',
+        title: data.get('title'),
+        instructorId: data.get('instructorId'),
+        language: data.get('language'),
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        capacity: Number(data.get('capacity')),
+        paymentMode,
+        priceCzk: paymentMode === 'paid' ? Number(document.querySelector('#lesson-price').value) : null,
+        minimumAttendance: Number(data.get('minimumAttendance')),
       });
       dialog.close();
       await Promise.all([loadLessons(), loadAdminLessons()]);
       renderAdmin('lessons');
-      showToast(result.failed ? `Čas je změněný. ${result.failed} e-mailů se nepodařilo odeslat.` : `Čas je změněný. Odesláno e-mailů: ${result.notified}.`);
+      showToast(result.failed ? `Lekce je upravená. ${result.failed} e-mailů se nepodařilo odeslat.` : `Lekce je upravená. Odesláno e-mailů: ${result.notified}.`);
     } catch (error) {
       button.disabled = false;
-      button.textContent = 'Uložit nový čas';
+      button.textContent = 'Uložit změny';
       showToast(error.message);
     }
   });

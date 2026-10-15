@@ -309,6 +309,9 @@ footer .brand-logo{height:72px}
 }
 
 /* Final public content and stable lesson/account administration. */
+.news-card.charity-card{display:flex;flex-direction:column;align-items:flex-start}
+.news-card.charity-card .charity-logo{width:105px;height:60px;margin:0 0 auto;object-fit:contain;object-position:left center}
+.news-card.charity-card span{margin-top:24px}
 .feature-list [data-setting="studio_capacity"]{color:inherit;font:inherit;margin:0}
 .admin-teacher blockquote{margin:8px 0 0;color:var(--ink);font-family:"Newsreader",serif;font-size:15px;line-height:1.4}
 .admin-table tbody tr{border-bottom:1px solid var(--line)}

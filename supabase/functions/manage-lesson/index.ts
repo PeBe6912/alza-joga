@@ -33,7 +33,7 @@ type PaymentEmailBatch = {
 };
 
 type LessonChange = {
-  action: 'reschedule' | 'cancel';
+  action: 'update' | 'reschedule' | 'cancel';
   lesson_id: string;
   title: string;
   location: string;
@@ -43,6 +43,14 @@ type LessonChange = {
   new_starts_at: string;
   new_ends_at: string;
   participants: Participant[];
+  old_title?: string;
+  old_teacher?: string;
+  old_language?: string;
+  old_payment_mode?: 'paid' | 'donation';
+  old_price_czk?: number | null;
+  new_language?: string;
+  new_payment_mode?: 'paid' | 'donation';
+  new_price_czk?: number | null;
 };
 
 const allowedOrigins = new Set([
@@ -278,31 +286,77 @@ Deno.serve(async (req: Request) => {
       });
       return json(req, { ok: true, action, ...confirmation });
     }
-    if (!['reschedule', 'cancel'].includes(action)) throw new Error('INVALID_ACTION');
-
-    const change = await callRpc<LessonChange>('admin_change_lesson', {
-      p_lesson_id: lessonId,
-      p_action: action,
-      p_starts_at: action === 'reschedule' ? body.startsAt : null,
-      p_ends_at: action === 'reschedule' ? body.endsAt : null,
-    });
+    let change: LessonChange;
+    if (action === 'update') {
+      const instructorId = String(body.instructorId ?? '');
+      const title = String(body.title ?? '').trim();
+      const language = String(body.language ?? 'cs');
+      const startsAt = String(body.startsAt ?? '');
+      const endsAt = String(body.endsAt ?? '');
+      const capacity = Number(body.capacity);
+      const paymentMode = String(body.paymentMode ?? '');
+      const priceCzk = paymentMode === 'paid' ? Number(body.priceCzk) : null;
+      const minimumAttendance = Number(body.minimumAttendance);
+      if (!/^[0-9a-f-]{36}$/i.test(instructorId)) throw new Error('INVALID_INSTRUCTOR');
+      if (title.length < 2 || title.length > 120) throw new Error('INVALID_TITLE');
+      if (!['cs', 'en'].includes(language)) throw new Error('INVALID_LANGUAGE');
+      if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100) throw new Error('INVALID_CAPACITY');
+      if (!['paid', 'donation'].includes(paymentMode)) throw new Error('INVALID_PAYMENT_MODE');
+      if (paymentMode === 'paid' && (!Number.isInteger(priceCzk) || priceCzk < 0 || priceCzk > 10000)) throw new Error('INVALID_PRICE');
+      if (!Number.isInteger(minimumAttendance) || minimumAttendance < 1 || minimumAttendance > capacity) throw new Error('INVALID_MINIMUM_ATTENDANCE');
+      if (!Number.isFinite(Date.parse(startsAt)) || !Number.isFinite(Date.parse(endsAt)) || Date.parse(endsAt) <= Date.parse(startsAt)) throw new Error('INVALID_TIME');
+      const instructorPayment = await getInstructorPayment(instructorId);
+      const paymentNote = instructorPayment.payment_mode === paymentMode && instructorPayment.payment_note
+        ? instructorPayment.payment_note
+        : paymentMode === 'paid'
+          ? `Platba ${priceCzk} Kč. QR kód bude odeslán po skončení lekce.`
+          : 'Dobrovolný příspěvek. QR kód bude odeslán po skončení lekce.';
+      change = await callRpc<LessonChange>('admin_update_lesson', {
+        p_lesson_id: lessonId,
+        p_title: title,
+        p_instructor_id: instructorId,
+        p_starts_at: startsAt,
+        p_ends_at: endsAt,
+        p_capacity: capacity,
+        p_language: language,
+        p_payment_mode: paymentMode,
+        p_price_czk: priceCzk,
+        p_payment_note: paymentNote,
+        p_minimum_attendance: minimumAttendance,
+      });
+    } else {
+      if (!['reschedule', 'cancel'].includes(action)) throw new Error('INVALID_ACTION');
+      change = await callRpc<LessonChange>('admin_change_lesson', {
+        p_lesson_id: lessonId,
+        p_action: action,
+        p_starts_at: action === 'reschedule' ? body.startsAt : null,
+        p_ends_at: action === 'reschedule' ? body.endsAt : null,
+      });
+    }
 
     const teacherFirstName = change.teacher.trim().split(/\s+/)[0] || 'Tým';
     const results = await Promise.all(change.participants.map((participant) => {
       const rescheduled = change.action === 'reschedule';
-      const details = rescheduled
+      const updated = change.action === 'update';
+      const paymentLabel = (mode?: 'paid' | 'donation', price?: number | null) => mode === 'donation' ? 'dobrovolný příspěvek' : `${price ?? 0} Kč`;
+      const details = updated
+        ? `<p><strong>Původně:</strong> ${escapeHtml(change.old_title || change.title)} · ${escapeHtml(change.old_teacher || change.teacher)}<br>
+          ${escapeHtml(formatLessonDate(change.old_starts_at))} · ${escapeHtml(change.old_language === 'en' ? 'anglicky' : 'česky')} · ${escapeHtml(paymentLabel(change.old_payment_mode, change.old_price_czk))}</p>
+          <p><strong>Nově:</strong> ${escapeHtml(change.title)} · ${escapeHtml(change.teacher)}<br>
+          ${escapeHtml(formatLessonDate(change.new_starts_at))} · ${escapeHtml(change.new_language === 'en' ? 'anglicky' : 'česky')} · ${escapeHtml(paymentLabel(change.new_payment_mode, change.new_price_czk))}</p>`
+        : rescheduled
         ? `<p>Původní termín: <s>${escapeHtml(formatLessonDate(change.old_starts_at))}</s><br>
           Nový termín: <strong>${escapeHtml(formatLessonDate(change.new_starts_at))}</strong></p>`
         : `<p>Termín: <strong>${escapeHtml(formatLessonDate(change.old_starts_at))}</strong></p>`;
       return sendBrevoEmail({
         toEmail: participant.email,
         toName: participant.name,
-        subject: `${rescheduled ? 'Změna času lekce' : 'Lekce zrušena'}: ${change.title}`,
+        subject: `${updated ? 'Změna lekce' : rescheduled ? 'Změna času lekce' : 'Lekce zrušena'}: ${change.title}`,
         htmlContent: `<p>Ahoj ${escapeHtml(participant.name)},</p>
-          <p>${rescheduled ? 'čas lekce byl změněn' : 'lekce byla zrušena'}: <strong>${escapeHtml(change.title)}</strong>.</p>
+          <p>${updated ? 'údaje lekce byly změněny' : rescheduled ? 'čas lekce byl změněn' : 'lekce byla zrušena'}: <strong>${escapeHtml(change.title)}</strong>.</p>
           ${details}
           <p>${escapeHtml(change.location)}</p>
-          <p>${rescheduled ? 'Těšíme se na podložce.' : 'Omlouváme se za komplikace.'}<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU</p>`,
+          <p>${updated || rescheduled ? 'Těšíme se na podložce.' : 'Omlouváme se za komplikace.'}<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU</p>`,
       });
     }));
 
@@ -311,13 +365,15 @@ Deno.serve(async (req: Request) => {
     return json(req, { ok: true, action: change.action, notified, failed });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') ? 400 : 500;
+    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('LESSON_UNCHANGED') ? 400 : 500;
     console.error('manage-lesson failed', code);
     const message = status === 403
       ? 'Tento účet nemá oprávnění správce.'
       : status === 409
         ? code.includes('LESSON_NOT_ENDED')
           ? 'Platební e-maily lze odeslat až po skončení lekce.'
+          : code.includes('LESSON_CAPACITY_TOO_SMALL')
+            ? 'Kapacita nemůže být nižší než počet potvrzených rezervací.'
           : 'Ve zvoleném termínu už má tento lektor naplánovanou lekci.'
         : code === 'ADMIN_EXISTS'
           ? 'Účet s tímto e-mailem už existuje.'
