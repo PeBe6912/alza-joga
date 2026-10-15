@@ -74,6 +74,8 @@ const allowedOrigins = new Set([
   'https://www.joganahallu.cz',
 ]);
 
+const DONATION_PAYMENT_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. Platba prostřednictvím QR kódu směřuje přímo na účet organizace Dobrý anděl.';
+
 const OWNER_ADMIN_USER_ID = '3f8ca22d-aa9a-4cad-bb14-8e4fbfae1c97';
 
 function headers(req: Request): Record<string, string> {
@@ -289,8 +291,8 @@ Deno.serve(async (req: Request) => {
       const results = await Promise.all(batch.participants.map(async (participant) => {
         const recipientEmail = recipientById.get(participant.reservation_id) || participant.email;
         const paymentCopy = donation
-          ? batch.payment_note
-          : `Prosíme o úhradu ${batch.price_czk ?? 0} Kč pomocí QR kódu níže.`;
+          ? DONATION_PAYMENT_COPY
+          : `Zaplať prosím ${batch.price_czk ?? 0} Kč pomocí QR kódu níže.`;
         const result = await sendBrevoEmail({
           toEmail: recipientEmail,
           toName: participant.name,
@@ -362,7 +364,7 @@ Deno.serve(async (req: Request) => {
         ? instructorPayment.payment_note
         : paymentMode === 'paid'
           ? `Platba ${priceCzk} Kč. QR kód bude odeslán po skončení lekce.`
-          : 'Dobrovolný příspěvek. QR kód bude odeslán po skončení lekce.';
+          : DONATION_PAYMENT_COPY;
 
       const created = await callRpc<{ created: number; lesson_ids: string[] }>('admin_create_lessons', {
         p_title: title,
@@ -412,7 +414,7 @@ Deno.serve(async (req: Request) => {
         ? instructorPayment.payment_note
         : paymentMode === 'paid'
           ? `Platba ${priceCzk} Kč. QR kód bude odeslán po skončení lekce.`
-          : 'Dobrovolný příspěvek. QR kód bude odeslán po skončení lekce.';
+          : DONATION_PAYMENT_COPY;
       change = await callRpc<LessonChange>('admin_update_lesson', {
         p_lesson_id: lessonId,
         p_title: title,

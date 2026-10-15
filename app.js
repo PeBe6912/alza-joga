@@ -6,6 +6,7 @@ const PUBLIC_SETTING_DEFAULTS = {
   default_paid_price: 150,
   studio_capacity: 20,
 };
+const DONATION_PAYMENT_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. Platba prostřednictvím QR kódu směřuje přímo na účet organizace Dobrý anděl.';
 
 async function loadPublicSettings() {
   try {
@@ -871,7 +872,7 @@ async function saveSettings(event) {
         ? teacher.payment_note
         : mode === 'paid'
           ? 'Platba QR kódem po skončení lekce.'
-          : 'Dobrovolný příspěvek. QR kód přijde po skončení lekce.';
+          : DONATION_PAYMENT_COPY;
       return adminRest(`instructors?id=eq.${encodeURIComponent(teacher.id)}`, 'PATCH', {
         payment_mode: mode,
         price_czk: mode === 'paid' ? Number(data.get(`teacherPrice-${teacher.id}`)) : null,
@@ -926,7 +927,7 @@ function openTeacherEditor(id) {
     const paymentNote = paymentMode !== teacher.payment_mode && enteredPaymentNote === teacher.payment_note
       ? paymentMode === 'paid'
         ? 'Platba QR kódem po skončení lekce.'
-        : 'Dobrovolný příspěvek. QR kód přijde po skončení lekce.'
+        : DONATION_PAYMENT_COPY
       : enteredPaymentNote;
     button.disabled = true;
     button.textContent = 'Ukládám…';
