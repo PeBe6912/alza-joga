@@ -352,7 +352,7 @@ footer .brand-logo{height:72px}
 .teacher-photo{height:100%;min-width:0;background:var(--paper);overflow:hidden}
 .teacher-card.reverse .teacher-photo{order:2}
 .teacher-photo img{width:100%;height:100%;min-height:0;object-fit:cover;object-position:center}
-.teacher-photo-portrait img{object-position:center bottom}
+.teacher-photo-portrait img{object-position:center 80%}
 .feature-list [data-setting="studio_capacity"]{color:inherit;font:inherit;margin:0}
 .admin-teacher blockquote{margin:8px 0 0;color:var(--ink);font-family:"Newsreader",serif;font-size:15px;line-height:1.4}
 .participant-actions{white-space:nowrap}
@@ -409,7 +409,7 @@ footer .brand-logo{height:72px}
   .teacher-photo{height:auto}
   .teacher-photo img{height:auto;max-height:none}
   .teacher-photo-portrait{height:560px}
-  .teacher-photo-portrait img{height:100%;object-position:center bottom}
+  .teacher-photo-portrait img{height:100%;object-position:center 80%}
   .gallery{grid-template-columns:1fr 1fr}
   .gallery-quote{display:grid;grid-column:1/-1;min-height:230px}
 }
