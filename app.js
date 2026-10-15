@@ -889,6 +889,11 @@ function studioBlockForm(block = null) {
 function openStudioBlockEditor(id = '') {
   const block = adminStudioBlocks.find((item) => item.id === id) || null;
   document.querySelector('#booking-content').innerHTML = studioBlockForm(block);
+  document.querySelector('#studio-block-start').addEventListener('change', (event) => {
+    const start = new Date(event.target.value);
+    if (Number.isNaN(start.getTime())) return;
+    document.querySelector('#studio-block-end').value = dateTimeLocalValue(new Date(start.getTime() + 60 * 60 * 1000));
+  });
   document.querySelector('#studio-block-form').addEventListener('submit', (event) => saveStudioBlock(event, block));
   dialog.showModal();
 }
@@ -1465,6 +1470,11 @@ function openLessonEditor(id) {
       field.value = dateTimeLocalValue(value);
     });
   }));
+  document.querySelector('#lesson-start').addEventListener('change', (event) => {
+    const start = new Date(event.target.value);
+    if (Number.isNaN(start.getTime())) return;
+    document.querySelector('#lesson-end').value = dateTimeLocalValue(new Date(start.getTime() + 60 * 60 * 1000));
+  });
   const syncEditorPaymentFields = () => {
     const paid = document.querySelector('[name="editPaymentMode"]:checked')?.value === 'paid';
     const price = document.querySelector('#lesson-price');
