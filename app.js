@@ -345,7 +345,10 @@ function showToast(message) {
 const publicView = document.querySelector('#public-view');
 const adminView = document.querySelector('#admin-view');
 
-async function openAdmin() {
+async function openAdmin({ updateUrl = true } = {}) {
+  if (updateUrl && location.hash !== '#admin') {
+    history.pushState({}, '', `${location.pathname}${location.search}#admin`);
+  }
   publicView.hidden = true;
   document.querySelector('.site-header').hidden = true;
   document.querySelector('.announcement').hidden = true;
@@ -361,15 +364,28 @@ async function openAdmin() {
   window.scrollTo(0, 0);
 }
 
-document.querySelectorAll('[data-open-admin]').forEach((button) => button.addEventListener('click', openAdmin));
-
-document.querySelector('#close-admin').addEventListener('click', () => {
+function closeAdmin() {
   adminView.hidden = true;
   publicView.hidden = false;
   document.querySelector('.site-header').hidden = false;
   document.querySelector('.announcement').hidden = false;
   document.querySelector('footer').hidden = false;
   window.scrollTo(0, 0);
+}
+
+document.querySelectorAll('[data-open-admin]').forEach((button) => button.addEventListener('click', (event) => {
+  event.preventDefault();
+  openAdmin();
+}));
+
+document.querySelector('#close-admin').addEventListener('click', () => {
+  history.pushState({}, '', `${location.pathname}${location.search}#top`);
+  closeAdmin();
+});
+
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#admin') openAdmin({ updateUrl: false });
+  else if (!adminView.hidden) closeAdmin();
 });
 
 function clearAdminSession() {
@@ -1286,3 +1302,4 @@ loadLessons();
 loadPublicContent();
 const cancellationToken = new URLSearchParams(location.search).get('cancel');
 if (cancellationToken) openCancellation(cancellationToken);
+else if (location.hash === '#admin') openAdmin({ updateUrl: false });
