@@ -25,11 +25,22 @@ type PaymentEmailBatch = {
   starts_at: string;
   ends_at?: string;
   teacher: string;
+  instructor_email: string | null;
   payment_mode: 'paid' | 'donation';
   price_czk: number | null;
   payment_note: string;
   payment_qr_url: string | null;
   participants: PaymentParticipant[];
+};
+
+type AdminReservationCancellation = {
+  reservation_id: string;
+  attendee_name: string;
+  attendee_email: string;
+  title: string;
+  starts_at: string;
+  location: string;
+  teacher: string;
 };
 
 type LessonChange = {
@@ -158,6 +169,42 @@ Deno.serve(async (req: Request) => {
       return json(req, { ok: true, action });
     }
 
+    if (action === 'instructor-contacts') {
+      const instructors = await callRpc<Array<{ instructor_id: string; email: string }>>('admin_instructor_contacts', {});
+      return json(req, { ok: true, action, instructors });
+    }
+
+    if (action === 'update-instructor-email') {
+      const instructorId = String(body.instructorId ?? '');
+      const email = String(body.email ?? '').trim().toLowerCase();
+      if (!/^[0-9a-f-]{36}$/i.test(instructorId)) throw new Error('INVALID_INSTRUCTOR');
+      if (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('INVALID_EMAIL');
+      await callRpc<void>('admin_update_instructor_email', { p_instructor_id: instructorId, p_email: email });
+      return json(req, { ok: true, action });
+    }
+
+    if (action === 'cancel-reservation') {
+      const reservationId = String(body.reservationId ?? '');
+      if (!/^[0-9a-f-]{36}$/i.test(reservationId)) throw new Error('INVALID_RESERVATION');
+      const cancellation = await callRpc<AdminReservationCancellation>('admin_cancel_reservation', {
+        p_reservation_id: reservationId,
+      });
+      const teacherFirstName = cancellation.teacher.trim().split(/\s+/)[0] || 'Tým';
+      const emailResult = await sendBrevoEmail({
+        toEmail: cancellation.attendee_email,
+        toName: cancellation.attendee_name,
+        subject: `Rezervace zrušena: ${cancellation.title}`,
+        htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:560px;margin:auto">
+          <p>Ahoj ${escapeHtml(cancellation.attendee_name)},</p>
+          <p>lektor zrušil tvoji rezervaci na lekci <strong>${escapeHtml(cancellation.title)}</strong>.</p>
+          <p>Termín: <strong>${escapeHtml(formatLessonDate(cancellation.starts_at))}</strong><br>${escapeHtml(cancellation.location)}</p>
+          <p>Pokud máš zájem, vyber si prosím jiný termín na webu.</p>
+          <p>${escapeHtml(teacherFirstName)} · Jóga na HALLU</p>
+        </div>`,
+      });
+      return json(req, { ok: true, action, emailSent: emailResult.sent });
+    }
+
     if (action === 'update-settings') {
       const cancellationHours = Number(body.cancellationHours);
       const minimumAttendance = Number(body.minimumAttendance);
@@ -206,6 +253,7 @@ Deno.serve(async (req: Request) => {
       const teacherFirstName = batch.teacher.trim().split(/\s+/)[0] || 'Tým';
       const publicSiteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
       const donation = batch.payment_mode === 'donation';
+      if (!batch.instructor_email) throw new Error('INSTRUCTOR_EMAIL_MISSING');
       if (!batch.payment_qr_url) throw new Error('PAYMENT_QR_MISSING');
       const qrUrl = publicAssetUrl(publicSiteUrl, batch.payment_qr_url);
       const results = await Promise.all(batch.participants.map(async (participant) => {
@@ -239,7 +287,24 @@ Deno.serve(async (req: Request) => {
       const sent = results.filter((result) => result.sent).length;
       const failed = results.length - sent;
       const skipped = requestedRecipients.length - results.length;
-      return json(req, { ok: true, action, sent, failed, skipped, results });
+      const summaryRows = batch.participants.map((participant) => {
+        const result = results.find((item) => item.reservationId === participant.reservation_id);
+        const recipientEmail = recipientById.get(participant.reservation_id) || participant.email;
+        return `<tr><td style="padding:7px 10px;border-bottom:1px solid #ddd">${escapeHtml(participant.name)}</td><td style="padding:7px 10px;border-bottom:1px solid #ddd">${escapeHtml(recipientEmail)}</td><td style="padding:7px 10px;border-bottom:1px solid #ddd">${result?.sent ? 'Odesláno' : 'Neodesláno'}</td></tr>`;
+      }).join('');
+      const summaryResult = await sendBrevoEmail({
+        toEmail: batch.instructor_email,
+        toName: batch.teacher,
+        subject: `Souhrn platebních e-mailů: ${batch.title}`,
+        htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:640px;margin:auto">
+          <p>Ahoj ${escapeHtml(teacherFirstName)},</p>
+          <p>platební údaje po lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}) byly rozeslány.</p>
+          <p><strong>Odesláno:</strong> ${sent}<br><strong>Neúspěšné:</strong> ${failed}<br><strong>Přeskočeno:</strong> ${skipped}</p>
+          <table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">Účastník</th><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">E-mail</th><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">Stav</th></tr></thead><tbody>${summaryRows}</tbody></table>
+          <p>Jóga na HALLU</p>
+        </div>`,
+      });
+      return json(req, { ok: true, action, sent, failed, skipped, summarySent: summaryResult.sent, results });
     }
 
     if (action === 'create') {
@@ -372,12 +437,14 @@ Deno.serve(async (req: Request) => {
     return json(req, { ok: true, action: change.action, notified, failed });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('LESSON_UNCHANGED') ? 400 : 500;
+    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') ? 400 : code.includes('RESERVATION_NOT_FOUND') ? 404 : 500;
     console.error('manage-lesson failed', code);
     const message = code === 'FORBIDDEN'
       ? 'Tento účet nemá oprávnění správce.'
       : status === 409
-        ? code.includes('LESSON_NOT_ENDED')
+        ? code.includes('CANCELLATION_NOT_ALLOWED')
+          ? 'Rezervaci už nelze zrušit nebo už byla zrušená.'
+        : code.includes('LESSON_NOT_ENDED')
           ? 'Platební e-maily lze odeslat až po skončení lekce.'
           : code.includes('LESSON_CAPACITY_TOO_SMALL')
             ? 'Kapacita nemůže být nižší než počet potvrzených rezervací.'
@@ -391,7 +458,11 @@ Deno.serve(async (req: Request) => {
         : requestedAction === 'change-password'
           ? 'Heslo se nepodařilo změnit.'
         : requestedAction.startsWith('payment-')
-          ? code.includes('PAYMENT_QR_MISSING') ? 'V profilu lektora chybí QR kód pro tento typ platby.' : 'Platební e-maily se nepodařilo připravit nebo odeslat.'
+          ? code.includes('PAYMENT_QR_MISSING') ? 'V profilu lektora chybí QR kód pro tento typ platby.' : code.includes('INSTRUCTOR_EMAIL_MISSING') ? 'V profilu lektora chybí e-mail pro souhrn.' : 'Platební e-maily se nepodařilo připravit nebo odeslat.'
+        : requestedAction === 'cancel-reservation'
+          ? code.includes('CANCELLATION_NOT_ALLOWED') ? 'Rezervaci už nelze zrušit nebo už byla zrušená.' : 'Rezervaci účastníka se nepodařilo zrušit.'
+        : requestedAction === 'update-instructor-email' || requestedAction === 'instructor-contacts'
+          ? 'E-mail lektora se nepodařilo načíst nebo uložit.'
         : requestedAction === 'update-settings'
           ? 'Nastavení se nepodařilo uložit.'
         : requestedAction === 'create'

@@ -272,10 +272,14 @@ function renderPublicNews() {
     return;
   }
   const displayItems = [...newsItems].sort((a, b) => Number(Boolean(b.image_url)) - Number(Boolean(a.image_url)));
-  grid.innerHTML = displayItems.map((item, index) => {
+  const textCardTones = ['tone-sage', 'tone-clay', 'tone-sand', 'tone-ink'];
+  let textCardIndex = 0;
+  grid.innerHTML = displayItems.map((item) => {
     const charityStory = item.title.trim().toLocaleLowerCase('cs-CZ') === 'cvičením pomáháme';
     if (item.image_url) return `<article class="news-card featured"><img src="${escapeHtml(item.image_url)}" alt=""><div><span>Ze studia</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></div></article>`;
-    return `<article class="news-card text-card${charityStory ? ' charity-card' : index % 2 ? ' warm' : ''}">${charityStory ? '<img class="charity-logo" src="assets/dobry-andel-logo.svg" alt="Dobrý Anděl">' : ''}<span>${charityStory ? 'Dobrá věc' : 'Novinka'}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></article>`;
+    const tone = textCardTones[textCardIndex % textCardTones.length];
+    textCardIndex += 1;
+    return `<article class="news-card text-card ${tone}${charityStory ? ' charity-card' : ''}">${charityStory ? '<img class="charity-logo" src="assets/dobry-andel-logo.svg" alt="Dobrý Anděl">' : ''}<span>${charityStory ? 'Dobrá věc' : 'Novinka'}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></article>`;
   }).join('');
 }
 
@@ -412,11 +416,15 @@ async function loadAdminLessons() {
 
 async function loadAdminInstructors() {
   const query = new URLSearchParams({ select: 'id,name,bio,practice_quote,styles,photo_url,payment_mode,price_czk,payment_note,paid_qr_url,donation_qr_url,active,sort_order', order: 'sort_order.asc' });
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/instructors?${query}`, {
-    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
-  });
+  const [response, contacts] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/instructors?${query}`, {
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
+    }),
+    manageLesson({ action: 'instructor-contacts' }),
+  ]);
   if (!response.ok) throw new Error('Lektory se nepodařilo načíst.');
-  adminInstructors = await response.json();
+  const emailByInstructor = new Map((contacts.instructors || []).map((contact) => [contact.instructor_id, contact.email]));
+  adminInstructors = (await response.json()).map((teacher) => ({ ...teacher, email: emailByInstructor.get(teacher.id) || '' }));
 }
 
 async function loadAdminNews() {
@@ -536,7 +544,7 @@ function overviewPanel() {
 }
 
 function teachersPanel() {
-  return `<div class="admin-card"><h2>Profily lektorů</h2>${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(teacher.name)}"><div><h3>${escapeHtml(teacher.name)}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.bio)}</p>${teacher.practice_quote ? `<blockquote>„${escapeHtml(teacher.practice_quote)}“</blockquote>` : ''}</div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
+  return `<div class="admin-card"><h2>Profily lektorů</h2>${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(teacher.name)}"><div><h3>${escapeHtml(teacher.name)}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.email || 'E-mail není nastavený')}</p><p>${escapeHtml(teacher.bio)}</p>${teacher.practice_quote ? `<blockquote>„${escapeHtml(teacher.practice_quote)}“</blockquote>` : ''}</div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
 }
 
 function accountsPanel() {
@@ -581,8 +589,9 @@ function lessonParticipantsPanel(lessonId, returnTab) {
   const lesson = adminLessons.find((item) => item.id === lessonId);
   if (!lesson) return '<div class="admin-card"><p>Lekci se nepodařilo najít.</p></div>';
   const participants = adminReservations.filter((reservation) => reservation.lessons.id === lessonId);
-  const rows = participants.map((reservation) => `<tr><td data-label="Jméno"><b>${escapeHtml(reservation.attendee_name)}</b></td><td data-label="E-mail">${escapeHtml(reservation.attendee_email)}</td><td data-label="Stav"><span class="status-pill">${reservation.status === 'attended' ? 'Účast potvrzena' : reservation.status === 'no_show' ? 'Nedorazil/a' : 'Přihlášen/a'}</span></td><td data-label="Platební e-mail">${reservation.payment_email_sent_at ? 'Odeslán' : 'Neodeslán'}</td></tr>`).join('');
-  return `<div class="admin-card"><button class="text-button admin-detail-back" data-return-tab="${returnTab}">← Zpět</button><h2>${escapeHtml(lesson.title)}</h2><p class="admin-help">${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)} · ${participants.length}/${lesson.capacity} přihlášených</p><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Stav</th><th>Platební e-mail</th></tr></thead><tbody>${rows || '<tr><td colspan="4">Na tuto lekci zatím není nikdo přihlášený.</td></tr>'}</tbody></table></div></div>`;
+  const canCancel = lesson.status !== 'cancelled' && new Date(lesson.iso) > new Date();
+  const rows = participants.map((reservation) => `<tr><td data-label="Jméno"><b>${escapeHtml(reservation.attendee_name)}</b></td><td data-label="E-mail">${escapeHtml(reservation.attendee_email)}</td><td data-label="Stav"><span class="status-pill">${reservation.status === 'attended' ? 'Účast potvrzena' : reservation.status === 'no_show' ? 'Nedorazil/a' : 'Přihlášen/a'}</span></td><td data-label="Platební e-mail">${reservation.payment_email_sent_at ? 'Odeslán' : 'Neodeslán'}</td><td class="participant-actions" data-label="Akce">${canCancel && reservation.status === 'confirmed' ? `<button class="button button-small button-secondary" data-cancel-reservation="${reservation.id}" data-lesson-id="${lesson.id}" data-return-tab="${returnTab}">Zrušit rezervaci</button>` : '—'}</td></tr>`).join('');
+  return `<div class="admin-card"><button class="text-button admin-detail-back" data-return-tab="${returnTab}">← Zpět</button><h2>${escapeHtml(lesson.title)}</h2><p class="admin-help">${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)} · ${participants.length}/${lesson.capacity} přihlášených</p><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Stav</th><th>Platební e-mail</th><th>Akce</th></tr></thead><tbody>${rows || '<tr><td colspan="5">Na tuto lekci zatím není nikdo přihlášený.</td></tr>'}</tbody></table></div></div>`;
 }
 
 function newsPanel() {
@@ -683,6 +692,25 @@ async function changeAdminPassword(event) {
 
 function bindParticipantDetailNavigation() {
   document.querySelector('[data-return-tab]')?.addEventListener('click', (event) => renderAdmin(event.currentTarget.dataset.returnTab));
+  document.querySelectorAll('[data-cancel-reservation]').forEach((button) => button.addEventListener('click', () => cancelAdminReservation(
+    button.dataset.cancelReservation,
+    button.dataset.lessonId,
+    button.dataset.returnTab,
+  )));
+}
+
+async function cancelAdminReservation(reservationId, lessonId, returnTab) {
+  const reservation = adminReservations.find((item) => item.id === reservationId);
+  if (!reservation || !confirm(`Zrušit rezervaci účastníka ${reservation.attendee_name}? Udělat to můžeš i méně než 24 hodin před lekcí.`)) return;
+  try {
+    const result = await manageLesson({ action: 'cancel-reservation', reservationId });
+    await Promise.all([loadAdminLessons(), loadAdminReservations()]);
+    document.querySelector('#admin-panel').innerHTML = lessonParticipantsPanel(lessonId, returnTab);
+    bindParticipantDetailNavigation();
+    showToast(result.emailSent ? 'Rezervace byla zrušena a účastník dostal e-mail.' : 'Rezervace byla zrušena. E-mail se nepodařilo odeslat.');
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 async function adminRest(path, method = 'GET', body) {
@@ -751,6 +779,7 @@ function openTeacherEditor(id) {
     <p class="eyebrow">Profil lektora</p><h2>${escapeHtml(teacher.name)}</h2>
     <div class="form-grid">
       <div class="field full"><label for="teacher-name">Jméno</label><input id="teacher-name" name="name" value="${escapeHtml(teacher.name)}" maxlength="120" required></div>
+      <div class="field full"><label for="teacher-email">E-mail pro souhrny po lekci</label><input id="teacher-email" name="email" type="email" value="${escapeHtml(teacher.email || '')}" maxlength="320" required><small>Po odeslání platebních údajů dostane lektor na tuto adresu souhrn.</small></div>
       <div class="field full"><label for="teacher-styles">Styly jógy</label><input id="teacher-styles" name="styles" value="${escapeHtml((teacher.styles || []).join(', '))}" placeholder="Power, Vinyasa, Hatha"></div>
       <div class="field full"><label for="teacher-bio">Medailonek</label><textarea id="teacher-bio" name="bio" rows="7" required>${escapeHtml(teacher.bio)}</textarea></div>
       <div class="field full"><label for="teacher-quote">Osobní citát o praxi</label><textarea id="teacher-quote" name="practiceQuote" rows="4" maxlength="1000">${escapeHtml(teacher.practice_quote || '')}</textarea></div>
@@ -778,6 +807,7 @@ function openTeacherEditor(id) {
     button.disabled = true;
     button.textContent = 'Ukládám…';
     try {
+      await manageLesson({ action: 'update-instructor-email', instructorId: id, email: data.get('email').trim() });
       await adminRest(`instructors?id=eq.${encodeURIComponent(id)}`, 'PATCH', {
         name: data.get('name').trim(),
         styles: String(data.get('styles')).split(',').map((item) => item.trim()).filter(Boolean),
@@ -891,11 +921,13 @@ async function openPaymentEmails(lessonId) {
     document.querySelector('#booking-content').innerHTML = `<form class="booking-panel payment-panel" id="payment-email-form">
       <p class="eyebrow">E-mail po lekci</p><h2>${escapeHtml(preview.title)}</h2>
       <p><b>${escapeHtml(preview.teacher)}</b> · ${escapeHtml(formatAdminDate(preview.starts_at))}</p>
+      <p class="form-hint">Souhrn odeslání dostane lektor na <b>${escapeHtml(preview.instructor_email || 'nenastavený e-mail')}</b>.</p>
       <div class="payment-preview">${qrPath ? `<img src="${escapeHtml(qrPath)}" alt="${escapeHtml(paymentText)}">` : '<div class="payment-qr-missing">QR kód chybí</div>'}<div><b>${escapeHtml(paymentText)}</b><p>${escapeHtml(preview.payment_note || '')}</p>${qrPath ? '' : '<p class="attendance-note">Nejdřív doplň QR kód v profilu lektora.</p>'}</div></div>
       <div class="payment-list-heading"><b>Komu e-mail odeslat</b><span>${unsentCount} neodeslaných</span></div>
       <div class="payment-recipient-list">${participantRows || '<p>Na této lekci nejsou žádní aktivní účastníci.</p>'}</div>
       <p class="form-hint">Adresu můžeš před odesláním opravit. Odškrtnutému účastníkovi e-mail nepřijde.</p>
-      <button class="button" type="submit" ${unsentCount && qrPath ? '' : 'disabled'}>Zkontrolovat a odeslat</button>
+      ${preview.instructor_email ? '' : '<p class="attendance-note">Nejdřív doplň e-mail lektora v jeho profilu.</p>'}
+      <button class="button" type="submit" ${unsentCount && qrPath && preview.instructor_email ? '' : 'disabled'}>Zkontrolovat a odeslat</button>
     </form>`;
     document.querySelectorAll('[name="paymentRecipient"]').forEach((checkbox) => checkbox.addEventListener('change', () => {
       document.querySelector(`[data-payment-email="${checkbox.value}"]`).disabled = !checkbox.checked;
@@ -928,7 +960,9 @@ async function sendPaymentEmails(event, lessonId) {
   try {
     const result = await manageLesson({ lessonId, action: 'payment-send', recipients });
     dialog.close();
-    showToast(result.failed ? `Odesláno: ${result.sent}. Neúspěšné: ${result.failed}.` : `Platební e-maily byly odeslány: ${result.sent}.`);
+    showToast(result.failed || !result.summarySent
+      ? `Účastníkům odesláno: ${result.sent}, neúspěšné: ${result.failed}. ${result.summarySent ? 'Souhrn lektorovi odeslán.' : 'Souhrn lektorovi se nepodařilo odeslat.'}`
+      : `Platební e-maily byly odeslány: ${result.sent}. Souhrn dostal také lektor.`);
   } catch (error) {
     button.disabled = false;
     button.textContent = 'Zkontrolovat a odeslat';
