@@ -31,6 +31,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
+    const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
     const token = String(body.token ?? '');
     if (token.length < 40 || token.length > 80) return json(req, { error: 'INVALID_TOKEN', message: 'Odkaz pro zrušení není platný.' }, 400);
 
@@ -45,7 +46,8 @@ Deno.serve(async (req: Request) => {
         subject: `Rezervace zrušena: ${cancellation.title}`,
         htmlContent: `<p>${escapeHtml(czechSalutation(cancellation.attendee_name))},</p>
           <p>rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong> (${escapeHtml(formatLessonDate(cancellation.starts_at))}) byla zrušena.</p>
-          <p>Jóga na HALLU</p>`,
+          <p>Budeme rádi, když si vybereš jiný termín.</p>
+          <p>Tým · Jóga na HALLU<br><a href="${escapeHtml(siteUrl)}">Web Jóga na HALLU</a></p>`,
       });
     }
 

@@ -145,6 +145,7 @@ Deno.serve(async (req: Request) => {
     const adminUser = await requireAdmin(req);
     const body = await req.json();
     const action = String(body.action ?? '');
+    const publicSiteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
     requestedAction = action;
     const canManageAdmins = adminUser.id === OWNER_ADMIN_USER_ID;
     if (action === 'capabilities') {
@@ -231,7 +232,7 @@ Deno.serve(async (req: Request) => {
           <p>lektor zrušil tvoji rezervaci na lekci <strong>${escapeHtml(cancellation.title)}</strong>.</p>
           <p>Termín: <strong>${escapeHtml(formatLessonDate(cancellation.starts_at))}</strong><br>${escapeHtml(cancellation.location)}</p>
           <p>Pokud máš zájem, vyber si prosím jiný termín na webu.</p>
-          <p>${escapeHtml(teacherFirstName)} · Jóga na HALLU</p>
+          <p>${escapeHtml(teacherFirstName)} · Jóga na HALLU<br><a href="${escapeHtml(publicSiteUrl)}">Web Jóga na HALLU</a></p>
         </div>`,
       });
       return json(req, { ok: true, action, emailSent: emailResult.sent });
@@ -283,7 +284,6 @@ Deno.serve(async (req: Request) => {
       if (!batch.participants.length) throw new Error('NO_ELIGIBLE_RECIPIENTS');
 
       const teacherFirstName = batch.teacher.trim().split(/\s+/)[0] || 'Tým';
-      const publicSiteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
       const donation = batch.payment_mode === 'donation';
       if (!batch.instructor_email) throw new Error('INSTRUCTOR_EMAIL_MISSING');
       if (!batch.payment_qr_url) throw new Error('PAYMENT_QR_MISSING');
@@ -303,7 +303,7 @@ Deno.serve(async (req: Request) => {
             <p>${escapeHtml(paymentCopy)}</p>
             <p style="text-align:center;margin:28px 0"><a href="${qrUrl}"><img src="${qrUrl}" width="280" alt="${donation ? 'QR kód pro dobrovolný příspěvek' : `QR kód pro platbu ${batch.price_czk ?? 0} Kč – ${escapeHtml(batch.teacher)}`}" style="max-width:100%;height:auto;border:0"></a></p>
             <p style="font-size:13px;color:#66706b">Pokud se obrázek v e-mailu nezobrazí, <a href="${qrUrl}">otevři QR kód v prohlížeči</a>.</p>
-            <p>Děkujeme.<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU</p>
+            <p>Děkujeme.<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU<br><a href="${escapeHtml(publicSiteUrl)}">Web Jóga na HALLU</a></p>
           </div>`,
         });
         await callRpc<void>('record_payment_email_result', {
@@ -333,7 +333,7 @@ Deno.serve(async (req: Request) => {
           <p>platební údaje po lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}) byly rozeslány.</p>
           <p><strong>Odesláno:</strong> ${sent}<br><strong>Neúspěšné:</strong> ${failed}<br><strong>Přeskočeno:</strong> ${skipped}</p>
           <table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">Účastník</th><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">E-mail</th><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">Stav</th></tr></thead><tbody>${summaryRows}</tbody></table>
-          <p>Jóga na HALLU</p>
+          <p>Tým · Jóga na HALLU<br><a href="${escapeHtml(publicSiteUrl)}">Web Jóga na HALLU</a></p>
         </div>`,
       });
       return json(req, { ok: true, action, sent, failed, skipped, summarySent: summaryResult.sent, results });
@@ -460,7 +460,7 @@ Deno.serve(async (req: Request) => {
           <p>${updated ? 'údaje lekce byly změněny' : rescheduled ? 'čas lekce byl změněn' : 'lekce byla zrušena'}: <strong>${escapeHtml(change.title)}</strong>.</p>
           ${details}
           <p>${escapeHtml(change.location)}</p>
-          <p>${updated || rescheduled ? 'Těšíme se na podložce.' : 'Omlouváme se za komplikace.'}<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU</p>`,
+          <p>${updated || rescheduled ? 'Těšíme se na podložce.' : 'Omlouváme se za komplikace.'}<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU<br><a href="${escapeHtml(publicSiteUrl)}">Web Jóga na HALLU</a></p>`,
       });
     }));
 

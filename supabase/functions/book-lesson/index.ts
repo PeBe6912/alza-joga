@@ -70,7 +70,7 @@ Deno.serve(async (req: Request) => {
         ${escapeHtml(reservation.location)}<br>Lektor: ${escapeHtml(reservation.teacher)}</p>
         <p>${escapeHtml(reservation.payment_note)}</p>
         <p>Rezervaci můžeš zrušit nejpozději ${cancellationHours} hodin před začátkem: <a href="${escapeHtml(cancelUrl)}">zrušit rezervaci</a>.</p>
-        <p>Těšíme se na podložce.<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU</p>`,
+        <p>Těšíme se na podložce.<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU<br><a href="${escapeHtml(siteUrl)}">Web Jóga na HALLU</a></p>`,
     });
 
     try {
