@@ -86,6 +86,10 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 .admin-topbar-actions .text-button{padding:10px;color:var(--muted)}
 footer .brand-logo{height:72px}
 
+@media(min-width:901px){
+  .admin-sidebar{position:sticky;top:0;height:100vh;align-self:start;overflow-y:auto}
+}
+
 @media(max-width:600px){
   .brand-logo{height:52px}
   .brand-name{font-size:20px}
