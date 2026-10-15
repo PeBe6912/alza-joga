@@ -68,7 +68,9 @@ function json(req: Request, body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: headers(req) });
 }
 
-async function requireAdmin(req: Request): Promise<void> {
+type AdminUser = { id: string; email?: string; app_metadata?: { role?: string } };
+
+async function requireAdmin(req: Request): Promise<AdminUser> {
   const authorization = req.headers.get('authorization');
   if (!authorization?.startsWith('Bearer ')) throw new Error('UNAUTHORIZED');
 
@@ -78,6 +80,22 @@ async function requireAdmin(req: Request): Promise<void> {
   });
   const user = await response.json().catch(() => null);
   if (!response.ok || user?.app_metadata?.role !== 'admin') throw new Error('FORBIDDEN');
+  return user;
+}
+
+async function callAuthAdmin(path: string, method: 'POST' | 'PUT', body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { url, secretKey } = supabaseConfig();
+  const response = await fetch(`${url}/auth/v1/admin/${path}`, {
+    method,
+    headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const code = String(result?.code || result?.error_code || result?.message || 'AUTH_ADMIN_FAILED');
+    throw new Error(code.includes('email_exists') || code.includes('already') ? 'ADMIN_EXISTS' : 'AUTH_ADMIN_FAILED');
+  }
+  return result;
 }
 
 async function getInstructorPayment(instructorId: string): Promise<{ payment_mode: 'paid' | 'donation'; price_czk: number | null; payment_note: string }> {
@@ -100,10 +118,31 @@ Deno.serve(async (req: Request) => {
 
   let requestedAction = '';
   try {
-    await requireAdmin(req);
+    const adminUser = await requireAdmin(req);
     const body = await req.json();
     const action = String(body.action ?? '');
     requestedAction = action;
+    if (action === 'create-admin') {
+      const email = String(body.email ?? '').trim().toLowerCase();
+      const password = String(body.password ?? '');
+      if (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('INVALID_EMAIL');
+      if (password.length < 12 || password.length > 72) throw new Error('INVALID_PASSWORD');
+      const created = await callAuthAdmin('users', 'POST', {
+        email,
+        password,
+        email_confirm: true,
+        app_metadata: { role: 'admin' },
+      });
+      return json(req, { ok: true, action, userId: created.id ?? null });
+    }
+
+    if (action === 'change-password') {
+      const password = String(body.password ?? '');
+      if (password.length < 12 || password.length > 72) throw new Error('INVALID_PASSWORD');
+      await callAuthAdmin(`users/${adminUser.id}`, 'PUT', { password });
+      return json(req, { ok: true, action });
+    }
+
     if (action === 'update-settings') {
       const cancellationHours = Number(body.cancellationHours);
       const minimumAttendance = Number(body.minimumAttendance);
@@ -280,6 +319,12 @@ Deno.serve(async (req: Request) => {
         ? code.includes('LESSON_NOT_ENDED')
           ? 'Platební e-maily lze odeslat až po skončení lekce.'
           : 'Ve zvoleném termínu už má tento lektor naplánovanou lekci.'
+        : code === 'ADMIN_EXISTS'
+          ? 'Účet s tímto e-mailem už existuje.'
+        : requestedAction === 'create-admin'
+          ? 'Administrátora se nepodařilo vytvořit.'
+        : requestedAction === 'change-password'
+          ? 'Heslo se nepodařilo změnit.'
         : requestedAction.startsWith('payment-')
           ? code.includes('PAYMENT_QR_MISSING') ? 'V profilu lektora chybí QR kód pro tento typ platby.' : 'Platební e-maily se nepodařilo připravit nebo odeslat.'
         : requestedAction === 'update-settings'

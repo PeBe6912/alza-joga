@@ -34,8 +34,8 @@ const fallbackLessons = [];
 let lessons = fallbackLessons;
 
 const fallbackTeachers = [
-  { name: 'Daniela Šťastná', photo: 'assets/daniela-stastna.jpg', styles: 'Fyzio · Hatha · Power · Vinyasa', bio: 'Jógu aktivně praktikuje od roku 2014. V roce 2023 dokončila akreditovaný 200hodinový kurz MŠMT od Yoga4Everybody.' },
-  { name: 'Petr Bena', photo: 'assets/petr-bena.jpeg', styles: 'Power · Vinyasa · Strong slow flow', bio: 'Od prosince 2023 praktikuje jógu denně. V roce 2026 dokončil 200hodinový kurz pro učitele power a vinyasa jógy v Ubudu na Bali.' }
+  { name: 'Daniela Šťastná', photo: 'assets/daniela-stastna.jpg', styles: 'Fyzio · Hatha · Power · Vinyasa', bio: 'Jógu aktivně praktikuje od roku 2014. V roce 2023 dokončila akreditovaný 200hodinový kurz MŠMT od Yoga4Everybody.', quote: 'Ve svých lekcích aktivně asistuji cvičícím, využívám éterické oleje a zpěv manter. Jsem zvědavá na vaši jógovou cestu a budu se na vás těšit.' },
+  { name: 'Petr Bena', photo: 'assets/petr-bena.jpeg', styles: 'Power · Vinyasa · Strong slow flow', bio: 'Od prosince 2023 praktikuje jógu denně. V roce 2026 dokončil 200hodinový kurz pro učitele power a vinyasa jógy v Ubudu na Bali.', quote: 'V roce 2026 jsem v Ubudu na Bali dokončil 200hodinový kurz pro učitele power a vinyasa jógy. Chci vytvářet lekce, na kterých se lidé cítí podporováni a zároveň přiměřeně vyzváni. Nejbližší je mi strong slow flow.' }
 ];
 let teachers = fallbackTeachers;
 let newsItems = [];
@@ -241,6 +241,7 @@ function instructorFromDatabase(row) {
     payment: donation ? (row.payment_note || 'Dobrovolný příspěvek') : `${row.price_czk || 0} Kč · ${row.payment_note || 'QR po skončení lekce'}`,
     charity: donation,
     bio: row.bio || '',
+    quote: row.practice_quote || '',
     paymentMode: row.payment_mode,
     priceCzk: row.price_czk,
     paymentNote: row.payment_note || '',
@@ -256,7 +257,7 @@ function renderPublicTeachers() {
       <p class="teacher-kicker">${escapeHtml(teacher.styles)}</p>
       <h3>${escapeHtml(teacher.name)}</h3>
       <p>${escapeHtml(teacher.bio)}</p>
-      <span class="charity-note">Cena nebo dobrovolný příspěvek se řídí konkrétním termínem.</span>
+      ${teacher.quote ? `<blockquote>„${escapeHtml(teacher.quote)}“</blockquote>` : ''}
     </div>
   </article>`).join('');
 }
@@ -277,7 +278,7 @@ function renderPublicNews() {
 async function loadPublicContent() {
   try {
     const [instructorsResponse, newsResponse] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/instructors?select=id,name,bio,styles,photo_url,payment_mode,price_czk,payment_note&active=eq.true&order=sort_order.asc`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY } }),
+      fetch(`${SUPABASE_URL}/rest/v1/instructors?select=id,name,bio,practice_quote,styles,photo_url,payment_mode,price_czk,payment_note&active=eq.true&order=sort_order.asc`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY } }),
       fetch(`${SUPABASE_URL}/rest/v1/news_items?select=id,title,summary,body,image_url,published_at&published_at=not.is.null&order=published_at.desc`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY } }),
     ]);
     if (instructorsResponse.ok) {
@@ -405,7 +406,7 @@ async function loadAdminLessons() {
 }
 
 async function loadAdminInstructors() {
-  const query = new URLSearchParams({ select: 'id,name,bio,styles,photo_url,payment_mode,price_czk,payment_note,paid_qr_url,donation_qr_url,active,sort_order', order: 'sort_order.asc' });
+  const query = new URLSearchParams({ select: 'id,name,bio,practice_quote,styles,photo_url,payment_mode,price_czk,payment_note,paid_qr_url,donation_qr_url,active,sort_order', order: 'sort_order.asc' });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/instructors?${query}`, {
     headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
   });
@@ -504,13 +505,16 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
         ? '<br><span class="attendance-note confirmed">Minimum splněno</span>'
         : '';
     const status = cancelled ? 'Zrušeno' : ended ? 'Proběhla' : 'Otevřeno';
+    const attendanceAction = belowMinimum && !lesson.lowAttendanceConfirmedAt
+      ? `<button class="button button-small button-secondary" data-confirm-lesson="${lesson.id}">Lekce se koná</button>`
+      : `<span class="lesson-action-state">${belowMinimum ? 'Koná se i v menším počtu' : 'Minimum splněno'}</span>`;
     const actions = cancelled
-      ? '<span class="form-hint">Bez dalších akcí</span>'
+      ? '<div class="lesson-actions-stack lesson-actions-disabled"><span class="lesson-action-state">Bez dalších akcí</span></div>'
       : ended
         ? `<button class="button button-small" data-payment-lesson="${lesson.id}">Platby a příspěvky</button>`
-        : `<div class="lesson-actions-stack">${belowMinimum && !lesson.lowAttendanceConfirmedAt ? `<button class="button button-small button-secondary" data-confirm-lesson="${lesson.id}">Lekce se koná</button>` : ''}<div><button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div></div>`;
+        : `<div class="lesson-actions-stack"><div class="lesson-action-primary">${attendanceAction}</div><div class="lesson-action-buttons"><button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div></div>`;
     const payment = lesson.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : `${lesson.priceCzk ?? 0} Kč`;
-    return `<tr><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span></td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
+    return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span></td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
   }).join('');
   return `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Obsazeno</th><th>Stav</th><th>Akce</th></tr></thead><tbody>${rows || `<tr><td colspan="6">${escapeHtml(emptyMessage)}</td></tr>`}</tbody></table></div>`;
 }
@@ -522,7 +526,27 @@ function overviewPanel() {
 }
 
 function teachersPanel() {
-  return `<div class="admin-card"><h2>Profily lektorů</h2>${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(teacher.name)}"><div><h3>${escapeHtml(teacher.name)}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.bio)}</p><p>${escapeHtml(teacher.payment_note)}</p></div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
+  return `<div class="admin-card"><h2>Profily lektorů</h2>${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(teacher.name)}"><div><h3>${escapeHtml(teacher.name)}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.bio)}</p>${teacher.practice_quote ? `<blockquote>„${escapeHtml(teacher.practice_quote)}“</blockquote>` : ''}</div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
+}
+
+function accountsPanel() {
+  return `<div class="account-grid">
+    <form class="admin-card account-form" id="create-admin-form">
+      <h2>Přidat administrátora</h2>
+      <p class="admin-help">Nový účet bude ihned aktivní a bude se moci přihlásit do správy.</p>
+      <div class="field"><label for="new-admin-email">E-mail</label><input id="new-admin-email" name="email" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="new-admin-password">Počáteční heslo</label><input id="new-admin-password" name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password" required><small>Nejméně 12 znaků.</small></div>
+      <div class="field"><label for="new-admin-password-confirm">Heslo znovu</label><input id="new-admin-password-confirm" name="passwordConfirm" type="password" minlength="12" maxlength="72" autocomplete="new-password" required></div>
+      <button class="button" type="submit">Vytvořit administrátora</button>
+    </form>
+    <form class="admin-card account-form" id="change-password-form">
+      <h2>Změnit moje heslo</h2>
+      <p class="admin-help">Po změně se znovu přihlásíš novým heslem.</p>
+      <div class="field"><label for="admin-new-password">Nové heslo</label><input id="admin-new-password" name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password" required><small>Nejméně 12 znaků.</small></div>
+      <div class="field"><label for="admin-new-password-confirm">Nové heslo znovu</label><input id="admin-new-password-confirm" name="passwordConfirm" type="password" minlength="12" maxlength="72" autocomplete="new-password" required></div>
+      <button class="button" type="submit">Změnit heslo</button>
+    </form>
+  </div>`;
 }
 
 function bookingsPanel() {
@@ -572,7 +596,7 @@ function renderAdmin(tab) {
   const panel = document.querySelector('#admin-panel');
   activeAdminTab = tab;
   document.querySelectorAll('.admin-nav').forEach((button) => button.classList.toggle('active', button.dataset.adminTab === tab));
-  const titles = { overview: 'Nejbližší lekce', lessons: 'Naplánované lekce', completed: 'Proběhlé lekce a platby', people: 'Účastníci', content: 'Novinky', teachers: 'Profily lektorů', settings: 'Nastavení' };
+  const titles = { overview: 'Nejbližší lekce', lessons: 'Naplánované lekce', completed: 'Proběhlé lekce a platby', people: 'Účastníci', content: 'Novinky', teachers: 'Profily lektorů', accounts: 'Administrátoři', settings: 'Nastavení' };
   const addButton = document.querySelector('#add-lesson');
   addButton.hidden = tab !== 'lessons';
   document.querySelector('#admin-logout').hidden = false;
@@ -584,6 +608,7 @@ function renderAdmin(tab) {
   if (tab === 'teachers') panel.innerHTML = teachersPanel();
   if (tab === 'people') panel.innerHTML = bookingsPanel();
   if (tab === 'content') panel.innerHTML = newsPanel();
+  if (tab === 'accounts') panel.innerHTML = accountsPanel();
   if (tab === 'settings') panel.innerHTML = settingsPanel();
 
   document.querySelectorAll('[data-edit-teacher]').forEach((button) => button.addEventListener('click', () => openTeacherEditor(button.dataset.editTeacher)));
@@ -600,6 +625,47 @@ function renderAdmin(tab) {
     bindParticipantDetailNavigation();
   }));
   document.querySelector('#settings-form')?.addEventListener('submit', saveSettings);
+  document.querySelector('#create-admin-form')?.addEventListener('submit', createAdminAccount);
+  document.querySelector('#change-password-form')?.addEventListener('submit', changeAdminPassword);
+}
+
+async function createAdminAccount(event) {
+  event.preventDefault();
+  const data = new FormData(event.target);
+  const password = String(data.get('password'));
+  if (password !== String(data.get('passwordConfirm'))) return showToast('Zadaná hesla se neshodují.');
+  const button = event.target.querySelector('[type="submit"]');
+  button.disabled = true;
+  button.textContent = 'Vytvářím…';
+  try {
+    await manageLesson({ action: 'create-admin', email: String(data.get('email')).trim(), password });
+    event.target.reset();
+    showToast('Administrátor byl vytvořen. Přihlašovací údaje mu předej bezpečnou cestou.');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Vytvořit administrátora';
+  }
+}
+
+async function changeAdminPassword(event) {
+  event.preventDefault();
+  const data = new FormData(event.target);
+  const password = String(data.get('password'));
+  if (password !== String(data.get('passwordConfirm'))) return showToast('Zadaná hesla se neshodují.');
+  const button = event.target.querySelector('[type="submit"]');
+  button.disabled = true;
+  button.textContent = 'Měním…';
+  try {
+    await manageLesson({ action: 'change-password', password });
+    clearAdminSession();
+    renderAdminLogin('Heslo bylo změněno. Přihlas se novým heslem.');
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = 'Změnit heslo';
+    showToast(error.message);
+  }
 }
 
 function bindParticipantDetailNavigation() {
@@ -674,6 +740,7 @@ function openTeacherEditor(id) {
       <div class="field full"><label for="teacher-name">Jméno</label><input id="teacher-name" name="name" value="${escapeHtml(teacher.name)}" maxlength="120" required></div>
       <div class="field full"><label for="teacher-styles">Styly jógy</label><input id="teacher-styles" name="styles" value="${escapeHtml((teacher.styles || []).join(', '))}" placeholder="Power, Vinyasa, Hatha"></div>
       <div class="field full"><label for="teacher-bio">Medailonek</label><textarea id="teacher-bio" name="bio" rows="7" required>${escapeHtml(teacher.bio)}</textarea></div>
+      <div class="field full"><label for="teacher-quote">Osobní citát o praxi</label><textarea id="teacher-quote" name="practiceQuote" rows="4" maxlength="1000">${escapeHtml(teacher.practice_quote || '')}</textarea></div>
       <div class="field full"><label for="teacher-photo">Adresa fotografie</label><input id="teacher-photo" name="photoUrl" value="${escapeHtml(teacher.photo_url || '')}"></div>
       <div class="field"><label for="teacher-payment-mode">Typ lekce</label><select id="teacher-payment-mode" name="paymentMode"><option value="paid" ${teacher.payment_mode === 'paid' ? 'selected' : ''}>Placená</option><option value="donation" ${teacher.payment_mode === 'donation' ? 'selected' : ''}>Dobrovolný příspěvek</option></select></div>
       <div class="field"><label for="teacher-price">Cena v Kč</label><input id="teacher-price" name="priceCzk" type="number" min="0" value="${teacher.price_czk ?? ''}"></div>
@@ -702,6 +769,7 @@ function openTeacherEditor(id) {
         name: data.get('name').trim(),
         styles: String(data.get('styles')).split(',').map((item) => item.trim()).filter(Boolean),
         bio: data.get('bio').trim(),
+        practice_quote: data.get('practiceQuote').trim(),
         photo_url: data.get('photoUrl').trim() || null,
         payment_mode: paymentMode,
         price_czk: paymentMode === 'paid' ? Number(price) : null,

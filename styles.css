@@ -308,3 +308,32 @@ footer .brand-logo{height:72px}
   .admin-stats{grid-template-columns:1fr}
 }
 
+/* Final public content and stable lesson/account administration. */
+.feature-list [data-setting="studio_capacity"]{color:inherit;font:inherit;margin:0}
+.admin-teacher blockquote{margin:8px 0 0;color:var(--ink);font-family:"Newsreader",serif;font-size:15px;line-height:1.4}
+.admin-table tbody tr{border-bottom:1px solid var(--line)}
+.admin-table tbody td{border-bottom:0}
+.lesson-actions-stack{display:grid;grid-template-columns:1fr;gap:8px;align-items:start}
+.lesson-actions-stack .button{min-width:0;width:100%;padding:11px 12px;white-space:normal}
+.lesson-action-primary{min-height:40px;display:flex}
+.lesson-action-primary>*{width:100%}
+.lesson-action-buttons{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.lesson-action-state{min-height:40px;padding:9px 12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:100px;background:var(--paper);font-size:12px;text-align:center;line-height:1.2}
+.lesson-actions-disabled{align-content:center;min-height:88px}
+.account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.account-form{display:grid;align-content:start;gap:16px}
+.account-form h2{margin-bottom:0}
+.account-form .button{justify-self:start;margin-top:4px}
+
+@media(max-width:900px){
+  .gallery{grid-template-columns:1fr 1fr}
+  .gallery-quote{display:grid;grid-column:1/-1;min-height:230px}
+}
+
+@media(max-width:600px){
+  .account-grid{grid-template-columns:1fr}
+  .account-form .button{width:100%}
+  .gallery{grid-template-columns:1fr}
+  .gallery-quote{min-height:220px;padding:34px 24px}
+}
+

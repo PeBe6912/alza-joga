@@ -68,9 +68,9 @@
         <h2>Klidné místo uprostřed HALLU</h2>
         <p>Najdeš nás v jógové místnosti ve 3. patře. Čeká tě krásný jógový prostor, příjemné světlo a dost prostoru pro vlastní podložku.</p>
         <ul class="feature-list">
-          <li><span>01</span> Kapacita <span data-setting="studio_capacity">20</span> lidí</li>
-          <li><span>02</span> Vlastní podložka na cvičení</li>
-          <li><span>03</span> V docházce zvol „Relax pauza“</li>
+          <li><span class="feature-number">01</span> Kapacita <span data-setting="studio_capacity">20</span> lidí</li>
+          <li><span class="feature-number">02</span> Vlastní podložka na cvičení</li>
+          <li><span class="feature-number">03</span> V docházce zvol „Relax pauza“</li>
         </ul>
         <a class="inline-link" href="#galerie">Prohlédnout studio →</a>
       </div>
@@ -99,7 +99,6 @@
             <h3>Petr Bena</h3>
             <p>Jeho jógová cesta je poměrně krátká, ale velmi intenzivní. Od prosince 2023 se jóga proměnila ze způsobu, jak se zotavit z běžeckého zranění, v každodenní praxi trvající 1 000 dní v řadě. Z fyzického cvičení se postupně stala cesta k větší přítomnosti, stabilitě a poznávání toho, jak lze filozofii jógy přenášet i do života mimo podložku.</p>
             <blockquote>„V roce 2026 jsem v Ubudu na Bali dokončil 200hodinový kurz pro učitele power a vinyasa jógy. Chci vytvářet lekce, na kterých se lidé cítí podporováni a zároveň přiměřeně vyzváni. Nejbližší je mi strong slow flow.“</blockquote>
-            <span class="charity-note">Cena nebo dobrovolný příspěvek se řídí konkrétním termínem.</span>
           </div>
         </article>
       </div>
@@ -111,7 +110,6 @@
           <p class="eyebrow">Co je nového</p>
           <h2>Ze studia</h2>
         </div>
-        <a class="inline-link" href="#">Všechny novinky →</a>
       </div>
       <div class="news-grid" id="news-grid">
         <article class="news-card featured">
@@ -137,7 +135,7 @@
           <div class="whatsapp-copy">
             <p class="whatsapp-label">WhatsApp skupina</p>
             <h3>Aktuální informace k lekcím</h3>
-            <p>Nové termíny, případné změny a rychlá domluva na jednom místě.</p>
+            <p>Případné změny a rychlá domluva na jednom místě.</p>
             <small>Naskenuj QR kód a přidej se do skupiny.</small>
           </div>
           <a class="whatsapp-qr" href="assets/whatsapp-joga-qr-only.png" target="_blank" rel="noopener" aria-label="Zvětšit QR kód WhatsApp skupiny">
@@ -147,11 +145,11 @@
         </div>
       </div>
       <div class="accordion">
-        <details open><summary>Kde lekce probíhají?</summary><p>V jógové místnosti ve 3. patře budovy HALL. Přesnou navigaci dostaneš také v potvrzení rezervace.</p></details>
+        <details><summary>Kde lekce probíhají?</summary><p>V jógové místnosti ve 3. patře budovy HALL. Přesnou navigaci dostaneš také v potvrzení rezervace.</p></details>
         <details><summary>Co si mám přinést?</summary><p>Vlastní podložku, pohodlné oblečení a láhev s vodou. Na místě buď ideálně pět minut před začátkem.</p></details>
-        <details><summary>Jak funguje zrušení?</summary><p>Rezervaci můžeš bezplatně zrušit do <span data-setting="cancellation_hours">24</span> hodin před lekcí. Později je lekce účtována, můžeš ale poslat náhradníka.</p></details>
         <details><summary>Kdy se lekce koná?</summary><p>Lekce se standardně koná při alespoň <span data-setting="minimum_attendance">5</span> přihlášených. Lektor ji může nechat proběhnout i v menším počtu. Pokud ji zruší, všichni přihlášení dostanou e-mail.</p></details>
-        <details><summary>Jak probíhá platba?</summary><p>Cena i způsob platby jsou uvedené u konkrétní lekce. Po placené nebo benefiční lekci přijde příslušný QR kód e-mailem.</p></details>
+        <details><summary>Jak probíhá platba?</summary><p>Podle konkrétního termínu stojí lekce <span data-setting="default_paid_price">150</span> Kč, nebo můžeš místo vstupného dobrovolně přispět na charitu. Po lekci přijde příslušný QR kód e-mailem.</p></details>
+        <details><summary>Jak funguje zrušení?</summary><p>Rezervaci můžeš bezplatně zrušit do <span data-setting="cancellation_hours">24</span> hodin před lekcí. Později je lekce účtována, můžeš ale poslat náhradníka.</p></details>
       </div>
     </section>
   </main>
@@ -167,6 +165,7 @@
         <button class="admin-nav" data-admin-tab="people">Účastníci</button>
         <button class="admin-nav" data-admin-tab="content">Novinky</button>
         <button class="admin-nav" data-admin-tab="teachers">Profily lektorů</button>
+        <button class="admin-nav" data-admin-tab="accounts">Administrátoři</button>
         <button class="admin-nav" data-admin-tab="settings">Nastavení</button>
       </nav>
       <button class="admin-back" id="close-admin">← Zpět na web</button>
