@@ -538,9 +538,11 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
 }
 
 function overviewPanel() {
+  const upcomingLessons = adminLessons.filter((lesson) => new Date(lesson.endsAt) > new Date());
   const openLessons = adminLessons.filter((lesson) => lesson.status === 'published' && new Date(lesson.endsAt) > new Date());
   const nextLesson = openLessons[0];
-  return `<div class="stats"><div class="stat-card"><span>AKTIVNÍ REZERVACE</span><strong>${openLessons.reduce((sum, lesson) => sum + lesson.booked, 0)}</strong><small>v budoucích lekcích</small></div><div class="stat-card"><span>NEJBLIŽŠÍ LEKCE</span><strong>${nextLesson ? `${nextLesson.booked} / ${nextLesson.capacity}` : '—'}</strong><small>${nextLesson ? `${escapeHtml(nextLesson.date)} v ${escapeHtml(nextLesson.time.split('–')[0])}` : 'Bez termínu'}</small></div><div class="stat-card"><span>NAPLÁNOVANÉ LEKCE</span><strong>${openLessons.length}</strong><small>${adminLessons.filter((lesson) => lesson.status === 'cancelled').length} zrušených</small></div></div><div class="admin-card admin-card-spaced"><h2>Nejbližší lekce</h2><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p>${lessonTable(openLessons.slice(0, 4), 'Nejsou naplánované žádné lekce.')}</div>`;
+  const cancelledLessons = upcomingLessons.filter((lesson) => lesson.status === 'cancelled').length;
+  return `<div class="stats"><div class="stat-card"><span>AKTIVNÍ REZERVACE</span><strong>${openLessons.reduce((sum, lesson) => sum + lesson.booked, 0)}</strong><small>v budoucích lekcích</small></div><div class="stat-card"><span>NEJBLIŽŠÍ LEKCE</span><strong>${nextLesson ? `${nextLesson.booked} / ${nextLesson.capacity}` : '—'}</strong><small>${nextLesson ? `${escapeHtml(nextLesson.date)} v ${escapeHtml(nextLesson.time.split('–')[0])}` : 'Bez termínu'}</small></div><div class="stat-card"><span>NAPLÁNOVANÉ LEKCE</span><strong>${openLessons.length}</strong><small>${cancelledLessons} zrušených</small></div></div><div class="admin-card admin-card-spaced"><h2>Naplánované lekce</h2><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p>${lessonTable(upcomingLessons, 'Nejsou naplánované žádné lekce.')}</div>`;
 }
 
 function teachersPanel() {
@@ -596,7 +598,7 @@ function lessonParticipantsPanel(lessonId, returnTab) {
 
 function newsPanel() {
   const items = adminNews.map((item) => `<article class="admin-news-item"><div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p><span class="status-pill${item.published_at ? '' : ' done'}">${item.published_at ? 'Zveřejněná' : 'Skrytá'}</span></div><div class="admin-news-actions"><button class="button button-small" data-edit-news="${item.id}">Upravit</button><button class="button button-small button-secondary" data-toggle-news="${item.id}">${item.published_at ? 'Skrýt' : 'Zveřejnit'}</button><button class="text-button danger" data-delete-news="${item.id}">Smazat</button></div></article>`).join('');
-  return `<div class="admin-grid"><div class="admin-card"><div class="admin-card-heading"><h2>Novinky</h2><button class="button button-small" data-add-news>+ Přidat novinku</button></div>${items || '<p>Zatím nejsou vytvořené žádné novinky.</p>'}</div><div class="admin-card"><h2>Rychlé odkazy</h2><p>WhatsApp skupina</p><p>Podmínky rezervace</p><p>Ochrana osobních údajů</p></div></div>`;
+  return `<div class="admin-grid"><div class="admin-card"><div class="admin-card-heading"><h2>Novinky a jógové tipy</h2><button class="button button-small" data-add-news>+ Přidat novinku nebo tip</button></div>${items || '<p>Zatím nejsou vytvořené žádné novinky ani tipy.</p>'}</div><div class="admin-card"><h2>Rychlé odkazy</h2><p>WhatsApp skupina</p><p>Podmínky rezervace</p><p>Ochrana osobních údajů</p></div></div>`;
 }
 
 function settingsPanel() {
@@ -618,14 +620,13 @@ function renderAdmin(tab) {
   const panel = document.querySelector('#admin-panel');
   activeAdminTab = tab;
   document.querySelectorAll('.admin-nav').forEach((button) => button.classList.toggle('active', button.dataset.adminTab === tab));
-  const titles = { overview: 'Nejbližší lekce', lessons: 'Naplánované lekce', completed: 'Proběhlé lekce a platby', people: 'Účastníci', content: 'Novinky', teachers: 'Profily lektorů', accounts: 'Administrátoři', settings: 'Nastavení' };
+  const titles = { overview: 'Lekce', completed: 'Proběhlé lekce a platby', people: 'Účastníci', content: 'Novinky a jógové tipy', teachers: 'Profily lektorů', accounts: 'Administrátoři', settings: 'Nastavení' };
   const addButton = document.querySelector('#add-lesson');
-  addButton.hidden = tab !== 'lessons';
+  addButton.hidden = tab !== 'overview';
   document.querySelector('#admin-logout').hidden = false;
   addButton.textContent = '+ Nová lekce';
   document.querySelector('#admin-title').textContent = titles[tab];
   if (tab === 'overview') panel.innerHTML = overviewPanel();
-  if (tab === 'lessons') panel.innerHTML = `<div class="admin-card"><h2>Naplánované lekce</h2><p class="admin-help">Kliknutím na název nebo obsazenost otevřeš účastníky.</p>${lessonTable(adminLessons.filter((lesson) => new Date(lesson.endsAt) > new Date()), 'Nejsou naplánované žádné lekce.')}</div>`;
   if (tab === 'completed') panel.innerHTML = `<div class="admin-card"><h2>Proběhlé lekce a platby</h2><p class="admin-help">Otevři účastníky nebo po kontrole ručně odešli správný platební či příspěvkový QR kód.</p>${lessonTable(adminLessons.filter((lesson) => new Date(lesson.endsAt) <= new Date()).reverse(), 'Zatím neproběhly žádné lekce.')}</div>`;
   if (tab === 'teachers') panel.innerHTML = teachersPanel();
   if (tab === 'people') panel.innerHTML = bookingsPanel();
@@ -1062,7 +1063,7 @@ async function createLessons(event) {
     });
     dialog.close();
     await Promise.all([loadLessons(), loadAdminLessons()]);
-    renderAdmin('lessons');
+    renderAdmin('overview');
     showToast(`Vytvořeno lekcí: ${result.created}.`);
   } catch (error) {
     button.disabled = false;
@@ -1148,7 +1149,7 @@ function openLessonEditor(id) {
       });
       dialog.close();
       await Promise.all([loadLessons(), loadAdminLessons()]);
-      renderAdmin('lessons');
+      renderAdmin('overview');
       showToast(result.failed ? `Lekce je upravená. ${result.failed} e-mailů se nepodařilo odeslat.` : `Lekce je upravená. Odesláno e-mailů: ${result.notified}.`);
     } catch (error) {
       button.disabled = false;
@@ -1165,7 +1166,7 @@ async function cancelLesson(id) {
   try {
     const result = await manageLesson({ lessonId: id, action: 'cancel' });
     await Promise.all([loadLessons(), loadAdminLessons()]);
-    renderAdmin('lessons');
+    renderAdmin('overview');
     showToast(result.failed ? `Lekce je zrušená. ${result.failed} e-mailů se nepodařilo odeslat.` : `Lekce je zrušená. Odesláno e-mailů: ${result.notified}.`);
   } catch (error) {
     showToast(error.message);
@@ -1178,7 +1179,7 @@ async function confirmLowAttendance(id) {
   try {
     await manageLesson({ lessonId: id, action: 'confirm-low-attendance' });
     await loadAdminLessons();
-    renderAdmin('lessons');
+    renderAdmin('overview');
     showToast('Uloženo: lekce se koná i v menším počtu.');
   } catch (error) {
     showToast(error.message);
@@ -1210,7 +1211,7 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
   button.classList.add('active');
   const tab = button.dataset.adminTab;
   try {
-    if (tab === 'overview' || tab === 'lessons' || tab === 'completed') await Promise.all([loadAdminLessons(), loadAdminReservations()]);
+    if (tab === 'overview' || tab === 'completed') await Promise.all([loadAdminLessons(), loadAdminReservations()]);
     if (tab === 'teachers') await loadAdminInstructors();
     if (tab === 'people') await loadAdminReservations();
     if (tab === 'content') await loadAdminNews();
