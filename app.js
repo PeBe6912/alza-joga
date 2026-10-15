@@ -46,6 +46,7 @@ let adminLessons = [];
 let adminInstructors = [];
 let adminNews = [];
 let adminReservations = [];
+let adminCanManageAdmins = false;
 let publicSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let activeAdminTab = 'overview';
@@ -372,6 +373,7 @@ function clearAdminSession() {
   adminInstructors = [];
   adminNews = [];
   adminReservations = [];
+  adminCanManageAdmins = false;
   adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
   sessionStorage.removeItem('jogaAdminSession');
 }
@@ -447,8 +449,13 @@ async function loadAdminSettings() {
   adminSettings = (await response.json()).reduce((settings, row) => ({ ...settings, [row.key]: row.value }), { ...PUBLIC_SETTING_DEFAULTS });
 }
 
+async function loadAdminCapabilities() {
+  const capabilities = await manageLesson({ action: 'capabilities' });
+  adminCanManageAdmins = capabilities.canManageAdmins === true;
+}
+
 async function loadAdminData() {
-  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations(), loadAdminSettings()]);
+  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations(), loadAdminSettings(), loadAdminCapabilities()]);
 }
 
 function renderAdminLogin(message = '') {
@@ -533,15 +540,18 @@ function teachersPanel() {
 }
 
 function accountsPanel() {
-  return `<div class="account-grid">
-    <form class="admin-card account-form" id="create-admin-form">
+  const createAdminPanel = adminCanManageAdmins
+    ? `<form class="admin-card account-form" id="create-admin-form">
       <h2>Přidat administrátora</h2>
       <p class="admin-help">Nový účet bude ihned aktivní a bude se moci přihlásit do správy.</p>
       <div class="field"><label for="new-admin-email">E-mail</label><input id="new-admin-email" name="email" type="email" autocomplete="email" required></div>
       <div class="field"><label for="new-admin-password">Počáteční heslo</label><input id="new-admin-password" name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password" required><small>Nejméně 12 znaků.</small></div>
       <div class="field"><label for="new-admin-password-confirm">Heslo znovu</label><input id="new-admin-password-confirm" name="passwordConfirm" type="password" minlength="12" maxlength="72" autocomplete="new-password" required></div>
       <button class="button" type="submit">Vytvořit administrátora</button>
-    </form>
+    </form>`
+    : `<div class="admin-card account-form"><h2>Administrátoři</h2><p class="admin-help">Nové administrátory může přidávat pouze Petr.</p></div>`;
+  return `<div class="account-grid">
+    ${createAdminPanel}
     <form class="admin-card account-form" id="change-password-form">
       <h2>Změnit moje heslo</h2>
       <p class="admin-help">Po změně se znovu přihlásíš novým heslem.</p>
@@ -1152,7 +1162,7 @@ async function manageLesson(payload) {
     body: JSON.stringify(payload),
   });
   const result = await response.json();
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401 || (response.status === 403 && result.error === 'FORBIDDEN')) {
     clearAdminSession();
     renderAdminLogin(result.message || 'Přihlášení vypršelo. Přihlas se prosím znovu.');
   }

@@ -60,6 +60,8 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 /* Full brand logo, lesson language and responsive administration. */
 .brand{display:flex;align-items:center}
 .brand-logo{width:auto;height:58px;object-fit:contain}
+.brand-name{font-family:"Newsreader",serif;font-size:26px;font-weight:400;line-height:1;letter-spacing:-.025em;white-space:nowrap}
+.brand-name strong{font-size:.82em;font-weight:500;letter-spacing:.055em}
 .admin-brand .brand-logo{height:88px;filter:brightness(0) invert(1)}
 .booking-summary{gap:18px}
 .booking-summary small{display:inline-block;margin-top:6px;color:var(--muted)}
@@ -73,6 +75,7 @@ footer .brand-logo{height:72px}
 
 @media(max-width:600px){
   .brand-logo{height:52px}
+  .brand-name{font-size:20px}
   .admin-shell{display:block}
   .admin-sidebar{display:block;padding:14px 12px}
   .admin-brand{display:none}

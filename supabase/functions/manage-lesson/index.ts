@@ -62,6 +62,8 @@ const allowedOrigins = new Set([
   'https://www.joganahallu.cz',
 ]);
 
+const OWNER_ADMIN_USER_ID = '3f8ca22d-aa9a-4cad-bb14-8e4fbfae1c97';
+
 function headers(req: Request): Record<string, string> {
   const origin = req.headers.get('origin');
   return {
@@ -130,7 +132,12 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const action = String(body.action ?? '');
     requestedAction = action;
+    const canManageAdmins = adminUser.id === OWNER_ADMIN_USER_ID;
+    if (action === 'capabilities') {
+      return json(req, { ok: true, action, canManageAdmins });
+    }
     if (action === 'create-admin') {
+      if (!canManageAdmins) throw new Error('OWNER_ONLY');
       const email = String(body.email ?? '').trim().toLowerCase();
       const password = String(body.password ?? '');
       if (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('INVALID_EMAIL');
@@ -365,9 +372,9 @@ Deno.serve(async (req: Request) => {
     return json(req, { ok: true, action: change.action, notified, failed });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('LESSON_UNCHANGED') ? 400 : 500;
+    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('LESSON_UNCHANGED') ? 400 : 500;
     console.error('manage-lesson failed', code);
-    const message = status === 403
+    const message = code === 'FORBIDDEN'
       ? 'Tento účet nemá oprávnění správce.'
       : status === 409
         ? code.includes('LESSON_NOT_ENDED')
@@ -377,6 +384,8 @@ Deno.serve(async (req: Request) => {
           : 'Ve zvoleném termínu už má tento lektor naplánovanou lekci.'
         : code === 'ADMIN_EXISTS'
           ? 'Účet s tímto e-mailem už existuje.'
+        : code === 'OWNER_ONLY'
+          ? 'Nové administrátory může přidávat pouze Petr.'
         : requestedAction === 'create-admin'
           ? 'Administrátora se nepodařilo vytvořit.'
         : requestedAction === 'change-password'
