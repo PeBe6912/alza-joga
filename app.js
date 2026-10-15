@@ -42,6 +42,7 @@ let newsItems = [];
 
 const savedBookings = JSON.parse(localStorage.getItem('alzaYogaBookings') || '[]');
 let adminSession = JSON.parse(sessionStorage.getItem('jogaAdminSession') || 'null');
+let adminRefreshPromise = null;
 let adminLessons = [];
 let adminInstructors = [];
 let adminNews = [];
@@ -409,12 +410,64 @@ function clearAdminSession() {
   sessionStorage.removeItem('jogaAdminSession');
 }
 
-async function isAdminSessionValid() {
-  if (!adminSession?.access_token) return false;
+function saveAdminSession(result) {
+  adminSession = {
+    access_token: result.access_token,
+    refresh_token: result.refresh_token,
+    expires_at: result.expires_at,
+  };
+  sessionStorage.setItem('jogaAdminSession', JSON.stringify(adminSession));
+}
+
+async function refreshAdminSession() {
+  if (!adminSession?.refresh_token) return false;
+  if (adminRefreshPromise) return adminRefreshPromise;
+  adminRefreshPromise = (async () => {
+    try {
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: adminSession.refresh_token }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.user?.app_metadata?.role !== 'admin' || !result.access_token || !result.refresh_token) {
+        clearAdminSession();
+        return false;
+      }
+      saveAdminSession(result);
+      return true;
+    } catch {
+      clearAdminSession();
+      return false;
+    }
+  })();
   try {
-    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
-    });
+    return await adminRefreshPromise;
+  } finally {
+    adminRefreshPromise = null;
+  }
+}
+
+async function adminFetch(url, options = {}) {
+  const expiresSoon = Number(adminSession?.expires_at || 0) * 1000 <= Date.now() + 60_000;
+  if (expiresSoon) await refreshAdminSession();
+  const send = () => fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${adminSession?.access_token || ''}`,
+    },
+  });
+  let response = await send();
+  if ([401, 403].includes(response.status) && await refreshAdminSession()) response = await send();
+  return response;
+}
+
+async function isAdminSessionValid() {
+  if (!adminSession?.access_token || !adminSession?.refresh_token) return false;
+  try {
+    const response = await adminFetch(`${SUPABASE_URL}/auth/v1/user`);
     if (!response.ok) return false;
     const user = await response.json();
     return user.app_metadata?.role === 'admin';
@@ -431,12 +484,7 @@ async function loadAdminLessons() {
     starts_at: `gte.${historyStart.toISOString()}`,
     order: 'starts_at.asc',
   });
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/lessons?${query}`, {
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${adminSession.access_token}`,
-    },
-  });
+  const response = await adminFetch(`${SUPABASE_URL}/rest/v1/lessons?${query}`);
   if (!response.ok) throw new Error('Lekce pro správu se nepodařilo načíst.');
   adminLessons = (await response.json()).map(lessonFromDatabase);
 }
@@ -444,9 +492,7 @@ async function loadAdminLessons() {
 async function loadAdminInstructors() {
   const query = new URLSearchParams({ select: 'id,name,bio,practice_quote,styles,photo_url,payment_mode,price_czk,payment_note,paid_qr_url,donation_qr_url,active,sort_order', order: 'sort_order.asc' });
   const [response, contacts] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/instructors?${query}`, {
-      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
-    }),
+    adminFetch(`${SUPABASE_URL}/rest/v1/instructors?${query}`),
     manageLesson({ action: 'instructor-contacts' }),
   ]);
   if (!response.ok) throw new Error('Lektory se nepodařilo načíst.');
@@ -456,9 +502,7 @@ async function loadAdminInstructors() {
 
 async function loadAdminNews() {
   const query = new URLSearchParams({ select: 'id,title,summary,body,image_url,published_at,created_at', order: 'created_at.desc' });
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/news_items?${query}`, {
-    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
-  });
+  const response = await adminFetch(`${SUPABASE_URL}/rest/v1/news_items?${query}`);
   if (!response.ok) throw new Error('Novinky se nepodařilo načíst.');
   adminNews = await response.json();
 }
@@ -468,18 +512,14 @@ async function loadAdminReservations() {
   historyStart.setMonth(historyStart.getMonth() - 12);
   const select = 'id,attendee_name,attendee_email,status,payment_email_sent_at,created_at,lessons!inner(id,title,starts_at,ends_at,status,instructors(name))';
   const query = new URLSearchParams({ select, status: 'in.(confirmed,attended,no_show)', 'lessons.starts_at': `gte.${historyStart.toISOString()}` });
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/reservations?${query}`, {
-    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
-  });
+  const response = await adminFetch(`${SUPABASE_URL}/rest/v1/reservations?${query}`);
   if (!response.ok) throw new Error('Účastníky se nepodařilo načíst.');
   adminReservations = (await response.json()).sort((a, b) => new Date(a.lessons.starts_at) - new Date(b.lessons.starts_at));
 }
 
 async function loadAdminSettings() {
   const query = new URLSearchParams({ select: 'key,value', order: 'key.asc' });
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/site_settings?${query}`, {
-    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${adminSession.access_token}` },
-  });
+  const response = await adminFetch(`${SUPABASE_URL}/rest/v1/site_settings?${query}`);
   if (!response.ok) throw new Error('Nastavení se nepodařilo načíst.');
   adminSettings = (await response.json()).reduce((settings, row) => ({ ...settings, [row.key]: row.value }), { ...PUBLIC_SETTING_DEFAULTS });
 }
@@ -536,9 +576,8 @@ async function signInAdmin(event) {
     });
     const result = await response.json();
     if (!response.ok) throw new Error('Přihlášení se nezdařilo. Zkontroluj e-mail a heslo.');
-    if (result.user?.app_metadata?.role !== 'admin') throw new Error('Tento účet nemá oprávnění správce.');
-    adminSession = { access_token: result.access_token };
-    sessionStorage.setItem('jogaAdminSession', JSON.stringify(adminSession));
+    if (result.user?.app_metadata?.role !== 'admin' || !result.access_token || !result.refresh_token) throw new Error('Tento účet nemá oprávnění správce.');
+    saveAdminSession(result);
     await loadAdminData();
     renderAdmin('overview');
   } catch (error) {
@@ -771,17 +810,17 @@ async function cancelAdminReservation(reservationId, lessonId, returnTab) {
 }
 
 async function adminRest(path, method = 'GET', body) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  const mutating = method !== 'GET' && method !== 'HEAD';
+  const response = await adminFetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     method,
     headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${adminSession.access_token}`,
       'Content-Type': 'application/json',
-      Prefer: 'return=minimal',
+      Prefer: mutating ? 'return=representation' : 'return=minimal',
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (response.status === 401 || response.status === 403) {
+    closeDialog();
     clearAdminSession();
     renderAdminLogin('Přihlášení vypršelo. Přihlas se prosím znovu.');
   }
@@ -789,6 +828,11 @@ async function adminRest(path, method = 'GET', body) {
     const details = await response.json().catch(() => ({}));
     throw new Error(details.message || 'Změnu se nepodařilo uložit.');
   }
+  const result = await response.json().catch(() => null);
+  if (mutating && (!Array.isArray(result) || result.length === 0)) {
+    throw new Error('Databáze změnu nepotvrdila. Obnov stránku a přihlas se znovu.');
+  }
+  return result;
 }
 
 async function saveSettings(event) {
@@ -1243,17 +1287,16 @@ async function confirmLowAttendance(id) {
 }
 
 async function manageLesson(payload) {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-lesson`, {
+  const response = await adminFetch(`${SUPABASE_URL}/functions/v1/manage-lesson`, {
     method: 'POST',
     headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${adminSession.access_token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   });
   const result = await response.json();
   if (response.status === 401 || (response.status === 403 && result.error === 'FORBIDDEN')) {
+    closeDialog();
     clearAdminSession();
     renderAdminLogin(result.message || 'Přihlášení vypršelo. Přihlas se prosím znovu.');
   }
