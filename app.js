@@ -165,11 +165,15 @@ function openBooking(id) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Rezervaci se nepodařilo uložit.');
 
-      const fallbackLink = result.cancelUrl
-        ? `<p>E-mail zatím není nastavený. Ulož si proto tento odkaz: <a href="${escapeHtml(result.cancelUrl)}">zrušit rezervaci</a>.</p>`
-        : '<p>Potvrzení a odkaz pro případné zrušení najdeš v e-mailu.</p>';
-      document.querySelector('#booking-content').innerHTML = `<div class="booking-panel"><p class="eyebrow">Hotovo</p><h2>Místo je tvoje</h2>${fallbackLink}<button class="button" type="button" data-dialog-done>Zavřít</button></div>`;
-      document.querySelector('[data-dialog-done]').addEventListener('click', () => dialog.close());
+      if (result.emailSent) {
+        closeDialog();
+      } else {
+        const fallbackLink = result.cancelUrl
+          ? `<p>E-mail se nepodařilo odeslat. Ulož si proto tento odkaz: <a href="${escapeHtml(result.cancelUrl)}">zrušit rezervaci</a>.</p>`
+          : '<p>Potvrzení se nepodařilo odeslat. Obrať se prosím na lektora.</p>';
+        document.querySelector('#booking-content').innerHTML = `<div class="booking-panel"><p class="eyebrow">Místo je rezervované</p>${fallbackLink}<button class="button" type="button" data-dialog-done>Zavřít</button></div>`;
+        document.querySelector('[data-dialog-done]').addEventListener('click', closeDialog);
+      }
       await loadLessons();
       showToast(result.emailSent ? 'Místo je rezervované. Potvrzení jsme poslali e-mailem.' : 'Místo je rezervované. Ulož si odkaz pro zrušení.');
     } catch (error) {
@@ -321,10 +325,10 @@ function openCancellation(token) {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Rezervaci se nepodařilo zrušit.');
-      document.querySelector('#booking-content').innerHTML = `<div class="booking-panel"><p class="eyebrow">Hotovo</p><h2>${result.alreadyCancelled ? 'Rezervace už byla zrušená' : 'Rezervace je zrušená'}</h2><button class="button" type="button" data-dialog-done>Zavřít</button></div>`;
-      document.querySelector('[data-dialog-done]').addEventListener('click', () => dialog.close());
+      closeDialog();
       history.replaceState({}, '', `${location.pathname}${location.hash}`);
       await loadLessons();
+      showToast(result.alreadyCancelled ? 'Rezervace už byla zrušená.' : 'Rezervace byla zrušená.');
     } catch (error) {
       event.target.disabled = false;
       event.target.textContent = 'Zrušit rezervaci';
@@ -334,7 +338,12 @@ function openCancellation(token) {
   dialog.showModal();
 }
 
-document.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
+function closeDialog() {
+  if (dialog.open) dialog.close();
+  document.querySelector('#booking-content').replaceChildren();
+}
+
+document.querySelector('.dialog-close').addEventListener('click', closeDialog);
 
 function showToast(message) {
   toast.textContent = message;
@@ -868,7 +877,7 @@ function openTeacherEditor(id) {
         paid_qr_url: data.get('paidQrUrl').trim() || null,
         donation_qr_url: data.get('donationQrUrl').trim() || null,
       });
-      dialog.close();
+      closeDialog();
       await Promise.all([loadAdminInstructors(), loadPublicContent()]);
       renderAdmin('teachers');
       showToast('Profil lektora byl uložen.');
@@ -909,7 +918,7 @@ function openNewsEditor(id = null) {
     button.textContent = 'Ukládám…';
     try {
       await adminRest(item ? `news_items?id=eq.${encodeURIComponent(item.id)}` : 'news_items', item ? 'PATCH' : 'POST', payload);
-      dialog.close();
+      closeDialog();
       await Promise.all([loadAdminNews(), loadPublicContent()]);
       renderAdmin('content');
       showToast(item ? 'Novinka byla upravena.' : 'Novinka byla přidána.');
@@ -982,7 +991,7 @@ async function openPaymentEmails(lessonId) {
     }));
     document.querySelector('#payment-email-form').addEventListener('submit', (event) => sendPaymentEmails(event, lessonId));
   } catch (error) {
-    dialog.close();
+    closeDialog();
     showToast(error.message);
   }
 }
@@ -1007,7 +1016,7 @@ async function sendPaymentEmails(event, lessonId) {
   button.textContent = 'Odesílám…';
   try {
     const result = await manageLesson({ lessonId, action: 'payment-send', recipients });
-    dialog.close();
+    closeDialog();
     showToast(result.failed || !result.summarySent
       ? `Účastníkům odesláno: ${result.sent}, neúspěšné: ${result.failed}. ${result.summarySent ? 'Souhrn lektorovi odeslán.' : 'Souhrn lektorovi se nepodařilo odeslat.'}`
       : `Platební e-maily byly odeslány: ${result.sent}. Souhrn dostal také lektor.`);
@@ -1108,7 +1117,7 @@ async function createLessons(event) {
       priceCzk: data.get('paymentMode') === 'paid' ? Number(data.get('priceCzk')) : null,
       minimumAttendance: Number(data.get('minimumAttendance')),
     });
-    dialog.close();
+    closeDialog();
     await Promise.all([loadLessons(), loadAdminLessons()]);
     renderAdmin('overview');
     showToast(`Vytvořeno lekcí: ${result.created}.`);
@@ -1194,7 +1203,7 @@ function openLessonEditor(id) {
         priceCzk: paymentMode === 'paid' ? Number(document.querySelector('#lesson-price').value) : null,
         minimumAttendance: Number(data.get('minimumAttendance')),
       });
-      dialog.close();
+      closeDialog();
       await Promise.all([loadLessons(), loadAdminLessons()]);
       renderAdmin('overview');
       showToast(result.failed ? `Lekce je upravená. ${result.failed} e-mailů se nepodařilo odeslat.` : `Lekce je upravená. Odesláno e-mailů: ${result.notified}.`);
