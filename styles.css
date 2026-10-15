@@ -347,6 +347,11 @@ footer .brand-logo{height:72px}
 .news-detail-summary{font-size:18px;line-height:1.55;color:var(--muted)}
 .news-detail img{max-height:310px;margin:24px 0;object-fit:cover}
 .news-detail-body{white-space:pre-line;line-height:1.7;color:var(--ink)}
+.teacher-photo{height:100%;min-width:0;padding:10px;background:var(--paper);overflow:hidden}
+.teacher-card.reverse .teacher-photo{order:2}
+.teacher-photo img{width:100%;height:100%;min-height:0;object-fit:contain;object-position:center;background:var(--paper)}
+.teacher-photo-landscape img{object-fit:cover}
+.teacher-photo-portrait img{transform:scale(1.04);transform-origin:center 62%}
 .feature-list [data-setting="studio_capacity"]{color:inherit;font:inherit;margin:0}
 .admin-teacher blockquote{margin:8px 0 0;color:var(--ink);font-family:"Newsreader",serif;font-size:15px;line-height:1.4}
 .participant-actions{white-space:nowrap}
@@ -399,6 +404,10 @@ footer .brand-logo{height:72px}
 .account-form .button{justify-self:start;margin-top:4px}
 
 @media(max-width:900px){
+  .teacher-card.reverse .teacher-photo{order:0}
+  .teacher-photo{height:auto;padding:8px}
+  .teacher-photo img{height:auto;max-height:560px}
+  .teacher-photo-portrait img{transform:none}
   .gallery{grid-template-columns:1fr 1fr}
   .gallery-quote{display:grid;grid-column:1/-1;min-height:230px}
 }

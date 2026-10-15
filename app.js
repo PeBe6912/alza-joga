@@ -363,15 +363,18 @@ function instructorFromDatabase(row) {
 function renderPublicTeachers() {
   const grid = document.querySelector('#teachers-grid');
   if (!grid) return;
-  grid.innerHTML = teachers.map((teacher, index) => `<article class="teacher-card${index % 2 ? ' reverse' : ''}">
-    <img src="${escapeHtml(teacher.photo)}" alt="Lektor jógy ${escapeHtml(teacher.name)}">
+  grid.innerHTML = teachers.map((teacher, index) => {
+    const photoOrientation = teacher.name.trim().toLocaleLowerCase('cs-CZ').startsWith('petr ') ? 'portrait' : 'landscape';
+    return `<article class="teacher-card${index % 2 ? ' reverse' : ''}">
+    <div class="teacher-photo teacher-photo-${photoOrientation}"><img src="${escapeHtml(teacher.photo)}" alt="Lektor jógy ${escapeHtml(teacher.name)}"></div>
     <div class="teacher-card-copy">
       <p class="teacher-kicker">${escapeHtml(teacher.styles)}</p>
       <h3>${escapeHtml(teacher.name)}</h3>
       <p>${escapeHtml(teacher.bio)}</p>
       ${teacher.quote ? `<blockquote>„${escapeHtml(teacher.quote)}“</blockquote>` : ''}
     </div>
-  </article>`).join('');
+  </article>`;
+  }).join('');
 }
 
 function renderPublicNews() {
