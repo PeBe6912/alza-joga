@@ -469,7 +469,7 @@ Deno.serve(async (req: Request) => {
     return json(req, { ok: true, action: change.action, notified, failed });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') || code === 'OWNER_SELF_DELETE' ? 400 : code.includes('RESERVATION_NOT_FOUND') || code === 'ADMIN_NOT_FOUND' ? 404 : 500;
+    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('STUDIO_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') || code === 'OWNER_SELF_DELETE' ? 400 : code.includes('RESERVATION_NOT_FOUND') || code === 'ADMIN_NOT_FOUND' ? 404 : 500;
     console.error('manage-lesson failed', code);
     const message = code === 'FORBIDDEN'
       ? 'Tento účet nemá oprávnění správce.'
@@ -480,7 +480,9 @@ Deno.serve(async (req: Request) => {
           ? 'Platební e-maily lze odeslat až po skončení lekce.'
           : code.includes('LESSON_CAPACITY_TOO_SMALL')
             ? 'Kapacita nemůže být nižší než počet potvrzených rezervací.'
-          : 'Ve zvoleném termínu už má tento lektor naplánovanou lekci.'
+          : code.includes('STUDIO_CONFLICT')
+            ? 'Studio je v tomto čase už obsazené, včetně 15minutové rezervy.'
+            : 'Ve zvoleném termínu už má tento lektor naplánovanou lekci.'
         : code === 'ADMIN_EXISTS'
           ? 'Účet s tímto e-mailem už existuje.'
         : code === 'OWNER_ONLY'

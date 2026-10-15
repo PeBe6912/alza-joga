@@ -48,6 +48,9 @@ let adminLessons = [];
 let adminInstructors = [];
 let adminNews = [];
 let adminReservations = [];
+let publicStudioBlocks = [];
+let publicStudioBlocksError = '';
+let adminStudioBlocks = [];
 let adminCanManageAdmins = false;
 let adminAccounts = [];
 let publicSettings = { ...PUBLIC_SETTING_DEFAULTS };
@@ -55,6 +58,7 @@ let adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let activeAdminTab = 'overview';
 const LESSON_PAGE_SIZE = 6;
 let lessonDisplayLimit = LESSON_PAGE_SIZE;
+let publicCalendarStart = startOfWeek(new Date());
 const classList = document.querySelector('#class-list');
 const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
@@ -70,6 +74,52 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function startOfWeek(value) {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay() || 7;
+  date.setDate(date.getDate() - day + 1);
+  return date;
+}
+
+function addDays(value, days) {
+  const date = new Date(value);
+  date.setDate(date.getDate() + days);
+  return date;
+}
+
+function pragueDateKey(value) {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Prague' }).format(new Date(value));
+}
+
+function shortTime(value) {
+  return new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Prague' }).format(new Date(value));
+}
+
+function calendarRangeLabel(start) {
+  const end = addDays(start, 6);
+  const format = new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'short', timeZone: 'Europe/Prague' });
+  return `${format.format(start)}–${format.format(end)}`;
+}
+
+function calendarDays(start, events, { admin = false } = {}) {
+  const dayFormat = new Intl.DateTimeFormat('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'Europe/Prague' });
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(start, index);
+    const key = pragueDateKey(date);
+    const dayEvents = events.filter((event) => pragueDateKey(event.startsAt) === key).sort((a, b) => new Date(a.occupiedStartsAt || a.startsAt) - new Date(b.occupiedStartsAt || b.startsAt));
+    const cards = dayEvents.map((event) => {
+      const occupiedStart = event.occupiedStartsAt || event.startsAt;
+      const occupiedEnd = event.occupiedEndsAt || event.endsAt;
+      const actions = admin && event.kind === 'private'
+        ? `<div class="calendar-event-actions"><button class="text-button" data-edit-studio-block="${event.id}">Upravit</button><button class="text-button danger" data-delete-studio-block="${event.id}">Smazat</button></div>`
+        : '';
+      return `<article class="calendar-event calendar-event-${event.kind}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
+    }).join('');
+    return `<section class="calendar-day"><h3>${escapeHtml(dayFormat.format(date))}</h3><div>${cards || '<p class="calendar-free">Volno</p>'}</div></section>`;
+  }).join('');
 }
 
 function placesLabel(places) {
@@ -234,11 +284,64 @@ async function loadLessons() {
     lessons = (await response.json()).map(lessonFromDatabase);
     renderLessons(document.querySelector('.filter.active')?.dataset.filter || 'all');
     renderNextClass();
+    renderPublicCalendar(publicStudioBlocksError);
   } catch (error) {
     console.error(error);
     showToast('Živé termíny se nepodařilo načíst. Zobrazuji poslední dostupný přehled.');
   }
 }
+
+async function loadPublicStudioBlocks() {
+  const rangeEnd = addDays(publicCalendarStart, 7);
+  try {
+    const query = new URLSearchParams({
+      select: 'starts_at,ends_at',
+      starts_at: `lt.${rangeEnd.toISOString()}`,
+      ends_at: `gt.${publicCalendarStart.toISOString()}`,
+      order: 'starts_at.asc',
+    });
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/studio_occupancy?${query}`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY } });
+    if (!response.ok) throw new Error('Dostupnost studia se nepodařilo načíst.');
+    publicStudioBlocks = (await response.json()).map((block, index) => ({
+      id: `public-${index}`,
+      kind: 'private',
+      title: 'Studio obsazeno',
+      startsAt: block.starts_at,
+      endsAt: block.ends_at,
+    }));
+    publicStudioBlocksError = '';
+    renderPublicCalendar();
+  } catch (error) {
+    console.error(error);
+    publicStudioBlocks = [];
+    publicStudioBlocksError = 'Dostupnost neveřejných rezervací se nepodařilo načíst.';
+    renderPublicCalendar(publicStudioBlocksError);
+  }
+}
+
+function publicCalendarEvents() {
+  const from = publicCalendarStart;
+  const to = addDays(from, 7);
+  const publicLessons = lessons
+    .filter((lesson) => new Date(lesson.iso) < to && new Date(lesson.endsAt) > from)
+    .map((lesson) => ({ id: lesson.id, kind: 'public', title: lesson.title, startsAt: lesson.iso, endsAt: lesson.endsAt }));
+  return [...publicLessons, ...publicStudioBlocks];
+}
+
+function renderPublicCalendar(errorMessage = '') {
+  const calendar = document.querySelector('#public-studio-calendar');
+  if (!calendar) return;
+  document.querySelector('#public-calendar-range').textContent = calendarRangeLabel(publicCalendarStart);
+  calendar.innerHTML = errorMessage ? `<p class="calendar-error">${escapeHtml(errorMessage)}</p>` : calendarDays(publicCalendarStart, publicCalendarEvents());
+}
+
+async function movePublicCalendar(days) {
+  publicCalendarStart = addDays(publicCalendarStart, days);
+  await loadPublicStudioBlocks();
+}
+
+document.querySelector('#public-calendar-prev')?.addEventListener('click', () => movePublicCalendar(-7));
+document.querySelector('#public-calendar-next')?.addEventListener('click', () => movePublicCalendar(7));
 
 function instructorFromDatabase(row) {
   const donation = row.payment_mode === 'donation';
@@ -428,6 +531,7 @@ function clearAdminSession() {
   adminInstructors = [];
   adminNews = [];
   adminReservations = [];
+  adminStudioBlocks = [];
   adminCanManageAdmins = false;
   adminAccounts = [];
   adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
@@ -541,6 +645,19 @@ async function loadAdminReservations() {
   adminReservations = (await response.json()).sort((a, b) => new Date(a.lessons.starts_at) - new Date(b.lessons.starts_at));
 }
 
+async function loadAdminStudioBlocks() {
+  const historyStart = new Date();
+  historyStart.setMonth(historyStart.getMonth() - 1);
+  const query = new URLSearchParams({
+    select: 'id,title,category,starts_at,ends_at,buffer_minutes,contact_name,contact_email,notes,created_at',
+    ends_at: `gte.${historyStart.toISOString()}`,
+    order: 'starts_at.asc',
+  });
+  const response = await adminFetch(`${SUPABASE_URL}/rest/v1/studio_blocks?${query}`);
+  if (!response.ok) throw new Error('Neveřejné rezervace studia se nepodařilo načíst.');
+  adminStudioBlocks = await response.json();
+}
+
 async function loadAdminSettings() {
   const query = new URLSearchParams({ select: 'key,value', order: 'key.asc' });
   const response = await adminFetch(`${SUPABASE_URL}/rest/v1/site_settings?${query}`);
@@ -564,7 +681,7 @@ async function loadAdminAccounts() {
 
 async function loadAdminData() {
   await loadAdminCapabilities();
-  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations(), loadAdminSettings(), loadAdminAccounts()]);
+  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations(), loadAdminStudioBlocks(), loadAdminSettings(), loadAdminAccounts()]);
 }
 
 function renderAdminLogin(message = '') {
@@ -716,6 +833,102 @@ function settingsPanel() {
   return `<form class="admin-card settings-form" id="settings-form"><h2>Nastavení rezervací a plateb</h2><p class="admin-help">Změny se propíšou na veřejný web, do podmínek, nových rezervací, e-mailů a budoucích lekcí.</p><section class="settings-section"><h3>Pravidla rezervací</h3><div class="settings-grid"><div class="field"><label for="setting-price">Výchozí cena placené lekce v Kč</label><input id="setting-price" name="defaultPaidPrice" type="number" min="0" max="10000" value="${Number(adminSettings.default_paid_price)}" required></div><div class="field"><label for="setting-cancellation">Bezplatné zrušení před lekcí v hodinách</label><input id="setting-cancellation" name="cancellationHours" type="number" min="0" max="168" value="${Number(adminSettings.cancellation_hours)}" required></div><div class="field"><label for="setting-minimum">Standardní minimum přihlášených</label><input id="setting-minimum" name="minimumAttendance" type="number" min="1" max="100" value="${Number(adminSettings.minimum_attendance)}" required></div></div></section><section class="settings-section"><h3>Výchozí platba podle lektora</h3><p class="admin-help">Každá nová lekce převezme nastavení zvoleného lektora. U konkrétní lekce lze typ platby i cenu změnit.</p><div class="settings-instructors">${instructorSettings}</div></section><div class="settings-actions"><button class="button" type="submit">Uložit nastavení</button></div></form>`;
 }
 
+const STUDIO_BLOCK_CATEGORIES = {
+  private_lesson: 'Privátní lekce',
+  team_event: 'Týmová akce',
+  private_practice: 'Soukromé cvičení',
+  maintenance: 'Údržba / blokace',
+  other: 'Jiná neveřejná akce',
+};
+
+function adminCalendarEvents() {
+  const from = publicCalendarStart;
+  const to = addDays(from, 7);
+  const lessonEvents = adminLessons
+    .filter((lesson) => lesson.status === 'published' && new Date(lesson.iso) < to && new Date(lesson.endsAt) > from)
+    .map((lesson) => ({ id: lesson.id, kind: 'public', title: `${lesson.title} · ${lesson.teacher}`, startsAt: lesson.iso, endsAt: lesson.endsAt }));
+  const privateEvents = adminStudioBlocks
+    .filter((block) => new Date(block.starts_at) < to && new Date(block.ends_at) > from)
+    .map((block) => ({
+      id: block.id,
+      kind: 'private',
+      title: block.title,
+      startsAt: block.starts_at,
+      endsAt: block.ends_at,
+      occupiedStartsAt: new Date(new Date(block.starts_at).getTime() - 15 * 60_000).toISOString(),
+      occupiedEndsAt: new Date(new Date(block.ends_at).getTime() + 15 * 60_000).toISOString(),
+    }));
+  return [...lessonEvents, ...privateEvents];
+}
+
+function calendarPanel() {
+  return `<div class="admin-card"><div class="admin-card-heading"><div><h2>Kalendář studia</h2><p class="admin-help">Veřejné lekce i neveřejné rezervace na jednom místě. Každá neveřejná akce automaticky blokuje dalších 15 minut před začátkem i po konci.</p></div><button class="button button-small" data-add-studio-block>+ Neveřejná rezervace</button></div><div class="calendar-toolbar"><button class="button button-small button-secondary" data-admin-calendar-move="-7">← Předchozí týden</button><strong>${escapeHtml(calendarRangeLabel(publicCalendarStart))}</strong><button class="button button-small button-secondary" data-admin-calendar-move="7">Další týden →</button></div><div class="studio-calendar admin-studio-calendar">${calendarDays(publicCalendarStart, adminCalendarEvents(), { admin: true })}</div><p class="calendar-legend"><span class="legend-public"></span> Veřejná lekce <span class="legend-private"></span> Neveřejná rezervace včetně rezervy</p></div>`;
+}
+
+function studioBlockForm(block = null) {
+  const defaultStart = new Date();
+  defaultStart.setMinutes(Math.ceil(defaultStart.getMinutes() / 15) * 15, 0, 0);
+  defaultStart.setHours(defaultStart.getHours() + 1);
+  const start = block?.starts_at || defaultStart;
+  const end = block?.ends_at || new Date(new Date(start).getTime() + 60 * 60_000);
+  const options = Object.entries(STUDIO_BLOCK_CATEGORIES).map(([value, label]) => `<option value="${value}" ${block?.category === value ? 'selected' : ''}>${escapeHtml(label)}</option>`).join('');
+  return `<form class="booking-panel" id="studio-block-form"><p class="eyebrow">${block ? 'Úprava rezervace' : 'Nová rezervace'}</p><h2>Neveřejná rezervace studia</h2><div class="form-grid"><div class="field full"><label for="studio-block-title">Název pro administraci</label><input id="studio-block-title" name="title" maxlength="120" value="${escapeHtml(block?.title || '')}" placeholder="Např. privátní lekce pro tým HR" required></div><div class="field"><label for="studio-block-category">Typ akce</label><select id="studio-block-category" name="category" required>${options}</select></div><div class="field"><label>Rezerva</label><input value="15 minut před i po akci" disabled></div><div class="field"><label for="studio-block-start">Začátek akce</label><input id="studio-block-start" name="startsAt" type="datetime-local" value="${dateTimeLocalValue(start)}" required></div><div class="field"><label for="studio-block-end">Konec akce</label><input id="studio-block-end" name="endsAt" type="datetime-local" value="${dateTimeLocalValue(end)}" required></div><div class="field"><label for="studio-block-contact">Kontaktní osoba</label><input id="studio-block-contact" name="contactName" maxlength="120" value="${escapeHtml(block?.contact_name || '')}"></div><div class="field"><label for="studio-block-email">Kontaktní e-mail</label><input id="studio-block-email" name="contactEmail" type="email" maxlength="320" value="${escapeHtml(block?.contact_email || '')}"></div><div class="field full"><label for="studio-block-notes">Interní poznámka</label><textarea id="studio-block-notes" name="notes" maxlength="2000">${escapeHtml(block?.notes || '')}</textarea></div></div><p class="form-hint">Na veřejném webu se zobrazí pouze šedý blok „Studio obsazeno“. Název, kontakt ani poznámka se nezveřejní.</p><button class="button" type="submit">${block ? 'Uložit změny' : 'Rezervovat studio'}</button></form>`;
+}
+
+function openStudioBlockEditor(id = '') {
+  const block = adminStudioBlocks.find((item) => item.id === id) || null;
+  document.querySelector('#booking-content').innerHTML = studioBlockForm(block);
+  document.querySelector('#studio-block-form').addEventListener('submit', (event) => saveStudioBlock(event, block));
+  dialog.showModal();
+}
+
+async function saveStudioBlock(event, block) {
+  event.preventDefault();
+  const data = new FormData(event.target);
+  const startsAt = new Date(data.get('startsAt'));
+  const endsAt = new Date(data.get('endsAt'));
+  if (endsAt <= startsAt) return showToast('Konec akce musí být později než začátek.');
+  const payload = {
+    title: String(data.get('title')).trim(),
+    category: data.get('category'),
+    starts_at: startsAt.toISOString(),
+    ends_at: endsAt.toISOString(),
+    buffer_minutes: 15,
+    contact_name: String(data.get('contactName')).trim(),
+    contact_email: String(data.get('contactEmail')).trim().toLowerCase(),
+    notes: String(data.get('notes')).trim(),
+  };
+  const button = event.target.querySelector('[type="submit"]');
+  button.disabled = true;
+  button.textContent = 'Ukládám…';
+  try {
+    const url = block ? `${SUPABASE_URL}/rest/v1/studio_blocks?id=eq.${block.id}` : `${SUPABASE_URL}/rest/v1/studio_blocks`;
+    const response = await adminFetch(url, { method: block ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(payload) });
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(String(result.message || '').includes('STUDIO_CONFLICT') ? 'Studio je v tomto čase už obsazené, včetně 15minutové rezervy.' : 'Rezervaci studia se nepodařilo uložit.');
+    }
+    closeDialog();
+    await Promise.all([loadAdminStudioBlocks(), loadPublicStudioBlocks()]);
+    renderAdmin('calendar');
+    showToast(block ? 'Neveřejná rezervace byla upravena.' : 'Studio je rezervované.');
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = block ? 'Uložit změny' : 'Rezervovat studio';
+    showToast(error.message);
+  }
+}
+
+async function deleteStudioBlock(id) {
+  const block = adminStudioBlocks.find((item) => item.id === id);
+  if (!block || !confirm(`Opravdu smazat neveřejnou rezervaci „${block.title}“?`)) return;
+  const response = await adminFetch(`${SUPABASE_URL}/rest/v1/studio_blocks?id=eq.${id}`, { method: 'DELETE' });
+  if (!response.ok) return showToast('Rezervaci studia se nepodařilo smazat.');
+  await Promise.all([loadAdminStudioBlocks(), loadPublicStudioBlocks()]);
+  renderAdmin('calendar');
+  showToast('Neveřejná rezervace byla smazána.');
+}
+
 function renderAdmin(tab) {
   if (!adminSession) {
     renderAdminLogin();
@@ -724,13 +937,14 @@ function renderAdmin(tab) {
   const panel = document.querySelector('#admin-panel');
   activeAdminTab = tab;
   document.querySelectorAll('.admin-nav').forEach((button) => button.classList.toggle('active', button.dataset.adminTab === tab));
-  const titles = { overview: 'Lekce', completed: 'Proběhlé lekce a platby', people: 'Účastníci', content: 'Novinky a jógové tipy', teachers: 'Profily lektorů', accounts: 'Administrátoři', settings: 'Nastavení' };
+  const titles = { overview: 'Lekce', calendar: 'Kalendář studia', completed: 'Proběhlé lekce a platby', people: 'Účastníci', content: 'Novinky a jógové tipy', teachers: 'Profily lektorů', accounts: 'Administrátoři', settings: 'Nastavení' };
   const addButton = document.querySelector('#add-lesson');
   addButton.hidden = tab !== 'overview';
   document.querySelector('#admin-logout').hidden = false;
   addButton.textContent = '+ Nová lekce';
   document.querySelector('#admin-title').textContent = titles[tab];
   if (tab === 'overview') panel.innerHTML = overviewPanel();
+  if (tab === 'calendar') panel.innerHTML = calendarPanel();
   if (tab === 'completed') panel.innerHTML = `<div class="admin-card"><h2>Proběhlé lekce a platby</h2><p class="admin-help">Otevři účastníky nebo po kontrole ručně odešli správný platební či příspěvkový QR kód.</p>${lessonTable(adminLessons.filter((lesson) => new Date(lesson.endsAt) <= new Date()).reverse(), 'Zatím neproběhly žádné lekce.')}</div>`;
   if (tab === 'teachers') panel.innerHTML = teachersPanel();
   if (tab === 'people') panel.innerHTML = bookingsPanel();
@@ -744,6 +958,14 @@ function renderAdmin(tab) {
   document.querySelectorAll('[data-toggle-news]').forEach((button) => button.addEventListener('click', () => toggleNews(button.dataset.toggleNews)));
   document.querySelectorAll('[data-delete-news]').forEach((button) => button.addEventListener('click', () => deleteNews(button.dataset.deleteNews)));
   document.querySelectorAll('[data-edit-lesson]').forEach((button) => button.addEventListener('click', () => openLessonEditor(button.dataset.editLesson)));
+  document.querySelector('[data-add-studio-block]')?.addEventListener('click', () => openStudioBlockEditor());
+  document.querySelectorAll('[data-edit-studio-block]').forEach((button) => button.addEventListener('click', () => openStudioBlockEditor(button.dataset.editStudioBlock)));
+  document.querySelectorAll('[data-delete-studio-block]').forEach((button) => button.addEventListener('click', () => deleteStudioBlock(button.dataset.deleteStudioBlock)));
+  document.querySelectorAll('[data-admin-calendar-move]').forEach((button) => button.addEventListener('click', async () => {
+    publicCalendarStart = addDays(publicCalendarStart, Number(button.dataset.adminCalendarMove));
+    await loadPublicStudioBlocks();
+    renderAdmin('calendar');
+  }));
   document.querySelectorAll('[data-cancel-lesson]').forEach((button) => button.addEventListener('click', () => cancelLesson(button.dataset.cancelLesson)));
   document.querySelectorAll('[data-confirm-lesson]').forEach((button) => button.addEventListener('click', () => confirmLowAttendance(button.dataset.confirmLesson)));
   document.querySelectorAll('[data-payment-lesson]').forEach((button) => button.addEventListener('click', () => openPaymentEmails(button.dataset.paymentLesson)));
@@ -1335,6 +1557,7 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
   const tab = button.dataset.adminTab;
   try {
     if (tab === 'overview' || tab === 'completed') await Promise.all([loadAdminLessons(), loadAdminReservations()]);
+    if (tab === 'calendar') await Promise.all([loadAdminLessons(), loadAdminStudioBlocks(), loadPublicStudioBlocks()]);
     if (tab === 'teachers') await loadAdminInstructors();
     if (tab === 'people') await loadAdminReservations();
     if (tab === 'content') await loadAdminNews();
@@ -1375,6 +1598,7 @@ renderLessons();
 renderNextClass();
 refreshPublicSettings();
 loadLessons();
+loadPublicStudioBlocks();
 loadPublicContent();
 const cancellationToken = new URLSearchParams(location.search).get('cancel');
 if (cancellationToken) openCancellation(cancellationToken);

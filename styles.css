@@ -356,6 +356,37 @@ footer .brand-logo{height:72px}
 .lesson-action-buttons{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .lesson-action-state{min-height:40px;padding:9px 12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:100px;background:var(--paper);font-size:12px;text-align:center;line-height:1.2}
 .lesson-actions-disabled{align-content:center;min-height:88px}
+
+/* Shared public and administrative studio calendar. */
+.availability-section{background:#f4f5f1}
+.calendar-toolbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;margin:30px 0 18px}
+.calendar-toolbar strong{text-align:center;font-family:"Newsreader",serif;font-size:24px;font-weight:400}
+.studio-calendar{display:grid;grid-template-columns:repeat(7,minmax(145px,1fr));gap:10px;overflow-x:auto;padding-bottom:10px}
+.calendar-day{min-height:210px;border:1px solid var(--line);background:#fff}
+.calendar-day h3{margin:0;padding:13px 14px;border-bottom:1px solid var(--line);font-size:12px;text-transform:capitalize}
+.calendar-day>div{display:grid;gap:8px;padding:10px}
+.calendar-event{display:grid;gap:4px;padding:11px;border-left:4px solid var(--sage-dark);background:#e4eee8;font-size:12px;line-height:1.35}
+.calendar-event span,.calendar-event small{color:var(--muted)}
+.calendar-event-private{border-left-color:#8b918e;background:#eceeed;color:#454b48}
+.calendar-free{margin:10px 4px;color:var(--muted);font-size:12px}
+.calendar-error{grid-column:1/-1;padding:20px;background:#fff;color:#855625}
+.calendar-legend{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0 0;color:var(--muted);font-size:12px}
+.calendar-legend span{width:14px;height:14px;margin-left:14px;border-radius:2px;background:#e4eee8;border-left:4px solid var(--sage-dark)}
+.calendar-legend span:first-child{margin-left:0}
+.calendar-legend .legend-private{background:#eceeed;border-left-color:#8b918e}
+.calendar-event-actions{display:flex;gap:8px;margin-top:5px;border-top:1px solid rgba(31,40,36,.12);padding-top:5px}
+.calendar-event-actions .text-button{padding:2px 0;font-size:11px}
+.admin-studio-calendar .calendar-day{min-height:240px}
+
+@media(max-width:900px){
+  .studio-calendar{grid-template-columns:repeat(7,180px)}
+}
+
+@media(max-width:600px){
+  .calendar-toolbar{grid-template-columns:1fr 1fr}
+  .calendar-toolbar strong{grid-column:1/-1;grid-row:1;text-align:left}
+  .calendar-toolbar .button{width:100%;padding:10px 8px}
+}
 .account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .account-form{display:grid;align-content:start;gap:16px}
 .account-form h2{margin-bottom:0}

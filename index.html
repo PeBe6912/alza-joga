@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2026101503" />
+  <link rel="stylesheet" href="styles.css?v=2026101515" />
 </head>
 <body>
   <div class="announcement">Nové termíny na příští týden jsou otevřené <a href="#lekce">Rezervovat místo →</a></div>
@@ -21,6 +21,7 @@
     </a>
     <nav id="main-menu" aria-label="Hlavní navigace">
       <a href="#lekce">Lekce</a>
+      <a href="#dostupnost">Dostupnost studia</a>
       <a href="#lektori">Lektoři</a>
       <a href="#studio">Studio</a>
       <a href="#novinky">Novinky a jógové tipy</a>
@@ -63,6 +64,23 @@
         <button class="filter" data-filter="charity">Dobrovolný příspěvek</button>
       </div>
       <div class="class-list" id="class-list"></div>
+    </section>
+
+    <section class="section availability-section" id="dostupnost">
+      <div class="section-heading split">
+        <div>
+          <p class="eyebrow">Kalendář studia</p>
+          <h2>Kdy je studio volné</h2>
+        </div>
+        <p>Veřejné lekce jsou označené barevně. Šedé bloky znamenají, že je studio obsazené neveřejnou akcí. U těchto rezervací zůstávají všechny podrobnosti soukromé.</p>
+      </div>
+      <div class="calendar-toolbar">
+        <button class="button button-small button-secondary" id="public-calendar-prev" type="button">← Předchozí týden</button>
+        <strong id="public-calendar-range"></strong>
+        <button class="button button-small button-secondary" id="public-calendar-next" type="button">Další týden →</button>
+      </div>
+      <div class="studio-calendar" id="public-studio-calendar" aria-live="polite"></div>
+      <p class="calendar-legend"><span class="legend-public"></span> Veřejná lekce <span class="legend-private"></span> Studio obsazeno včetně 15 minut na přípravu a úklid</p>
     </section>
 
     <section class="studio-grid" id="studio">
@@ -188,6 +206,7 @@
       <button class="admin-menu-toggle" id="admin-menu-toggle" type="button" aria-expanded="false" aria-controls="admin-menu">☰ Menu správy</button>
       <nav id="admin-menu">
         <button class="admin-nav active" data-admin-tab="overview">Lekce</button>
+        <button class="admin-nav" data-admin-tab="calendar">Kalendář studia</button>
         <button class="admin-nav" data-admin-tab="completed">Proběhlé lekce a platby</button>
         <button class="admin-nav" data-admin-tab="people">Účastníci</button>
         <button class="admin-nav" data-admin-tab="content">Novinky a jógové tipy</button>
@@ -214,6 +233,6 @@
     <div id="booking-content"></div>
   </dialog>
   <div class="toast" id="toast" role="status"></div>
-  <script src="app.js?v=2026101509"></script>
+  <script src="app.js?v=2026101515"></script>
 </body>
 </html>
