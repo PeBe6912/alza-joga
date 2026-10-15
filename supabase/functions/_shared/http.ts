@@ -1,5 +1,7 @@
 const allowedOrigins = new Set([
+  'http://127.0.0.1:3000',
   'http://127.0.0.1:4173',
+  'http://localhost:3000',
   'http://localhost:4173',
   'https://joga-na-hallu.pages.dev',
   'https://alza-joga-i7pk.vercel.app',
@@ -11,7 +13,7 @@ export function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin');
   return {
     'Access-Control-Allow-Origin': origin && allowedOrigins.has(origin) ? origin : '',
-    'Access-Control-Allow-Headers': 'apikey, content-type',
+    'Access-Control-Allow-Headers': 'apikey, authorization, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',
   };
