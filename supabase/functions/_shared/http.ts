@@ -54,7 +54,8 @@ export async function callRpc<T>(name: string, payload: Record<string, unknown>)
     headers: { apikey: secretKey, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const body = await response.json();
+  const responseText = await response.text();
+  const body = responseText ? JSON.parse(responseText) : null;
   if (!response.ok) throw new Error(body?.message || 'DATABASE_ERROR');
   return body as T;
 }
