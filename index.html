@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2026101516" />
+  <link rel="stylesheet" href="styles.css?v=2026101517" />
 </head>
 <body>
   <div class="announcement">Nové termíny na příští týden jsou otevřené <a href="#lekce">Rezervovat místo →</a></div>
@@ -21,7 +21,6 @@
     </a>
     <nav id="main-menu" aria-label="Hlavní navigace">
       <a href="#lekce">Lekce</a>
-      <a href="#dostupnost">Dostupnost studia</a>
       <a href="#lektori">Lektoři</a>
       <a href="#studio">Studio</a>
       <a href="#novinky">Novinky a jógové tipy</a>
@@ -66,39 +65,6 @@
       <div class="class-list" id="class-list"></div>
     </section>
 
-    <section class="section availability-section" id="dostupnost">
-      <div class="section-heading split">
-        <div>
-          <p class="eyebrow">Kalendář studia</p>
-          <h2>Kdy je studio volné</h2>
-        </div>
-        <p>Veřejné lekce jsou označené barevně. Šedé bloky znamenají, že je studio obsazené neveřejnou akcí. U těchto rezervací zůstávají všechny podrobnosti soukromé.</p>
-      </div>
-      <div class="calendar-toolbar">
-        <button class="button button-small button-secondary" id="public-calendar-prev" type="button">← Předchozí týden</button>
-        <strong id="public-calendar-range"></strong>
-        <button class="button button-small button-secondary" id="public-calendar-next" type="button">Další týden →</button>
-      </div>
-      <div class="studio-calendar" id="public-studio-calendar" aria-live="polite"></div>
-      <p class="calendar-legend"><span class="legend-public"></span> Veřejná lekce <span class="legend-private"></span> Studio obsazeno včetně 15 minut na přípravu a úklid</p>
-    </section>
-
-    <section class="studio-grid" id="studio">
-      <div class="studio-main image-frame"><img src="assets/studio-daylight.jpeg" alt="Světlé jógové studio s podlahou v dekoru dřeva" /></div>
-      <div class="studio-copy">
-        <p class="eyebrow">Naše studio</p>
-        <h2>Klidné místo uprostřed HALLU</h2>
-        <p>Najdeš nás v jógové místnosti ve 3. patře. Čeká tě krásný jógový prostor, příjemné světlo a dost prostoru pro vlastní podložku.</p>
-        <ul class="feature-list">
-          <li><span class="feature-number">01</span> Kapacita <span data-setting="studio_capacity">20</span> lidí</li>
-          <li><span class="feature-number">02</span> Vlastní podložka na cvičení</li>
-          <li><span class="feature-number">03</span> V docházce zvol „Relax pauza“</li>
-        </ul>
-        <a class="inline-link" href="#galerie">Prohlédnout studio →</a>
-      </div>
-      <div class="studio-detail image-frame"><img src="assets/studio-hooks.jpeg" alt="Dřevěné držáky na podložky v jógovém studiu" /></div>
-    </section>
-
     <section class="section teachers-section" id="lektori">
       <div class="section-heading split">
         <div><p class="eyebrow">Kdo tě lekcí provede</p><h2>Naši lektoři</h2></div>
@@ -125,6 +91,41 @@
         </article>
       </div>
     </section>
+
+    <div class="studio-cluster" id="studio">
+      <section class="studio-grid" aria-label="Naše studio">
+        <div class="studio-main image-frame"><img src="assets/studio-daylight.jpeg" alt="Světlé jógové studio s podlahou v dekoru dřeva" /></div>
+        <div class="studio-copy">
+          <p class="eyebrow">Naše studio</p>
+          <h2>Klidné místo uprostřed HALLU</h2>
+          <p>Najdeš nás v jógové místnosti ve 3. patře. Čeká tě krásný jógový prostor, příjemné světlo a dost prostoru pro vlastní podložku.</p>
+          <ul class="feature-list">
+            <li><span class="feature-number">01</span> Kapacita <span data-setting="studio_capacity">20</span> lidí</li>
+            <li><span class="feature-number">02</span> Vlastní podložka na cvičení</li>
+            <li><span class="feature-number">03</span> V docházce zvol „Relax pauza“</li>
+          </ul>
+          <a class="inline-link" href="#galerie">Prohlédnout studio →</a>
+        </div>
+        <div class="studio-detail image-frame"><img src="assets/studio-hooks.jpeg" alt="Dřevěné držáky na podložky v jógovém studiu" /></div>
+      </section>
+
+      <section class="section availability-section" id="dostupnost">
+        <div class="section-heading split">
+          <div>
+            <p class="eyebrow">Kalendář studia</p>
+            <h2>Kdy je studio volné</h2>
+          </div>
+          <p>Veřejné lekce jsou označené barevně. Šedé bloky znamenají, že je studio obsazené neveřejnou akcí. U těchto rezervací zůstávají všechny podrobnosti soukromé.</p>
+        </div>
+        <div class="calendar-toolbar">
+          <button class="button button-small button-secondary" id="public-calendar-prev" type="button">← Předchozí týden</button>
+          <strong id="public-calendar-range"></strong>
+          <button class="button button-small button-secondary" id="public-calendar-next" type="button">Další týden →</button>
+        </div>
+        <div class="studio-calendar" id="public-studio-calendar" aria-live="polite"></div>
+        <p class="calendar-legend"><span class="legend-public"></span> Veřejná lekce <span class="legend-private"></span> Studio obsazeno včetně 15 minut na přípravu a úklid</p>
+      </section>
+    </div>
 
     <section class="section news-section" id="novinky">
       <div class="section-heading split">
