@@ -333,6 +333,16 @@ footer .brand-logo{height:72px}
 .news-card.charity-card{display:flex;flex-direction:column;align-items:flex-start}
 .news-card.charity-card .charity-logo{width:105px;height:60px;margin:0 0 auto;object-fit:contain;object-position:left center}
 .news-card.charity-card span{margin-top:24px}
+.news-card[role="button"]{position:relative;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
+.news-card[role="button"]:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(31,40,36,.16)}
+.news-card[role="button"]:focus-visible{outline:3px solid var(--clay);outline-offset:4px}
+.news-card-action{display:inline-block;margin-top:auto;padding-top:22px;border-bottom:1px solid currentColor;font-size:14px;line-height:1.4}
+.news-card.featured .news-card-action{margin-top:8px;padding-top:0}
+.news-detail{max-height:min(82vh,760px);overflow:auto}
+.news-detail h2{padding-right:28px}
+.news-detail-summary{font-size:18px;line-height:1.55;color:var(--muted)}
+.news-detail img{max-height:310px;margin:24px 0;object-fit:cover}
+.news-detail-body{white-space:pre-line;line-height:1.7;color:var(--ink)}
 .feature-list [data-setting="studio_capacity"]{color:inherit;font:inherit;margin:0}
 .admin-teacher blockquote{margin:8px 0 0;color:var(--ink);font-family:"Newsreader",serif;font-size:15px;line-height:1.4}
 .participant-actions{white-space:nowrap}
@@ -354,6 +364,12 @@ footer .brand-logo{height:72px}
 @media(max-width:900px){
   .gallery{grid-template-columns:1fr 1fr}
   .gallery-quote{display:grid;grid-column:1/-1;min-height:230px}
+}
+
+@media(min-width:1400px){
+  .site-header{height:94px}
+  .site-header .brand-logo{height:68px}
+  .site-header .brand-name{font-size:22px}
 }
 
 @media(max-width:600px){

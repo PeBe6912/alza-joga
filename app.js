@@ -282,11 +282,34 @@ function renderPublicNews() {
   let textCardIndex = 0;
   grid.innerHTML = displayItems.map((item) => {
     const charityStory = item.title.trim().toLocaleLowerCase('cs-CZ') === 'cvičením pomáháme';
-    if (item.image_url) return `<article class="news-card featured"><img src="${escapeHtml(item.image_url)}" alt=""><div><span>Ze studia</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></div></article>`;
+    if (item.image_url) return `<article class="news-card featured" role="button" tabindex="0" data-news-detail="${escapeHtml(item.id)}" aria-label="Přečíst celý článek: ${escapeHtml(item.title)}"><img src="${escapeHtml(item.image_url)}" alt=""><div><span>Ze studia</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p><strong class="news-card-action">Číst dál →</strong></div></article>`;
     const tone = textCardTones[textCardIndex % textCardTones.length];
     textCardIndex += 1;
-    return `<article class="news-card text-card ${tone}${charityStory ? ' charity-card' : ''}">${charityStory ? '<img class="charity-logo" src="assets/dobry-andel-logo.svg" alt="Dobrý Anděl">' : ''}<span>${charityStory ? 'Dobrá věc' : 'Novinka'}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p></article>`;
+    return `<article class="news-card text-card ${tone}${charityStory ? ' charity-card' : ''}" role="button" tabindex="0" data-news-detail="${escapeHtml(item.id)}" aria-label="Přečíst celý článek: ${escapeHtml(item.title)}">${charityStory ? '<img class="charity-logo" src="assets/dobry-andel-logo.svg" alt="Dobrý Anděl">' : ''}<span>${charityStory ? 'Dobrá věc' : 'Novinka'}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p><strong class="news-card-action">Číst dál →</strong></article>`;
   }).join('');
+  grid.querySelectorAll('[data-news-detail]').forEach((card) => {
+    const openDetail = () => openNewsDetail(card.dataset.newsDetail);
+    card.addEventListener('click', openDetail);
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openDetail();
+      }
+    });
+  });
+}
+
+function openNewsDetail(id) {
+  const item = newsItems.find((newsItem) => String(newsItem.id) === String(id));
+  if (!item) return;
+  document.querySelector('#booking-content').innerHTML = `<article class="booking-panel news-detail">
+    <p class="eyebrow">Novinky a jógové tipy</p>
+    <h2>${escapeHtml(item.title)}</h2>
+    ${item.summary ? `<p class="news-detail-summary">${escapeHtml(item.summary)}</p>` : ''}
+    ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="">` : ''}
+    <div class="news-detail-body">${escapeHtml(item.body || item.summary || '')}</div>
+  </article>`;
+  dialog.showModal();
 }
 
 async function loadPublicContent() {
