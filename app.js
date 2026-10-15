@@ -484,6 +484,12 @@ function showToast(message) {
 
 const publicView = document.querySelector('#public-view');
 const adminView = document.querySelector('#admin-view');
+const adminSidebar = document.querySelector('.admin-sidebar');
+
+function setAdminAuthenticatedLayout(isAuthenticated) {
+  adminView.classList.toggle('admin-login-mode', !isAuthenticated);
+  adminSidebar.hidden = !isAuthenticated;
+}
 
 async function openAdmin({ updateUrl = true } = {}) {
   if (updateUrl && location.hash !== '#admin') {
@@ -494,6 +500,7 @@ async function openAdmin({ updateUrl = true } = {}) {
   document.querySelector('.announcement').hidden = true;
   document.querySelector('footer').hidden = true;
   adminView.hidden = false;
+  setAdminAuthenticatedLayout(false);
   if (adminSession && await isAdminSessionValid()) {
     await loadAdminData();
     renderAdmin('overview');
@@ -688,6 +695,7 @@ async function loadAdminData() {
 }
 
 function renderAdminLogin(message = '') {
+  setAdminAuthenticatedLayout(false);
   document.querySelector('#admin-title').textContent = 'Přihlášení do správy';
   const addButton = document.querySelector('#add-lesson');
   addButton.hidden = true;
@@ -937,6 +945,7 @@ function renderAdmin(tab) {
     renderAdminLogin();
     return;
   }
+  setAdminAuthenticatedLayout(true);
   const panel = document.querySelector('#admin-panel');
   activeAdminTab = tab;
   document.querySelectorAll('.admin-nav').forEach((button) => button.classList.toggle('active', button.dataset.adminTab === tab));
