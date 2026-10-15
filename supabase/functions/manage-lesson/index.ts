@@ -218,6 +218,37 @@ Deno.serve(async (req: Request) => {
       return json(req, { ok: true, action });
     }
 
+    if (action === 'update-instructor-profile') {
+      const instructorId = String(body.instructorId ?? '');
+      const email = String(body.email ?? '').trim().toLowerCase();
+      const name = String(body.name ?? '').trim();
+      const bio = String(body.bio ?? '').trim();
+      const paymentMode = String(body.paymentMode ?? '');
+      const priceCzk = body.priceCzk === null || body.priceCzk === undefined ? null : Number(body.priceCzk);
+      const styles = Array.isArray(body.styles) ? body.styles.map((style) => String(style).trim()).filter(Boolean) : [];
+      if (!/^[0-9a-f-]{36}$/i.test(instructorId)) throw new Error('INVALID_INSTRUCTOR');
+      if (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('INVALID_EMAIL');
+      if (!name || name.length > 120) throw new Error('INVALID_INSTRUCTOR_NAME');
+      if (!bio) throw new Error('INVALID_INSTRUCTOR_BIO');
+      if (!['paid', 'donation'].includes(paymentMode)) throw new Error('INVALID_PAYMENT_MODE');
+      if (paymentMode === 'paid' && (!Number.isInteger(priceCzk) || priceCzk < 0 || priceCzk > 10000)) throw new Error('INVALID_INSTRUCTOR_PRICE');
+      const profile = await callRpc<{ instructor_id: string; updated_at: string }>('admin_update_instructor_profile', {
+        p_instructor_id: instructorId,
+        p_email: email,
+        p_name: name,
+        p_styles: styles,
+        p_bio: bio,
+        p_practice_quote: String(body.practiceQuote ?? '').trim(),
+        p_photo_url: String(body.photoUrl ?? '').trim() || null,
+        p_payment_mode: paymentMode,
+        p_price_czk: paymentMode === 'paid' ? priceCzk : null,
+        p_payment_note: String(body.paymentNote ?? '').trim(),
+        p_paid_qr_url: String(body.paidQrUrl ?? '').trim() || null,
+        p_donation_qr_url: String(body.donationQrUrl ?? '').trim() || null,
+      });
+      return json(req, { ok: true, action, profile });
+    }
+
     if (action === 'cancel-reservation') {
       const reservationId = String(body.reservationId ?? '');
       if (!/^[0-9a-f-]{36}$/i.test(reservationId)) throw new Error('INVALID_RESERVATION');
@@ -505,6 +536,8 @@ Deno.serve(async (req: Request) => {
           ? code.includes('PAYMENT_QR_MISSING') ? 'V profilu lektora chybí QR kód pro tento typ platby.' : code.includes('INSTRUCTOR_EMAIL_MISSING') ? 'V profilu lektora chybí e-mail pro souhrn.' : 'Platební e-maily se nepodařilo připravit nebo odeslat.'
         : requestedAction === 'cancel-reservation'
           ? code.includes('CANCELLATION_NOT_ALLOWED') ? 'Rezervaci už nelze zrušit nebo už byla zrušená.' : 'Rezervaci účastníka se nepodařilo zrušit.'
+        : requestedAction === 'update-instructor-profile'
+          ? 'Profil lektora se nepodařilo uložit.'
         : requestedAction === 'update-instructor-email' || requestedAction === 'instructor-contacts'
           ? 'E-mail lektora se nepodařilo načíst nebo uložit.'
         : requestedAction === 'update-settings'

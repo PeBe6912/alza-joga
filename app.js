@@ -1166,18 +1166,20 @@ function openTeacherEditor(id) {
     button.disabled = true;
     button.textContent = 'Ukládám…';
     try {
-      await manageLesson({ action: 'update-instructor-email', instructorId: id, email: data.get('email').trim() });
-      await adminRest(`instructors?id=eq.${encodeURIComponent(id)}`, 'PATCH', {
+      await manageLesson({
+        action: 'update-instructor-profile',
+        instructorId: id,
+        email: data.get('email').trim(),
         name: data.get('name').trim(),
         styles: String(data.get('styles')).split(',').map((item) => item.trim()).filter(Boolean),
         bio: data.get('bio').trim(),
-        practice_quote: data.get('practiceQuote').trim(),
-        photo_url: data.get('photoUrl').trim() || null,
-        payment_mode: paymentMode,
-        price_czk: paymentMode === 'paid' ? Number(price) : null,
-        payment_note: paymentNote,
-        paid_qr_url: data.get('paidQrUrl').trim() || null,
-        donation_qr_url: data.get('donationQrUrl').trim() || null,
+        practiceQuote: data.get('practiceQuote').trim(),
+        photoUrl: data.get('photoUrl').trim() || null,
+        paymentMode,
+        priceCzk: paymentMode === 'paid' ? Number(price) : null,
+        paymentNote,
+        paidQrUrl: data.get('paidQrUrl').trim() || null,
+        donationQrUrl: data.get('donationQrUrl').trim() || null,
       });
       closeDialog();
       await Promise.all([loadAdminInstructors(), loadPublicContent()]);
