@@ -104,12 +104,12 @@ async function requireAdmin(req: Request): Promise<AdminUser> {
   return user;
 }
 
-async function callAuthAdmin(path: string, method: 'POST' | 'PUT', body: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function callAuthAdmin(path: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', body?: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { url, secretKey } = supabaseConfig();
   const response = await fetch(`${url}/auth/v1/admin/${path}`, {
     method,
     headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : undefined,
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -160,6 +160,35 @@ Deno.serve(async (req: Request) => {
         app_metadata: { role: 'admin' },
       });
       return json(req, { ok: true, action, userId: created.id ?? null });
+    }
+
+    if (action === 'list-admins') {
+      if (!canManageAdmins) throw new Error('OWNER_ONLY');
+      const result = await callAuthAdmin('users?page=1&per_page=1000', 'GET');
+      const users = Array.isArray(result.users) ? result.users : [];
+      const admins = users
+        .filter((user) => user?.app_metadata?.role === 'admin')
+        .map((user) => ({
+          id: user.id,
+          email: user.email ?? '',
+          createdAt: user.created_at ?? null,
+          lastSignInAt: user.last_sign_in_at ?? null,
+          isOwner: user.id === OWNER_ADMIN_USER_ID,
+        }))
+        .sort((a, b) => Number(b.isOwner) - Number(a.isOwner) || a.email.localeCompare(b.email));
+      return json(req, { ok: true, action, admins });
+    }
+
+    if (action === 'delete-admin') {
+      if (!canManageAdmins) throw new Error('OWNER_ONLY');
+      const userId = String(body.userId ?? '');
+      if (!/^[0-9a-f-]{36}$/i.test(userId)) throw new Error('INVALID_ADMIN');
+      if (userId === OWNER_ADMIN_USER_ID || userId === adminUser.id) throw new Error('OWNER_SELF_DELETE');
+      const target = await callAuthAdmin(`users/${userId}`, 'GET');
+      const targetMetadata = target.app_metadata as { role?: string } | undefined;
+      if (targetMetadata?.role !== 'admin') throw new Error('ADMIN_NOT_FOUND');
+      await callAuthAdmin(`users/${userId}`, 'DELETE');
+      return json(req, { ok: true, action, userId });
     }
 
     if (action === 'change-password') {
@@ -437,7 +466,7 @@ Deno.serve(async (req: Request) => {
     return json(req, { ok: true, action: change.action, notified, failed });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') ? 400 : code.includes('RESERVATION_NOT_FOUND') ? 404 : 500;
+    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') || code === 'OWNER_SELF_DELETE' ? 400 : code.includes('RESERVATION_NOT_FOUND') || code === 'ADMIN_NOT_FOUND' ? 404 : 500;
     console.error('manage-lesson failed', code);
     const message = code === 'FORBIDDEN'
       ? 'Tento účet nemá oprávnění správce.'
@@ -452,9 +481,17 @@ Deno.serve(async (req: Request) => {
         : code === 'ADMIN_EXISTS'
           ? 'Účet s tímto e-mailem už existuje.'
         : code === 'OWNER_ONLY'
-          ? 'Nové administrátory může přidávat pouze Petr.'
+          ? 'Administrátory může spravovat pouze Petr.'
+        : code === 'OWNER_SELF_DELETE'
+          ? 'Vlastní účet správce nelze smazat.'
+        : code === 'ADMIN_NOT_FOUND'
+          ? 'Administrátor nebyl nalezen.'
         : requestedAction === 'create-admin'
           ? 'Administrátora se nepodařilo vytvořit.'
+        : requestedAction === 'list-admins'
+          ? 'Seznam administrátorů se nepodařilo načíst.'
+        : requestedAction === 'delete-admin'
+          ? 'Administrátora se nepodařilo smazat.'
         : requestedAction === 'change-password'
           ? 'Heslo se nepodařilo změnit.'
         : requestedAction.startsWith('payment-')

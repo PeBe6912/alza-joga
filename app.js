@@ -47,6 +47,7 @@ let adminInstructors = [];
 let adminNews = [];
 let adminReservations = [];
 let adminCanManageAdmins = false;
+let adminAccounts = [];
 let publicSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let activeAdminTab = 'overview';
@@ -378,6 +379,7 @@ function clearAdminSession() {
   adminNews = [];
   adminReservations = [];
   adminCanManageAdmins = false;
+  adminAccounts = [];
   adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
   sessionStorage.removeItem('jogaAdminSession');
 }
@@ -462,8 +464,18 @@ async function loadAdminCapabilities() {
   adminCanManageAdmins = capabilities.canManageAdmins === true;
 }
 
+async function loadAdminAccounts() {
+  if (!adminCanManageAdmins) {
+    adminAccounts = [];
+    return;
+  }
+  const result = await manageLesson({ action: 'list-admins' });
+  adminAccounts = result.admins || [];
+}
+
 async function loadAdminData() {
-  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations(), loadAdminSettings(), loadAdminCapabilities()]);
+  await loadAdminCapabilities();
+  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations(), loadAdminSettings(), loadAdminAccounts()]);
 }
 
 function renderAdminLogin(message = '') {
@@ -530,7 +542,7 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
       ? '<div class="lesson-actions-stack lesson-actions-disabled"><span class="lesson-action-state">Bez dalších akcí</span></div>'
       : ended
         ? `<button class="button button-small" data-payment-lesson="${lesson.id}">Platby a příspěvky</button>`
-        : `<div class="lesson-actions-stack"><div class="lesson-action-primary">${attendanceAction}</div><div class="lesson-action-buttons"><button class="button button-small" data-edit-lesson="${lesson.id}">Změnit čas</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div></div>`;
+        : `<div class="lesson-actions-stack"><div class="lesson-action-primary">${attendanceAction}</div><div class="lesson-action-buttons"><button class="button button-small" data-edit-lesson="${lesson.id}">Upravit</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div></div>`;
     const payment = lesson.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : `${lesson.priceCzk ?? 0} Kč`;
     return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span></td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
   }).join('');
@@ -538,10 +550,10 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
 }
 
 function overviewPanel() {
-  const upcomingLessons = adminLessons.filter((lesson) => new Date(lesson.endsAt) > new Date());
+  const upcomingLessons = adminLessons.filter((lesson) => lesson.status === 'published' && new Date(lesson.endsAt) > new Date());
   const openLessons = adminLessons.filter((lesson) => lesson.status === 'published' && new Date(lesson.endsAt) > new Date());
   const nextLesson = openLessons[0];
-  const cancelledLessons = upcomingLessons.filter((lesson) => lesson.status === 'cancelled').length;
+  const cancelledLessons = adminLessons.filter((lesson) => lesson.status === 'cancelled' && new Date(lesson.endsAt) > new Date()).length;
   return `<div class="stats"><div class="stat-card"><span>AKTIVNÍ REZERVACE</span><strong>${openLessons.reduce((sum, lesson) => sum + lesson.booked, 0)}</strong><small>v budoucích lekcích</small></div><div class="stat-card"><span>NEJBLIŽŠÍ LEKCE</span><strong>${nextLesson ? `${nextLesson.booked} / ${nextLesson.capacity}` : '—'}</strong><small>${nextLesson ? `${escapeHtml(nextLesson.date)} v ${escapeHtml(nextLesson.time.split('–')[0])}` : 'Bez termínu'}</small></div><div class="stat-card"><span>NAPLÁNOVANÉ LEKCE</span><strong>${openLessons.length}</strong><small>${cancelledLessons} zrušených</small></div></div><div class="admin-card admin-card-spaced"><h2>Naplánované lekce</h2><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p>${lessonTable(upcomingLessons, 'Nejsou naplánované žádné lekce.')}</div>`;
 }
 
@@ -560,6 +572,10 @@ function accountsPanel() {
       <button class="button" type="submit">Vytvořit administrátora</button>
     </form>`
     : `<div class="admin-card account-form"><h2>Administrátoři</h2><p class="admin-help">Nové administrátory může přidávat pouze Petr.</p></div>`;
+  const adminRows = adminAccounts.map((account) => `<tr><td data-label="E-mail"><b>${escapeHtml(account.email || 'Bez e-mailu')}</b>${account.isOwner ? '<br><small>Vlastník správy</small>' : ''}</td><td data-label="Vytvořen">${account.createdAt ? escapeHtml(formatAdminDate(account.createdAt)) : '—'}</td><td data-label="Poslední přihlášení">${account.lastSignInAt ? escapeHtml(formatAdminDate(account.lastSignInAt)) : 'Dosud nepřihlášen/a'}</td><td data-label="Akce">${account.isOwner ? '<span class="status-pill">Nelze smazat</span>' : `<button class="text-button danger" data-delete-admin="${account.id}" data-admin-email="${escapeHtml(account.email || '')}">Smazat</button>`}</td></tr>`).join('');
+  const adminListPanel = adminCanManageAdmins
+    ? `<div class="admin-card admin-card-spaced"><h2>Aktivní administrátoři</h2><p class="admin-help">Vlastní účet smazat nelze. Odebráním ostatního účtu zanikne jeho přístup do správy.</p><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>E-mail</th><th>Vytvořen</th><th>Poslední přihlášení</th><th>Akce</th></tr></thead><tbody>${adminRows || '<tr><td colspan="4">Nejsou evidováni žádní administrátoři.</td></tr>'}</tbody></table></div></div>`
+    : '';
   return `<div class="account-grid">
     ${createAdminPanel}
     <form class="admin-card account-form" id="change-password-form">
@@ -569,7 +585,7 @@ function accountsPanel() {
       <div class="field"><label for="admin-new-password-confirm">Nové heslo znovu</label><input id="admin-new-password-confirm" name="passwordConfirm" type="password" minlength="12" maxlength="72" autocomplete="new-password" required></div>
       <button class="button" type="submit">Změnit heslo</button>
     </form>
-  </div>`;
+  </div>${adminListPanel}`;
 }
 
 function bookingsPanel() {
@@ -650,6 +666,7 @@ function renderAdmin(tab) {
   document.querySelector('#settings-form')?.addEventListener('submit', saveSettings);
   document.querySelector('#create-admin-form')?.addEventListener('submit', createAdminAccount);
   document.querySelector('#change-password-form')?.addEventListener('submit', changeAdminPassword);
+  document.querySelectorAll('[data-delete-admin]').forEach((button) => button.addEventListener('click', () => deleteAdminAccount(button.dataset.deleteAdmin, button.dataset.adminEmail)));
 }
 
 async function createAdminAccount(event) {
@@ -663,12 +680,26 @@ async function createAdminAccount(event) {
   try {
     await manageLesson({ action: 'create-admin', email: String(data.get('email')).trim(), password });
     event.target.reset();
+    await loadAdminAccounts();
+    renderAdmin('accounts');
     showToast('Administrátor byl vytvořen. Přihlašovací údaje mu předej bezpečnou cestou.');
   } catch (error) {
     showToast(error.message);
   } finally {
     button.disabled = false;
     button.textContent = 'Vytvořit administrátora';
+  }
+}
+
+async function deleteAdminAccount(userId, email) {
+  if (!confirm(`Opravdu smazat administrátora ${email}? Tento účet se už nebude moci přihlásit.`)) return;
+  try {
+    await manageLesson({ action: 'delete-admin', userId });
+    await loadAdminAccounts();
+    renderAdmin('accounts');
+    showToast('Administrátor byl smazán.');
+  } catch (error) {
+    showToast(error.message);
   }
 }
 
@@ -1215,6 +1246,7 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
     if (tab === 'teachers') await loadAdminInstructors();
     if (tab === 'people') await loadAdminReservations();
     if (tab === 'content') await loadAdminNews();
+    if (tab === 'accounts' && adminCanManageAdmins) await loadAdminAccounts();
     if (tab === 'settings') await Promise.all([loadAdminSettings(), loadAdminInstructors()]);
     renderAdmin(tab);
     document.querySelector('#admin-menu').classList.remove('is-open');
