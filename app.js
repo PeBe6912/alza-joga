@@ -46,6 +46,7 @@ let userSession = JSON.parse(localStorage.getItem('jogaUserSession') || 'null');
 let userRefreshPromise = null;
 let accountData = null;
 let accountRecoveryMode = false;
+let activeAccountTab = 'lessons';
 let adminSession = JSON.parse(sessionStorage.getItem('jogaAdminSession') || 'null');
 let adminRefreshPromise = null;
 let adminLessons = [];
@@ -265,11 +266,11 @@ async function openBooking(id) {
     <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(lesson.teacher)}</small><br>${languageNote}</span><span>${escapeHtml(lesson.price)}</span></div>
     <p class="form-hint">Bezplatné zrušení je možné nejpozději ${settingNumber('cancellation_hours')} hodin před začátkem.</p>
     <div class="form-grid">
-      ${signedIn ? `<div class="account-booking-identity field full"><strong>${escapeHtml(accountData.profile.fullName)}</strong><span>${escapeHtml(accountData.email)} · ${accountData.profile.relation === 'guest' ? 'Host / externista' : 'Zaměstnanec Alzy'}</span><a href="#ucet">Upravit údaje v mém účtu</a></div>` : `<div class="field"><label for="name">Jméno a příjmení</label><input id="name" name="name" required autocomplete="name"></div>
+      ${signedIn ? '' : `<div class="field"><label for="name">Jméno a příjmení</label><input id="name" name="name" required autocomplete="name"></div>
       <div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" required autocomplete="email"></div>
       <div class="field full"><label for="relation">Jdu jako</label><select id="relation" name="relation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host / externista</option></select></div>
-      <p class="field full form-hint">Máš účet? <a href="#ucet" data-booking-account>Přihlas se</a> a příště už údaje vyplňovat nemusíš.</p>`}
-      <label class="checkbox field full"><input type="checkbox" required><span>Souhlasím s <a href="podminky.html" target="_blank" rel="noopener">podmínkami rezervace</a> a potvrzuji, že jsem se seznámil/a s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>
+      <p class="field full form-hint">Máš účet? <a href="#ucet" data-booking-account>Přihlas se</a> a příště už údaje vyplňovat nemusíš.</p>
+      <label class="checkbox field full"><input type="checkbox" required><span>Souhlasím s <a href="podminky.html" target="_blank" rel="noopener">podmínkami rezervace</a> a potvrzuji, že jsem se seznámil/a s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>`}
     </div><button class="button" type="submit">Potvrdit rezervaci</button>
   </form>`;
   document.querySelector('#booking-form').addEventListener('submit', async (event) => {
@@ -704,10 +705,13 @@ async function loadAccountData() {
 }
 
 function accountLessonCard(reservation, upcoming) {
-  const date = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Europe/Prague' }).format(new Date(reservation.startsAt));
+  const startsAt = new Date(reservation.startsAt);
+  const day = new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', timeZone: 'Europe/Prague' }).format(startsAt);
+  const month = new Intl.DateTimeFormat('cs-CZ', { month: 'short', timeZone: 'Europe/Prague' }).format(startsAt).replace('.', '');
+  const date = new Intl.DateTimeFormat('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Prague' }).format(startsAt);
   const status = reservation.status === 'cancelled' ? 'Zrušeno' : reservation.status === 'attended' ? 'Účast potvrzena' : reservation.status === 'no_show' ? 'Nedorazil/a' : upcoming ? 'Rezervováno' : 'Proběhlo';
   const canCancel = upcoming && reservation.status === 'confirmed' && new Date(reservation.cancelBefore) >= new Date();
-  return `<article class="account-lesson-card"><div><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(reservation.teacher)} · ${escapeHtml(reservation.location)}</p></div>${canCancel ? `<button class="button button-small button-secondary" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</article>`;
+  return `<article class="account-lesson-card${reservation.status === 'cancelled' ? ' is-cancelled' : ''}"><div class="account-lesson-date"><strong>${escapeHtml(day)}</strong><span>${escapeHtml(month)}</span></div><div class="account-lesson-details"><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(reservation.teacher)} · ${escapeHtml(reservation.location)}</p></div><div class="account-lesson-actions"><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span>${canCancel ? `<button class="text-button" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</div></article>`;
 }
 
 function openAccountDeletion() {
@@ -736,14 +740,17 @@ function openAccountDeletion() {
   dialog.showModal();
 }
 
-function bindAccountDashboard() {
-  accountPanel.querySelector('#account-profile-form')?.addEventListener('submit', async (event) => {
+function openAccountProfileEditor() {
+  const profile = accountData.profile;
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="account-profile-form"><p class="eyebrow">Nastavení účtu</p><h2>Osobní údaje</h2><div class="field"><label for="account-full-name">Jméno a příjmení</label><input id="account-full-name" name="fullName" maxlength="120" value="${escapeHtml(profile.fullName)}" autocomplete="name" required></div><div class="field"><label for="account-relation">Jdu jako</label><select id="account-relation" name="relation"><option value="employee" ${profile.relation === 'employee' ? 'selected' : ''}>Zaměstnanec Alzy</option><option value="guest" ${profile.relation === 'guest' ? 'selected' : ''}>Host / externista</option></select></div><button class="button" type="submit">Uložit údaje</button></form>`;
+  document.querySelector('#account-profile-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const button = event.target.querySelector('[type="submit"]');
     const data = new FormData(event.target);
     button.disabled = true;
     try {
       await accountApi({ action: 'update-profile', fullName: data.get('fullName'), relation: data.get('relation') });
+      closeDialog();
       await renderAccountDashboard();
       showToast('Údaje jsou uložené.');
     } catch (error) {
@@ -751,7 +758,12 @@ function bindAccountDashboard() {
       showToast(error.message);
     }
   });
-  accountPanel.querySelector('#account-password-form')?.addEventListener('submit', async (event) => {
+  dialog.showModal();
+}
+
+function openAccountPasswordEditor() {
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="account-password-form"><p class="eyebrow">Nastavení účtu</p><h2>${accountRecoveryMode ? 'Nové heslo' : 'Změna hesla'}</h2><div class="field"><label for="account-password-new">Nové heslo</label><input id="account-password-new" name="password" type="password" minlength="12" autocomplete="new-password" required><small>Alespoň 12 znaků.</small></div><div class="field"><label for="account-password-confirm">Nové heslo znovu</label><input id="account-password-confirm" name="passwordConfirm" type="password" minlength="12" autocomplete="new-password" required></div><button class="button" type="submit">Změnit heslo</button></form>`;
+  document.querySelector('#account-password-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const button = event.target.querySelector('[type="submit"]');
     const data = new FormData(event.target);
@@ -760,14 +772,22 @@ function bindAccountDashboard() {
     try {
       await accountApi({ action: 'change-password', password: data.get('password') });
       accountRecoveryMode = false;
-      event.target.reset();
-      showToast('Heslo bylo změněno.');
+      closeDialog();
       await renderAccountDashboard();
+      showToast('Heslo bylo změněno.');
     } catch (error) {
       button.disabled = false;
       showToast(error.message);
     }
   });
+  dialog.showModal();
+}
+
+function bindAccountDashboard() {
+  accountPanel.querySelectorAll('[data-account-tab]').forEach((button) => button.addEventListener('click', async () => {
+    activeAccountTab = button.dataset.accountTab;
+    await renderAccountDashboard();
+  }));
   accountPanel.querySelectorAll('[data-account-cancel]').forEach((button) => button.addEventListener('click', async () => {
     if (!confirm('Opravdu chceš tuto rezervaci zrušit?')) return;
     button.disabled = true;
@@ -784,24 +804,23 @@ function bindAccountDashboard() {
     clearUserSession();
     renderAccountLogin('Byl/a jsi odhlášen/a.');
   });
+  accountPanel.querySelector('[data-account-edit-profile]')?.addEventListener('click', openAccountProfileEditor);
+  accountPanel.querySelector('[data-account-edit-password]')?.addEventListener('click', openAccountPasswordEditor);
   accountPanel.querySelector('[data-account-delete]')?.addEventListener('click', openAccountDeletion);
 }
 
 async function renderAccountDashboard() {
   const data = await loadAccountData();
+  if (accountRecoveryMode) activeAccountTab = 'settings';
   const now = new Date();
   const upcoming = data.reservations.filter((item) => new Date(item.startsAt) >= now && item.status !== 'cancelled').sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
   const history = data.reservations.filter((item) => new Date(item.startsAt) < now || item.status === 'cancelled').sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
-  accountPanel.innerHTML = `${accountRecoveryMode ? '<div class="account-notice"><strong>Nastav si nové heslo.</strong> Odkaz z e-mailu byl ověřený.</div>' : ''}
-    <div class="account-dashboard-heading"><p>Přihlášený e-mail: <strong>${escapeHtml(data.email)}</strong></p><button class="text-button" type="button" data-account-logout>Odhlásit se</button></div>
-    <div class="account-dashboard-grid">
-      <section class="account-card account-reservations"><h2>Naplánované lekce</h2><div class="account-lesson-list">${upcoming.map((item) => accountLessonCard(item, true)).join('') || '<p class="account-empty">Zatím nemáš žádnou naplánovanou lekci. <a href="#lekce">Vyber si termín.</a></p>'}</div></section>
-      <section class="account-card"><h2>Moje údaje</h2><form id="account-profile-form" class="account-form"><div class="field"><label for="account-full-name">Jméno a příjmení</label><input id="account-full-name" name="fullName" maxlength="120" value="${escapeHtml(data.profile.fullName)}" autocomplete="name" required></div><div class="field"><label for="account-relation">Jdu jako</label><select id="account-relation" name="relation"><option value="employee" ${data.profile.relation === 'employee' ? 'selected' : ''}>Zaměstnanec Alzy</option><option value="guest" ${data.profile.relation === 'guest' ? 'selected' : ''}>Host / externista</option></select></div><button class="button button-small" type="submit">Uložit údaje</button></form></section>
-      <section class="account-card account-history"><h2>Historie lekcí</h2><div class="account-lesson-list">${history.map((item) => accountLessonCard(item, false)).join('') || '<p class="account-empty">Historie je zatím prázdná.</p>'}</div></section>
-      <section class="account-card"><h2>${accountRecoveryMode ? 'Nové heslo' : 'Změna hesla'}</h2><form id="account-password-form" class="account-form"><div class="field"><label for="account-password-new">Nové heslo</label><input id="account-password-new" name="password" type="password" minlength="12" autocomplete="new-password" required><small>Alespoň 12 znaků.</small></div><div class="field"><label for="account-password-confirm">Nové heslo znovu</label><input id="account-password-confirm" name="passwordConfirm" type="password" minlength="12" autocomplete="new-password" required></div><button class="button button-small" type="submit">Změnit heslo</button></form></section>
-      <section class="account-card"><h2>Smazání účtu</h2><p class="form-hint">Účet můžeš kdykoli kompletně smazat. Rezervační záznamy se od profilu odpojí a zůstanou jen po dobu uvedenou v ochraně osobních údajů.</p><button class="text-button danger" type="button" data-account-delete>Smazat účet</button></section>
-    </div>`;
+  const relation = data.profile.relation === 'guest' ? 'Host / externista' : 'Zaměstnanec Alzy';
+  const lessonsPanel = `<div class="account-dashboard-content"><section class="account-card account-reservations"><div class="account-card-heading"><div><p class="eyebrow">Co tě čeká</p><h2>Naplánované lekce</h2></div>${upcoming.length ? '<a class="text-button" href="#lekce">Vybrat další lekci</a>' : ''}</div><div class="account-lesson-list">${upcoming.map((item) => accountLessonCard(item, true)).join('') || '<div class="account-empty-state"><h3>Zatím nemáš naplánovanou žádnou lekci</h3><p>Vyber si termín, který ti vyhovuje.</p><a class="button button-small" href="#lekce">Vybrat lekci</a></div>'}</div></section><section class="account-card account-history"><div class="account-card-heading"><div><p class="eyebrow">Tvoje praxe</p><h2>Historie lekcí</h2></div></div><div class="account-lesson-list">${history.map((item) => accountLessonCard(item, false)).join('') || '<p class="account-empty">Historie je zatím prázdná.</p>'}</div></section></div>`;
+  const settingsPanel = `<section class="account-card account-settings"><div class="account-card-heading"><div><p class="eyebrow">Přihlášení a profil</p><h2>Nastavení účtu</h2></div></div><div class="account-setting-row"><div><h3>Osobní údaje</h3><p>${escapeHtml(data.profile.fullName)} · ${escapeHtml(relation)}<br>${escapeHtml(data.email)}</p></div><button class="button button-small button-secondary" type="button" data-account-edit-profile>Upravit</button></div><div class="account-setting-row"><div><h3>Heslo</h3><p>Změň si heslo používané k přihlášení.</p></div><button class="button button-small button-secondary" type="button" data-account-edit-password>Změnit heslo</button></div><div class="account-setting-row account-setting-danger"><div><h3>Smazání účtu</h3><p>Profil se odstraní a dřívější rezervace se od něj odpojí.</p></div><button class="text-button danger" type="button" data-account-delete>Smazat účet</button></div></section>`;
+  accountPanel.innerHTML = `${accountRecoveryMode ? '<div class="account-notice"><strong>Nastav si nové heslo.</strong> Odkaz z e-mailu byl ověřený.</div>' : ''}<div class="account-profile-bar"><div class="account-avatar" aria-hidden="true">${escapeHtml(data.profile.fullName.trim().charAt(0).toLocaleUpperCase('cs-CZ'))}</div><div><h2>${escapeHtml(data.profile.fullName)}</h2><p>${escapeHtml(data.email)} <span>·</span> ${escapeHtml(relation)}</p></div><button class="text-button" type="button" data-account-logout>Odhlásit se</button></div><div class="account-tabs" role="tablist" aria-label="Obsah účtu"><button type="button" role="tab" aria-selected="${activeAccountTab === 'lessons'}" class="${activeAccountTab === 'lessons' ? 'active' : ''}" data-account-tab="lessons">Moje lekce</button><button type="button" role="tab" aria-selected="${activeAccountTab === 'settings'}" class="${activeAccountTab === 'settings' ? 'active' : ''}" data-account-tab="settings">Nastavení účtu</button></div>${activeAccountTab === 'settings' ? settingsPanel : lessonsPanel}`;
   bindAccountDashboard();
+  if (accountRecoveryMode && !dialog.open) openAccountPasswordEditor();
 }
 
 function openRecoveryRequest() {

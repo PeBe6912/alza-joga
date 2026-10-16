@@ -471,9 +471,8 @@ footer .brand-logo{height:72px}
 .account-section{padding-top:82px}
 .account-section>.section-heading,.account-section>#account-panel{width:min(100%,1200px);margin-left:auto;margin-right:auto}
 .account-section h1{margin:0;font-family:"Newsreader",serif;font-size:clamp(48px,6vw,76px);font-weight:400;line-height:1}
-#account-panel{margin-top:46px}
-.account-grid,.account-dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-.account-dashboard-grid{align-items:start}
+#account-panel{margin-top:38px}
+.account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .account-card{padding:34px;background:#fff;border:1px solid var(--line);border-radius:8px}
 .account-card h2{margin:0 0 22px;font-family:"Newsreader",serif;font-size:32px;font-weight:400}
 .account-card .form-hint{margin-top:0}
@@ -481,29 +480,59 @@ footer .brand-logo{height:72px}
 .account-form .button{justify-self:start;margin-top:4px}
 .account-form small{color:var(--muted)}
 .account-recovery-link{justify-self:start;padding:2px 0;border-bottom:1px solid currentColor}
-.account-dashboard-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px;padding:16px 20px;background:var(--cream);border-left:4px solid var(--clay)}
-.account-dashboard-heading p{margin:0}
-.account-reservations,.account-history{grid-column:1/-1}
-.account-lesson-list{display:grid;gap:10px}
-.account-lesson-card{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:19px 0;border-top:1px solid var(--line)}
+.account-profile-bar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;padding:24px 28px;background:var(--ink);color:#fff}
+.account-profile-bar h2{margin:0 0 4px;font-family:"Newsreader",serif;font-size:30px;font-weight:400}
+.account-profile-bar p{margin:0;color:rgba(255,255,255,.7);font-size:14px}
+.account-profile-bar p span{padding:0 5px;color:var(--clay)}
+.account-profile-bar .text-button{color:#fff;border-bottom:1px solid rgba(255,255,255,.5)}
+.account-avatar{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--cream);color:var(--ink);font-family:"Newsreader",serif;font-size:25px}
+.account-tabs{display:flex;gap:30px;margin:0 0 22px;padding:0 28px;background:#fff;border:1px solid var(--line);border-top:0}
+.account-tabs button{position:relative;padding:18px 0 16px;border:0;background:none;color:var(--muted);font:600 14px "DM Sans",sans-serif;cursor:pointer}
+.account-tabs button::after{content:"";position:absolute;right:0;bottom:-1px;left:0;height:3px;background:transparent}
+.account-tabs button.active{color:var(--ink)}
+.account-tabs button.active::after{background:var(--clay)}
+.account-dashboard-content{display:grid;gap:22px}
+.account-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:18px}
+.account-card-heading .eyebrow{margin:0 0 6px}
+.account-card-heading h2{margin:0}
+.account-lesson-list{display:grid}
+.account-lesson-card{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:center;gap:20px;padding:19px 0;border-top:1px solid var(--line)}
 .account-lesson-card:first-child{border-top:0}
-.account-lesson-card h3{margin:9px 0 5px;font-family:"Newsreader",serif;font-size:24px;font-weight:400}
+.account-lesson-card.is-cancelled{opacity:.62}
+.account-lesson-date{display:grid;justify-items:center;padding:7px 5px;background:var(--paper);line-height:1}
+.account-lesson-date strong{font-family:"Newsreader",serif;font-size:27px;font-weight:400}
+.account-lesson-date span{margin-top:4px;color:var(--muted);font-size:11px;text-transform:uppercase}
+.account-lesson-card h3{margin:0 0 5px;font-family:"Newsreader",serif;font-size:24px;font-weight:400}
 .account-lesson-card p,.account-empty{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.account-lesson-actions{display:grid;justify-items:end;gap:10px}
+.account-lesson-actions .text-button{font-size:12px;border-bottom:1px solid currentColor}
 .account-empty a{color:var(--sage-dark);font-weight:700;border-bottom:1px solid currentColor}
+.account-empty-state{display:grid;justify-items:center;padding:48px 24px;background:var(--paper);text-align:center}
+.account-empty-state h3{margin:0 0 8px;font-family:"Newsreader",serif;font-size:27px;font-weight:400}
+.account-empty-state p{margin:0 0 22px;color:var(--muted)}
+.account-settings{padding-top:38px;padding-bottom:18px}
+.account-setting-row{display:flex;align-items:center;justify-content:space-between;gap:28px;padding:24px 0;border-top:1px solid var(--line)}
+.account-setting-row h3{margin:0 0 6px;font-family:"Newsreader",serif;font-size:24px;font-weight:400}
+.account-setting-row p{margin:0;color:var(--muted);font-size:14px;line-height:1.55}
+.account-setting-danger{margin-top:8px}
+.account-setting-danger h3{color:#9a3f34}
 .account-notice{margin:0 0 18px;padding:16px 19px;background:#e4eee8;border-left:4px solid var(--sage-dark);line-height:1.5}
-.account-booking-identity{padding:16px 18px;background:var(--paper);border-left:4px solid var(--sage-dark)}
-.account-booking-identity span{display:block;margin-top:4px;color:var(--muted);font-size:13px}
-.account-booking-identity a{display:inline-block;margin-top:10px;color:var(--sage-dark);font-size:12px;font-weight:700;border-bottom:1px solid currentColor}
 
 @media(max-width:800px){
   .account-section{padding-top:58px}
-  .account-grid,.account-dashboard-grid{grid-template-columns:1fr}
-  .account-reservations,.account-history{grid-column:auto}
+  .account-grid{grid-template-columns:1fr}
 }
 
 @media(max-width:600px){
   .account-card{padding:26px 22px}
-  .account-dashboard-heading,.account-lesson-card{align-items:flex-start;flex-direction:column}
-  .account-lesson-card .button{width:100%}
+  .account-profile-bar{grid-template-columns:auto 1fr;padding:20px}
+  .account-profile-bar .text-button{grid-column:2;justify-self:start}
+  .account-tabs{gap:22px;padding:0 20px}
+  .account-card-heading{align-items:flex-start;flex-direction:column}
+  .account-lesson-card{grid-template-columns:48px minmax(0,1fr);gap:14px}
+  .account-lesson-date strong{font-size:24px}
+  .account-lesson-actions{grid-column:2;justify-items:start;grid-auto-flow:column;align-items:center}
+  .account-setting-row{align-items:flex-start;flex-direction:column;gap:16px}
+  .account-setting-row .button{width:100%}
 }
 
