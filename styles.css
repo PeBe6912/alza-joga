@@ -340,6 +340,8 @@ footer .brand-logo{height:72px}
 .text-card.tone-sand p{color:rgba(31,40,36,.72)}
 .text-card.tone-ink{background:var(--ink)}
 .news-card.charity-card{display:flex;flex-direction:column;align-items:flex-start}
+.text-card.charity-card{background:#d8c8a8;color:var(--ink)}
+.text-card.charity-card p{color:rgba(31,40,36,.72)}
 .news-card.charity-card .charity-logo{width:105px;height:60px;margin:0 0 auto;object-fit:contain;object-position:left center}
 .news-card.charity-card span{margin-top:24px}
 .news-card[role="button"]{position:relative;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
