@@ -2202,6 +2202,31 @@ loadPublicStudioBlocks();
 loadPublicContent();
 
 async function initializeRoute() {
+  const accountParams = new URLSearchParams(location.search);
+  const tokenHash = accountParams.get('token_hash');
+  const verificationType = accountParams.get('type');
+  if (tokenHash && ['signup', 'magiclink', 'recovery'].includes(verificationType)) {
+    try {
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token_hash: tokenHash, type: verificationType }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.access_token || !result.refresh_token) throw new Error('INVALID_AUTH_LINK');
+      saveUserSession(result);
+      accountRecoveryMode = verificationType === 'recovery';
+      history.replaceState({}, '', `${location.pathname}#ucet`);
+      await openAccount();
+      showToast(accountRecoveryMode ? 'Odkaz je ověřený. Nastav si nové heslo.' : 'E-mail je potvrzený. Účet je připravený.');
+      return;
+    } catch {
+      history.replaceState({}, '', `${location.pathname}#ucet`);
+      await openAccount();
+      renderAccountLogin('Odkaz je neplatný nebo už vypršel. Vyžádej si prosím nový.');
+      return;
+    }
+  }
   const authFragment = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
   if (authFragment.get('access_token') && authFragment.get('refresh_token')) {
     saveUserSession({

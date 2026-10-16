@@ -58,11 +58,20 @@ function emailButton(url: string, label: string): string {
   return `<p style="margin:28px 0"><a href="${escapeHtml(url)}" style="display:inline-block;padding:13px 22px;border-radius:999px;background:#3e5648;color:#fff;text-decoration:none;font-weight:700">${escapeHtml(label)}</a></p>`;
 }
 
-function actionLinkFrom(result: Record<string, unknown>): string {
+function tokenHashFrom(result: Record<string, unknown>): string {
   const properties = result.properties && typeof result.properties === 'object'
     ? result.properties as Record<string, unknown>
     : {};
-  return String(result.action_link ?? properties.action_link ?? '');
+  return String(result.hashed_token ?? properties.hashed_token ?? '');
+}
+
+function accountVerificationLink(siteUrl: string, tokenHash: string, type: 'signup' | 'magiclink' | 'recovery'): string {
+  const url = new URL(siteUrl);
+  url.searchParams.set('account', type === 'recovery' ? 'recovery' : 'confirmed');
+  url.searchParams.set('token_hash', tokenHash);
+  url.searchParams.set('type', type);
+  url.hash = 'ucet';
+  return url.toString();
 }
 
 async function generateLink(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -151,34 +160,38 @@ Deno.serve(async (req: Request) => {
         if (fullName.length < 2 || fullName.length > 120) return json(req, { message: 'Zkontroluj prosím jméno.' }, 400);
         if (password.length < 12) return json(req, { message: 'Heslo musí mít alespoň 12 znaků.' }, 400);
         let result: Record<string, unknown>;
+        let verificationType: 'signup' | 'magiclink' = 'signup';
         try {
           result = await generateLink({
             type: 'signup', email, password,
             data: { full_name: fullName, relation },
-            redirect_to: `${siteUrl}/?account=confirmed`,
           });
         } catch (error) {
           if (String(error).toLowerCase().includes('already')) {
-            return json(req, { ok: true, existing: true, message: 'Účet s tímto e-mailem už existuje. Přihlas se nebo si obnov heslo.' });
+            result = await generateLink({ type: 'magiclink', email });
+            verificationType = 'magiclink';
+          } else {
+            throw error;
           }
-          throw error;
         }
-        const actionLink = actionLinkFrom(result);
-        if (!actionLink) throw new Error('AUTH_LINK_FAILED');
+        const tokenHash = tokenHashFrom(result);
+        if (!tokenHash) throw new Error('AUTH_LINK_FAILED');
+        const actionLink = accountVerificationLink(siteUrl, tokenHash, verificationType);
         const emailResult = await sendBrevoEmail({
           toEmail: email,
           toName: fullName,
-          subject: 'Potvrď svůj účet | Jóga na HALLU',
-          htmlContent: `<p>${escapeHtml(czechSalutation(fullName))},</p><p>děkujeme za vytvoření účtu. Potvrď e-mailovou adresu a potom už budeš rezervovat lekce bez opakovaného vyplňování údajů.</p>${emailButton(actionLink, 'Potvrdit účet')}<p>Pokud jsi účet nevytvářel/a, tuto zprávu můžeš ignorovat.</p>`,
+          subject: verificationType === 'signup' ? 'Potvrď svůj účet | Jóga na HALLU' : 'Dokonči přihlášení | Jóga na HALLU',
+          htmlContent: `<p>${escapeHtml(czechSalutation(fullName))},</p><p>${verificationType === 'signup' ? 'děkujeme za vytvoření účtu. Potvrď e-mailovou adresu a potom už budeš rezervovat lekce bez opakovaného vyplňování údajů.' : 'účet s tímto e-mailem už existuje. Pomocí odkazu níže dokončíš přihlášení.'}</p>${emailButton(actionLink, verificationType === 'signup' ? 'Potvrdit účet' : 'Přihlásit se')}<p>Pokud jsi o tento odkaz nežádal/a, zprávu můžeš ignorovat.</p>`,
         });
         if (!emailResult.sent) throw new Error(emailResult.error || 'EMAIL_SEND_FAILED');
-        return json(req, { ok: true, message: 'Poslali jsme ti e-mail pro potvrzení účtu.' }, 201);
+        return json(req, { ok: true, message: verificationType === 'signup' ? 'Poslali jsme ti e-mail pro potvrzení účtu.' : 'Účet už existuje. Poslali jsme ti nový přihlašovací odkaz.' }, verificationType === 'signup' ? 201 : 200);
       }
 
       try {
-        const result = await generateLink({ type: 'recovery', email, redirect_to: `${siteUrl}/?account=recovery` });
-        const actionLink = actionLinkFrom(result);
-        if (actionLink) {
+        const result = await generateLink({ type: 'recovery', email });
+        const tokenHash = tokenHashFrom(result);
+        if (tokenHash) {
+          const actionLink = accountVerificationLink(siteUrl, tokenHash, 'recovery');
           await sendBrevoEmail({
             toEmail: email,
             toName: email,
