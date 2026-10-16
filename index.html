@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2026101604" />
+  <link rel="stylesheet" href="styles.css?v=2026101605" />
 </head>
 <body>
   <div class="announcement">Nové termíny na příští týden jsou otevřené <a href="#lekce">Rezervovat místo →</a></div>
@@ -24,8 +24,8 @@
       <a href="#lektori">Lektoři</a>
       <a href="#studio">Studio</a>
       <a href="#novinky">Novinky a jógové tipy</a>
-      <a href="#soukrome-lekce">Soukromé lekce</a>
       <a href="#informace">Informace</a>
+      <a href="#soukrome-lekce">Soukromé lekce</a>
     </nav>
     <div class="header-actions">
       <a class="button button-small" href="#lekce">Vybrat lekci</a>
@@ -148,31 +148,8 @@
       <p>„Nejde o to dotknout se prstů u nohou. Jde o to, co objevíš cestou dolů.“</p>
     </section>
 
-    <section class="section private-lessons-section" id="soukrome-lekce">
-      <div class="section-heading split">
-        <div>
-          <p class="eyebrow">Po domluvě</p>
-          <h2>Soukromé lekce</h2>
-        </div>
-        <p>Pokud chceš cvičit mimo vypsané skupinové termíny, můžeš se s Danielou nebo Petrem domluvit na soukromé lekci. Termín i cena jsou individuální.</p>
-      </div>
-      <div class="private-lesson-grid">
-        <article class="private-lesson-card">
-          <p class="private-lesson-label">Lektorka</p>
-          <h3>Daniela Šťastná</h3>
-          <p>Domluv si soukromou lekci přímo s Danielou.</p>
-          <button class="button button-light" type="button" data-private-instructor="Daniela Šťastná">Mám zájem o lekci s Danielou</button>
-        </article>
-        <article class="private-lesson-card">
-          <p class="private-lesson-label">Lektor</p>
-          <h3>Petr Bena</h3>
-          <p>Domluv si soukromou lekci přímo s Petrem.</p>
-          <button class="button button-light" type="button" data-private-instructor="Petr Bena">Mám zájem o lekci s Petrem</button>
-        </article>
-      </div>
-    </section>
-
     <section class="section info-section" id="informace">
+      <div class="info-section-inner">
       <div>
         <p class="eyebrow">Dobré vědět</p>
         <h2>Jednoduše přijď<br>a zacvič si</h2>
@@ -195,6 +172,31 @@
         <details><summary>Kdy se lekce koná?</summary><p>Lekce se standardně koná při alespoň <span data-setting="minimum_attendance">5</span> přihlášených. Lektor ji může nechat proběhnout i v menším počtu. Pokud ji zruší, všichni přihlášení dostanou e-mail.</p></details>
         <details><summary>Jak probíhá platba?</summary><p>Podle konkrétního termínu stojí lekce <span data-setting="default_paid_price">150</span> Kč, nebo můžeš místo vstupného dobrovolně přispět na charitu. Po lekci přijde příslušný QR kód e-mailem.</p></details>
         <details><summary>Jak funguje zrušení?</summary><p>Rezervaci můžeš bezplatně zrušit do <span data-setting="cancellation_hours">24</span> hodin před lekcí. Později je lekce účtována, můžeš ale poslat náhradníka.</p></details>
+      </div>
+      </div>
+    </section>
+
+    <section class="section private-lessons-section" id="soukrome-lekce">
+      <div class="section-heading split">
+        <div>
+          <p class="eyebrow">Po domluvě</p>
+          <h2>Soukromé lekce</h2>
+        </div>
+        <p>Pokud chceš cvičit mimo vypsané skupinové termíny, můžeš se s Danielou nebo Petrem domluvit na soukromé lekci. Termín i cena jsou individuální.</p>
+      </div>
+      <div class="private-lesson-grid">
+        <article class="private-lesson-card">
+          <p class="private-lesson-label">Lektorka</p>
+          <h3>Daniela Šťastná</h3>
+          <p>Domluv si soukromou lekci přímo s Danielou.</p>
+          <button class="button button-light" type="button" data-private-instructor="Daniela Šťastná">Mám zájem o lekci s Danielou</button>
+        </article>
+        <article class="private-lesson-card">
+          <p class="private-lesson-label">Lektor</p>
+          <h3>Petr Bena</h3>
+          <p>Domluv si soukromou lekci přímo s Petrem.</p>
+          <button class="button button-light" type="button" data-private-instructor="Petr Bena">Mám zájem o lekci s Petrem</button>
+        </article>
       </div>
     </section>
   </main>
