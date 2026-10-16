@@ -138,10 +138,10 @@ export async function sendBrevoEmail(message: {
         <tr><td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;border-collapse:collapse">
             <tr><td style="padding:22px 28px;background:#3e5648;color:#fff">
-              <a href="${escapeHtml(siteUrl)}" style="display:inline-flex;align-items:center;color:#fff;text-decoration:none">
-                <img src="${escapeHtml(siteUrl)}/assets/joga-na-hallu-logo.png" alt="" width="58" height="58" style="display:block;width:58px;height:58px;object-fit:contain;margin-right:14px">
-                <span style="font-family:Georgia,serif;font-size:25px">Jóga na HALLU</span>
-              </a>
+              <table role="presentation" cellspacing="0" cellpadding="0"><tr>
+                <td style="padding-right:14px"><a href="${escapeHtml(siteUrl)}"><img src="${escapeHtml(siteUrl)}/assets/joga-na-hallu-logo.png" alt="" width="58" height="58" style="display:block;width:58px;height:58px;object-fit:contain"></a></td>
+                <td><a href="${escapeHtml(siteUrl)}" style="color:#fff;text-decoration:none;font-family:Georgia,serif;font-size:25px">Jóga na HALLU</a></td>
+              </tr></table>
             </td></tr>
             <tr><td style="padding:34px 32px;background:#fff;border-left:1px solid rgba(31,40,36,.12);border-right:1px solid rgba(31,40,36,.12);font-size:16px;line-height:1.65">
               ${message.htmlContent}
