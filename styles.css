@@ -246,10 +246,25 @@ footer .brand-logo{height:72px}
 .text-button.danger{color:#9a4038}
 .admin-card-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
 .admin-card-heading h2{margin:0}
+.admin-list-heading{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:18px}
+.admin-list-heading h2{margin-bottom:8px}
+.admin-list-heading .admin-help{margin:0}
+.admin-lesson-filter{min-width:220px}
+.admin-lesson-filter select{padding:11px 36px 11px 13px}
 .admin-news-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center;padding:18px 0;border-top:1px solid var(--line)}
 .admin-news-item h3{margin:0 0 6px;font-family:"Newsreader",serif;font-size:22px;font-weight:400}
 .admin-news-item p{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.5}
 .admin-news-actions{display:flex;align-items:center;gap:8px}
+.admin-news-order{display:flex;gap:5px;margin-right:4px}
+.admin-news-order .button{min-width:40px;padding-left:12px;padding-right:12px}
+.admin-news-order .button:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+.admin-news-meta{display:flex;align-items:center;gap:12px}
+.news-tone-label{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:11px}
+.news-tone-swatch{display:inline-block;width:14px;height:14px;border:1px solid var(--line);border-radius:50%}
+.news-tone-swatch.tone-sage{background:var(--sage-dark)}
+.news-tone-swatch.tone-clay{background:var(--clay)}
+.news-tone-swatch.tone-sand{background:#d8c8a8}
+.news-tone-swatch.tone-ink{background:var(--ink)}
 .reservation-groups{display:grid;gap:22px}
 .reservation-group{border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .reservation-group .admin-table{padding:0 14px}
@@ -274,6 +289,8 @@ footer .brand-logo{height:72px}
   .admin-topbar-actions{width:auto;display:grid;justify-items:end;gap:8px}
   .admin-topbar-actions .button{width:auto;min-width:112px;flex:none}
   .admin-topbar-actions .text-button{padding:8px 0}
+  .admin-list-heading{align-items:stretch;flex-direction:column}
+  .admin-lesson-filter{min-width:0}
   .admin-news-item{grid-template-columns:1fr;gap:12px}
   .admin-news-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .admin-news-actions .danger{grid-column:1/-1;justify-self:start;padding:8px 0}
@@ -344,9 +361,7 @@ footer .brand-logo{height:72px}
 .text-card.tone-sand p{color:rgba(31,40,36,.72)}
 .text-card.tone-ink{background:var(--ink)}
 .news-card.charity-card{display:flex;flex-direction:column;align-items:flex-start}
-.text-card.charity-card{background:#d8c8a8;color:var(--ink)}
-.text-card.charity-card p{color:rgba(31,40,36,.72)}
-.news-card.charity-card .charity-logo{width:105px;height:60px;margin:0 0 auto;object-fit:contain;object-position:left center}
+.news-card.charity-card .charity-logo{width:122px;height:70px;margin:0 0 auto;padding:7px 9px;background:#fff;border-radius:3px;object-fit:contain;object-position:left center}
 .news-card.charity-card span{margin-top:24px}
 .news-card[role="button"]{position:relative;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
 .news-card[role="button"]:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(31,40,36,.16)}
