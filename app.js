@@ -279,7 +279,8 @@ async function shareLesson(lesson) {
 }
 
 function bindLessonShareButtons(root = document) {
-  root.querySelectorAll('[data-share-lesson]').forEach((button) => button.addEventListener('click', () => {
+  root.querySelectorAll('[data-share-lesson]').forEach((button) => button.addEventListener('click', (event) => {
+    event.preventDefault();
     const lesson = lessonById(button.dataset.shareLesson);
     if (lesson) shareLesson(lesson);
   }));
@@ -310,7 +311,7 @@ function renderLessons(filter = 'all') {
       <div class="class-date"><strong>${lesson.day}</strong><span>${lesson.date}</span></div>
       <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${escapeHtml(lesson.teacher)}</small><b class="class-time-compact">${escapeHtml(lesson.time)}</b><br><span>${typeLabel}</span>${languageLabel}</div>
       <div class="class-meta"><b>${escapeHtml(lesson.time)}</b><span>HALL · 3. patro</span><span>${escapeHtml(lesson.price)}</span></div>
-      <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${attendanceLabel(lesson)}</small><button class="text-button class-share" type="button" data-share-lesson="${lesson.id}">Sdílet lekci</button></div>
+      <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${attendanceLabel(lesson)}</small><a class="text-button class-share" href="${escapeHtml(lessonShareUrl(lesson))}" data-share-lesson="${lesson.id}" aria-label="Sdílet lekci ${escapeHtml(lesson.title)}">Sdílet lekci</a></div>
     </article>`;
   }).join('');
   const remaining = filtered.length - visible.length;

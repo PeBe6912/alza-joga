@@ -639,3 +639,21 @@ footer .brand-logo{height:72px}
   .journey-milestone-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
+.shared-lesson-landing{padding:64px 6vw;background:var(--paper);border-bottom:1px solid var(--line)}
+.shared-lesson-landing-inner{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:60px;max-width:1440px;margin:0 auto}
+.shared-lesson-landing h1{max-width:900px;margin:0 0 18px;font:400 clamp(42px,5vw,68px)/1 "Newsreader",serif}
+.shared-lesson-landing p{margin:6px 0;color:var(--muted);line-height:1.55}
+.shared-lesson-landing .shared-lesson-lead{color:var(--ink);font-size:18px;font-weight:600}
+.shared-lesson-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.shared-lesson-tags span{padding:7px 12px;border-radius:100px;background:var(--cream);font-size:12px}
+.shared-lesson-actions{display:grid;justify-items:center;gap:18px;min-width:230px;text-align:center}
+.shared-lesson-actions .button{width:100%}
+.shared-lesson-state{max-width:260px;color:var(--muted);line-height:1.5}
+
+@media(max-width:600px){
+  .shared-lesson-landing{padding:44px 22px}
+  .shared-lesson-landing-inner{grid-template-columns:1fr;gap:32px}
+  .shared-lesson-landing h1{font-size:42px}
+  .shared-lesson-actions{justify-items:stretch;min-width:0;text-align:center}
+}
+
