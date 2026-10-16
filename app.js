@@ -221,10 +221,8 @@ function adminMonthAgenda(month, events) {
   }).join('');
 }
 
-function placesLabel(places) {
-  if (places === 1) return '1 volné místo';
-  if (places > 1 && places < 5) return `${places} volná místa`;
-  return `${places} volných míst`;
+function attendanceLabel(lesson) {
+  return `Přihlášeno ${lesson.booked} / ${lesson.capacity}`;
 }
 
 function settingNumber(key) {
@@ -248,7 +246,7 @@ function renderLessons(filter = 'all') {
       <div class="class-date"><strong>${lesson.day}</strong><span>${lesson.date}</span></div>
       <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${escapeHtml(lesson.teacher)}</small><b class="class-time-compact">${escapeHtml(lesson.time)}</b><br><span>${typeLabel}</span>${languageLabel}</div>
       <div class="class-meta"><b>${escapeHtml(lesson.time)}</b><span>HALL · 3. patro</span><span>${escapeHtml(lesson.price)}</span></div>
-      <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${placesLabel(places)}</small></div>
+      <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${attendanceLabel(lesson)}</small></div>
     </article>`;
   }).join('');
   const remaining = filtered.length - visible.length;
@@ -271,7 +269,7 @@ function renderNextClass() {
     card.innerHTML = '<p>Nové termíny připravujeme.</p>';
     return;
   }
-  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)}</p><div class="spots"><span>${placesLabel(spotsLeft(lesson))}</span><a href="#lekce">Rezervovat →</a></div>`;
+  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)}</p><div class="spots"><span>${attendanceLabel(lesson)}</span><a href="#lekce">Rezervovat →</a></div>`;
 }
 
 document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
