@@ -389,6 +389,9 @@ verify_jwt = false
 [functions.cancel-reservation]
 verify_jwt = false
 
+[functions.contact-instructor]
+verify_jwt = false
+
 [functions.manage-lesson]
 verify_jwt = true
 

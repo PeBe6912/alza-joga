@@ -481,6 +481,59 @@ function openNewsDetail(id) {
   dialog.showModal();
 }
 
+function openPrivateLessonInquiry(instructorName) {
+  const openedAt = Date.now();
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="private-lesson-form">
+    <p class="eyebrow">Soukromá lekce</p><h2>${escapeHtml(instructorName)}</h2>
+    <p class="form-hint">Napiš krátce, o jakou lekci máš zájem. Zpráva přijde přímo vybranému lektorovi.</p>
+    <div class="form-grid">
+      <div class="field"><label for="private-name">Jméno a příjmení</label><input id="private-name" name="name" maxlength="120" autocomplete="name" required></div>
+      <div class="field"><label for="private-email">E-mail</label><input id="private-email" name="email" type="email" maxlength="320" autocomplete="email" required></div>
+      <div class="field full"><label for="private-phone">Telefon (nepovinné)</label><input id="private-phone" name="phone" type="tel" maxlength="40" autocomplete="tel"></div>
+      <div class="field full"><label for="private-message">Co bys od lekce potřeboval/a?</label><textarea id="private-message" name="message" rows="5" minlength="10" maxlength="2000" required></textarea></div>
+      <div hidden aria-hidden="true"><label>Web<input name="website" tabindex="-1" autocomplete="off"></label></div>
+      <label class="checkbox field full"><input name="consent" type="checkbox" required><span>Souhlasím s odesláním údajů vybranému lektorovi a potvrzuji, že jsem se seznámil/a s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>
+    </div>
+    <button class="button" type="submit">Odeslat poptávku</button>
+  </form>`;
+  document.querySelector('#private-lesson-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const data = new FormData(event.target);
+    button.disabled = true;
+    button.textContent = 'Odesílám…';
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/contact-instructor`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instructorName,
+          name: data.get('name'),
+          email: data.get('email'),
+          phone: data.get('phone'),
+          message: data.get('message'),
+          website: data.get('website'),
+          consent: data.get('consent') === 'on',
+          openedAt,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Poptávku se nepodařilo odeslat.');
+      closeDialog();
+      showToast(`Poptávka byla odeslána lektorovi ${instructorName}.`);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = 'Odeslat poptávku';
+      showToast(error.message);
+    }
+  });
+  dialog.showModal();
+}
+
+document.querySelectorAll('[data-private-instructor]').forEach((button) => button.addEventListener('click', () => {
+  openPrivateLessonInquiry(button.dataset.privateInstructor);
+}));
+
 async function loadPublicContent() {
   try {
     const [instructorsResponse, newsResponse] = await Promise.all([
