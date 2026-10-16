@@ -410,14 +410,14 @@ footer .brand-logo{height:72px}
   .teacher-card.reverse .teacher-photo{order:0}
   .teacher-photo{height:auto}
   .teacher-photo img{height:auto;max-height:none}
-  .teacher-photo-portrait{height:560px}
+  .teacher-photo-portrait{height:clamp(560px,86vw,720px)}
   .teacher-photo-portrait img{height:100%;object-position:center 80%}
   .gallery{grid-template-columns:1fr 1fr}
   .gallery-quote{display:grid;grid-column:1/-1;min-height:230px}
 }
 
 @media(max-width:600px){
-  .teacher-photo-portrait{height:420px}
+  .teacher-photo-portrait{height:clamp(420px,100vw,600px)}
   .quote-break{padding:58px 24px}
 }
 
