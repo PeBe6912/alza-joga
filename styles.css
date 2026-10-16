@@ -85,6 +85,7 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 .booking-summary{gap:18px}
 .booking-summary small{display:inline-block;margin-top:6px;color:var(--muted)}
 .language-badge{display:inline-block!important;margin:7px 0 0 7px!important;padding:4px 9px!important;border-radius:100px!important;background:#dde8f4!important;color:#294f73!important;font-size:11px!important;font-weight:700}
+.booking-summary .language-badge{margin-left:0!important}
 .form-hint{color:var(--muted);font-size:12px;line-height:1.5}
 .admin-topbar{gap:22px}
 .admin-topbar-actions,.lesson-actions{display:flex;align-items:center;gap:8px}
