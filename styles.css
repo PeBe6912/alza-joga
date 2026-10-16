@@ -33,7 +33,7 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 .gallery img{height:500px}
 .gallery-quote{min-height:500px}
 .info-section{position:relative;z-index:2;display:block;overflow:hidden}
-.info-section-inner{display:grid;grid-template-columns:.8fr 1.2fr;gap:10vw;align-items:start;width:min(100%,1440px);margin:0 auto}
+.info-section-inner{display:grid;grid-template-columns:.8fr 1.2fr;gap:10vw;align-items:center;width:min(100%,1440px);margin:0 auto}
 .info-section-inner>div{min-width:0}
 .admin-teacher{display:grid;grid-template-columns:92px 1fr auto;gap:20px;align-items:center}
 .admin-teacher+.admin-teacher{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
@@ -45,7 +45,7 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 .admin-setting{padding:14px;background:var(--paper);border-radius:5px;font-size:13px}
 
 @media(max-width:900px){
-  .info-section-inner{grid-template-columns:1fr;gap:60px}
+  .info-section-inner{grid-template-columns:1fr;gap:60px;align-items:stretch}
   .teacher-card,.teacher-card.reverse{grid-template-columns:1fr;height:auto}
   .teacher-card.reverse img{order:0}
   .teacher-card img{height:560px}
