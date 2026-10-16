@@ -69,7 +69,7 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 
 /* Compact lesson list on tablets and phones. */
 .class-action small{text-align:center}
-.class-action .class-share{width:auto;margin-top:7px;padding:0;color:var(--sage-dark);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.class-action .class-share{display:block;width:auto;margin:7px auto 0;padding:0;color:var(--sage-dark);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .booking-share{display:flex;margin:14px auto 0;color:var(--sage-dark);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .class-time-compact{display:none}
 .class-list-more{display:flex;justify-content:center;padding:28px 0 4px}
