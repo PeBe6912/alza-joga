@@ -16,6 +16,7 @@ type Cancellation = {
   attendee_email: string;
   title: string;
   starts_at: string;
+  teacher: string;
 };
 
 const errors: Record<string, [number, string]> = {
@@ -31,7 +32,6 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
     const token = String(body.token ?? '');
     if (token.length < 40 || token.length > 80) return json(req, { error: 'INVALID_TOKEN', message: 'Odkaz pro zrušení není platný.' }, 400);
 
@@ -40,14 +40,15 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!cancellation.already_cancelled) {
+      const teacherFirstName = cancellation.teacher.trim().split(/\s+/)[0] || '';
       await sendBrevoEmail({
         toEmail: cancellation.attendee_email,
         toName: cancellation.attendee_name,
         subject: `Rezervace zrušena: ${cancellation.title}`,
+        signatureName: teacherFirstName,
         htmlContent: `<p>${escapeHtml(czechSalutation(cancellation.attendee_name))},</p>
           <p>rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong> (${escapeHtml(formatLessonDate(cancellation.starts_at))}) byla zrušena.</p>
-          <p>Budeme rádi, když si vybereš jiný termín.</p>
-          <p>Tým · Jóga na HALLU<br><a href="${escapeHtml(siteUrl)}">Web Jóga na HALLU</a></p>`,
+          <p>Budeme rádi, když si vybereš jiný termín.</p>`,
       });
     }
 

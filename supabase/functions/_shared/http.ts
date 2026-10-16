@@ -125,12 +125,15 @@ export async function sendBrevoEmail(message: {
   toName: string;
   subject: string;
   htmlContent: string;
+  signatureName?: string;
 }): Promise<{ sent: boolean; messageId?: string; error?: string }> {
   const apiKey = Deno.env.get('BREVO_API_KEY');
   const senderEmail = Deno.env.get('BREVO_SENDER_EMAIL');
   if (!apiKey || !senderEmail) return { sent: false, error: 'BREVO_NOT_CONFIGURED' };
 
   const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
+  const signatureName = String(message.signatureName ?? '').trim();
+  const signature = signatureName ? `${escapeHtml(signatureName)} · Jóga na HALLU` : 'Jóga na HALLU';
   const brandedContent = `<!doctype html>
     <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
     <body style="margin:0;padding:0;background:#f5f1e9;color:#1f2824;font-family:Arial,sans-serif">
@@ -139,13 +142,14 @@ export async function sendBrevoEmail(message: {
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;border-collapse:collapse">
             <tr><td style="padding:22px 28px;background:#3e5648;color:#fff">
               <table role="presentation" cellspacing="0" cellpadding="0"><tr>
-                <td width="70" height="70" align="center" bgcolor="#f5f1e9" style="width:70px;height:70px;background:#f5f1e9;border-radius:4px"><a href="${escapeHtml(siteUrl)}" style="display:block"><img src="${escapeHtml(siteUrl)}/assets/joga-na-hallu-logo.png" alt="" width="58" height="58" style="display:block;width:58px;height:58px;object-fit:contain;margin:0 auto"></a></td>
-                <td width="14" style="width:14px"></td>
+                <td width="96" height="106" align="center" bgcolor="#ffffff" style="width:96px;height:106px;background:#ffffff;border-radius:4px"><a href="${escapeHtml(siteUrl)}" style="display:block"><img src="${escapeHtml(siteUrl)}/assets/joga-na-hallu-logo.png" alt="Jóga na HALLU" width="82" height="92" style="display:block;width:82px;height:92px;margin:0 auto;border:0"></a></td>
+                <td width="18" style="width:18px"></td>
                 <td><a href="${escapeHtml(siteUrl)}" style="color:#fff;text-decoration:none;font-family:Georgia,serif;font-size:25px">Jóga na HALLU</a></td>
               </tr></table>
             </td></tr>
             <tr><td style="padding:34px 32px;background:#fff;border-left:1px solid rgba(31,40,36,.12);border-right:1px solid rgba(31,40,36,.12);font-size:16px;line-height:1.65">
               ${message.htmlContent}
+              <p style="margin:30px 0 0;color:#1f2824">${signature}<br><a href="${escapeHtml(siteUrl)}" style="color:#3e5648;font-weight:700">Web Jóga na HALLU</a></p>
             </td></tr>
             <tr><td style="padding:18px 28px;background:#ebe3d6;border-top:3px solid #b87854;color:#66706b;font-size:12px;line-height:1.5">
               Jóga na HALLU · 3. patro · Pro zaměstnance Alzy a jejich hosty

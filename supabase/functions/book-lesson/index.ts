@@ -73,13 +73,14 @@ Deno.serve(async (req: Request) => {
       toEmail: reservation.attendee_email,
       toName: reservation.attendee_name,
       subject: `Potvrzení rezervace: ${reservation.title}`,
+      signatureName: teacherFirstName,
       htmlContent: `<p>${escapeHtml(czechSalutation(reservation.attendee_name))},</p>
         <p>máš rezervované místo na lekci <strong>${escapeHtml(reservation.title)}</strong>.</p>
         <p><strong>${escapeHtml(formatLessonDate(reservation.starts_at))}</strong><br>
         ${escapeHtml(reservation.location)}<br>Lektor: ${escapeHtml(reservation.teacher)}</p>
         <p>${escapeHtml(reservation.payment_note)}</p>
         <p>Rezervaci můžeš zrušit nejpozději ${cancellationHours} hodin před začátkem: <a href="${escapeHtml(cancelUrl)}">zrušit rezervaci</a>.</p>
-        <p>Těšíme se na podložce.<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU<br><a href="${escapeHtml(siteUrl)}">Web Jóga na HALLU</a></p>`,
+        <p>Těšíme se na podložce.</p>`,
     });
 
     try {

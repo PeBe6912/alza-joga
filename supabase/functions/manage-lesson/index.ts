@@ -260,12 +260,12 @@ Deno.serve(async (req: Request) => {
         toEmail: cancellation.attendee_email,
         toName: cancellation.attendee_name,
         subject: `Rezervace zrušena: ${cancellation.title}`,
+        signatureName: teacherFirstName,
         htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:560px;margin:auto">
           <p>${escapeHtml(czechSalutation(cancellation.attendee_name))},</p>
           <p>lektor zrušil tvoji rezervaci na lekci <strong>${escapeHtml(cancellation.title)}</strong>.</p>
           <p>Termín: <strong>${escapeHtml(formatLessonDate(cancellation.starts_at))}</strong><br>${escapeHtml(cancellation.location)}</p>
           <p>Pokud máš zájem, vyber si prosím jiný termín na webu.</p>
-          <p>${escapeHtml(teacherFirstName)} · Jóga na HALLU<br><a href="${escapeHtml(publicSiteUrl)}">Web Jóga na HALLU</a></p>
         </div>`,
       });
       return json(req, { ok: true, action, emailSent: emailResult.sent });
@@ -330,13 +330,14 @@ Deno.serve(async (req: Request) => {
           toEmail: recipientEmail,
           toName: participant.name,
           subject: donation ? `Dobrovolný příspěvek po lekci: ${batch.title}` : `Platba za lekci: ${batch.title}`,
+          signatureName: teacherFirstName,
           htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:560px;margin:auto">
             <p>${escapeHtml(czechSalutation(participant.name))},</p>
             <p>děkujeme za účast na lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}).</p>
             <p>${escapeHtml(paymentCopy)}</p>
             <p style="text-align:center;margin:28px 0"><a href="${qrUrl}"><img src="${qrUrl}" width="280" alt="${donation ? 'QR kód pro dobrovolný příspěvek' : `QR kód pro platbu ${batch.price_czk ?? 0} Kč – ${escapeHtml(batch.teacher)}`}" style="max-width:100%;height:auto;border:0"></a></p>
             <p style="font-size:13px;color:#66706b">Pokud se obrázek v e-mailu nezobrazí, <a href="${qrUrl}">otevři QR kód v prohlížeči</a>.</p>
-            <p>Děkujeme.<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU<br><a href="${escapeHtml(publicSiteUrl)}">Web Jóga na HALLU</a></p>
+            <p>Děkujeme.</p>
           </div>`,
         });
         await callRpc<void>('record_payment_email_result', {
@@ -366,7 +367,6 @@ Deno.serve(async (req: Request) => {
           <p>platební údaje po lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}) byly rozeslány.</p>
           <p><strong>Odesláno:</strong> ${sent}<br><strong>Neúspěšné:</strong> ${failed}<br><strong>Přeskočeno:</strong> ${skipped}</p>
           <table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">Účastník</th><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">E-mail</th><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">Stav</th></tr></thead><tbody>${summaryRows}</tbody></table>
-          <p>Tým · Jóga na HALLU<br><a href="${escapeHtml(publicSiteUrl)}">Web Jóga na HALLU</a></p>
         </div>`,
       });
       return json(req, { ok: true, action, sent, failed, skipped, summarySent: summaryResult.sent, results });
@@ -489,11 +489,12 @@ Deno.serve(async (req: Request) => {
         toEmail: participant.email,
         toName: participant.name,
         subject: `${updated ? 'Změna lekce' : rescheduled ? 'Změna času lekce' : 'Lekce zrušena'}: ${change.title}`,
+        signatureName: teacherFirstName,
         htmlContent: `<p>${escapeHtml(czechSalutation(participant.name))},</p>
           <p>${updated ? 'údaje lekce byly změněny' : rescheduled ? 'čas lekce byl změněn' : 'lekce byla zrušena'}: <strong>${escapeHtml(change.title)}</strong>.</p>
           ${details}
           <p>${escapeHtml(change.location)}</p>
-          <p>${updated || rescheduled ? 'Těšíme se na podložce.' : 'Omlouváme se za komplikace.'}<br>${escapeHtml(teacherFirstName)} · Jóga na HALLU<br><a href="${escapeHtml(publicSiteUrl)}">Web Jóga na HALLU</a></p>`,
+          <p>${updated || rescheduled ? 'Těšíme se na podložce.' : 'Omlouváme se za komplikace.'}</p>`,
       });
     }));
 
