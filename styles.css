@@ -355,7 +355,7 @@ footer .brand-logo{height:72px}
 .teacher-card.reverse .teacher-photo{order:2}
 .teacher-photo img{width:100%;height:100%;min-height:0;object-fit:cover;object-position:center}
 .teacher-photo-portrait img{object-position:center 80%}
-.quote-break{width:min(100%,1440px);margin:0 auto;padding:78px 6vw;background:var(--paper);text-align:center}
+.quote-break{width:100%;margin:0;padding:78px 6vw;background:var(--sage-dark);color:#fff;text-align:center}
 .quote-break p{max-width:920px;margin:0 auto;font-family:"Newsreader",serif;font-size:clamp(30px,3.4vw,50px);line-height:1.2}
 .feature-list [data-setting="studio_capacity"]{color:inherit;font:inherit;margin:0}
 .admin-teacher blockquote{margin:8px 0 0;color:var(--ink);font-family:"Newsreader",serif;font-size:15px;line-height:1.4}
@@ -372,8 +372,8 @@ footer .brand-logo{height:72px}
 .lesson-actions-disabled{align-content:center;min-height:88px}
 
 /* Shared public and administrative studio calendar. */
-.studio-cluster{scroll-margin-top:94px}
-.availability-section{background:#f4f5f1}
+.studio-cluster{scroll-margin-top:94px;background:var(--paper)}
+.availability-section{background:var(--paper)}
 .availability-section>*{width:min(100%,1440px)}
 .calendar-toolbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;margin:30px auto 18px}
 .calendar-toolbar strong{text-align:center;font-family:"Newsreader",serif;font-size:24px;font-weight:400}
