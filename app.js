@@ -79,6 +79,7 @@ let adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let activeAdminTab = 'overview';
 const LESSON_PAGE_SIZE = 6;
 let lessonDisplayLimit = LESSON_PAGE_SIZE;
+let sharedLessonHandled = false;
 let publicCalendarStart = startOfWeek(new Date());
 let adminCalendarMonth = startOfMonth(new Date());
 const classList = document.querySelector('#class-list');
@@ -226,6 +227,67 @@ function attendanceLabel(lesson) {
   return `Přihlášeno ${lesson.booked} / ${lesson.capacity}`;
 }
 
+function lessonShareSlug(lesson) {
+  const title = String(lesson.title || 'lekce')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  const date = String(lesson.iso || '').slice(0, 10);
+  return `${title || 'lekce'}-${date}-${lesson.id}`;
+}
+
+function lessonShareUrl(lesson) {
+  return `${location.origin}/lekce/${lessonShareSlug(lesson)}`;
+}
+
+function lessonById(id) {
+  return lessons.find((item) => item.id === id) || adminLessons.find((item) => item.id === id);
+}
+
+async function copyLessonLink(lesson) {
+  const url = lessonShareUrl(lesson);
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    const input = document.createElement('textarea');
+    input.value = url;
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    input.remove();
+  }
+  showToast('Odkaz na lekci je zkopírovaný.');
+}
+
+async function shareLesson(lesson) {
+  const url = lessonShareUrl(lesson);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: `${lesson.title} · Jóga na HALLU`, text: `${lesson.date} · ${lesson.time} · ${lesson.teacher}`, url });
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+    }
+  }
+  await copyLessonLink(lesson);
+}
+
+function bindLessonShareButtons(root = document) {
+  root.querySelectorAll('[data-share-lesson]').forEach((button) => button.addEventListener('click', () => {
+    const lesson = lessonById(button.dataset.shareLesson);
+    if (lesson) shareLesson(lesson);
+  }));
+  root.querySelectorAll('[data-copy-lesson]').forEach((button) => button.addEventListener('click', () => {
+    const lesson = lessonById(button.dataset.copyLesson);
+    if (lesson) copyLessonLink(lesson);
+  }));
+}
+
 function settingNumber(key) {
   const value = Number(publicSettings[key] ?? PUBLIC_SETTING_DEFAULTS[key]);
   return Number.isFinite(value) ? value : Number(PUBLIC_SETTING_DEFAULTS[key]);
@@ -247,7 +309,7 @@ function renderLessons(filter = 'all') {
       <div class="class-date"><strong>${lesson.day}</strong><span>${lesson.date}</span></div>
       <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${escapeHtml(lesson.teacher)}</small><b class="class-time-compact">${escapeHtml(lesson.time)}</b><br><span>${typeLabel}</span>${languageLabel}</div>
       <div class="class-meta"><b>${escapeHtml(lesson.time)}</b><span>HALL · 3. patro</span><span>${escapeHtml(lesson.price)}</span></div>
-      <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${attendanceLabel(lesson)}</small></div>
+      <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${attendanceLabel(lesson)}</small><button class="text-button class-share" type="button" data-share-lesson="${lesson.id}">Sdílet lekci</button></div>
     </article>`;
   }).join('');
   const remaining = filtered.length - visible.length;
@@ -257,6 +319,7 @@ function renderLessons(filter = 'all') {
   classList.innerHTML = lessonRows || '<p class="class-list-empty">V této kategorii teď nejsou žádné vypsané lekce.</p>';
   classList.insertAdjacentHTML('beforeend', moreButton);
   document.querySelectorAll('[data-book]').forEach((button) => button.addEventListener('click', () => openBooking(button.dataset.book)));
+  bindLessonShareButtons(classList);
   document.querySelector('[data-show-more]')?.addEventListener('click', () => {
     lessonDisplayLimit += LESSON_PAGE_SIZE;
     renderLessons(filter);
@@ -283,6 +346,10 @@ document.querySelectorAll('.filter').forEach((button) => button.addEventListener
 async function openBooking(id) {
   const lesson = lessons.find((item) => item.id === id);
   if (!lesson) return;
+  if (spotsLeft(lesson) <= 0) {
+    showSharedLessonStatus(lesson, 'Tato lekce je už obsazená. Odkaz můžeš přesto sdílet.');
+    return;
+  }
   if (userSession && !accountData) {
     try {
       accountData = await loadAccountData();
@@ -302,8 +369,9 @@ async function openBooking(id) {
       <div class="field full"><label for="relation">Jdu jako</label><select id="relation" name="relation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host / externista</option></select></div>
       <p class="field full form-hint">Máš účet? <a href="#ucet" data-booking-account>Přihlas se</a> a příště už údaje vyplňovat nemusíš.</p>
       <label class="checkbox field full"><input type="checkbox" required><span>Souhlasím s <a href="podminky.html" target="_blank" rel="noopener">podmínkami rezervace</a> a potvrzuji, že jsem se seznámil/a s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>`}
-    </div><button class="button" type="submit">Potvrdit rezervaci</button>
+    </div><button class="button" type="submit">Potvrdit rezervaci</button><button class="text-button booking-share" type="button" data-share-lesson="${lesson.id}">Sdílet lekci</button>
   </form>`;
+  bindLessonShareButtons(document.querySelector('#booking-content'));
   document.querySelector('#booking-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const submitButton = event.target.querySelector('[type="submit"]');
@@ -378,6 +446,60 @@ function lessonFromDatabase(row) {
   };
 }
 
+function lessonFromShareData(row) {
+  return lessonFromDatabase({
+    ...row,
+    instructor_id: null,
+    payment_note: '',
+    minimum_attendance: PUBLIC_SETTING_DEFAULTS.minimum_attendance,
+    low_attendance_confirmed_at: null,
+    instructors: { name: row.teacher },
+  });
+}
+
+function sharedLessonIdFromLocation() {
+  const match = location.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
+  return match?.[0] || new URLSearchParams(location.search).get('lesson') || '';
+}
+
+async function loadSharedLesson(id) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/public_lesson_share`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_lesson_id: id }),
+  });
+  if (!response.ok) throw new Error('Lekci se nepodařilo načíst.');
+  return response.json();
+}
+
+function showSharedLessonStatus(lesson, message) {
+  document.querySelector('#booking-content').innerHTML = `<article class="booking-panel"><p class="eyebrow">Sdílená lekce</p><h2>${escapeHtml(lesson?.title || 'Lekce nenalezena')}</h2>${lesson ? `<div class="booking-summary"><span><b>${escapeHtml(lesson.day)} ${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(lesson.teacher)}</small></span><span>${escapeHtml(lesson.price)}</span></div>` : ''}<p class="form-hint">${escapeHtml(message)}</p>${lesson ? `<button class="button" type="button" data-share-lesson="${lesson.id}">Sdílet lekci</button>` : '<a class="button" href="/#lekce">Vybrat jinou lekci</a>'}</article>`;
+  bindLessonShareButtons(document.querySelector('#booking-content'));
+  dialog.showModal();
+}
+
+async function openSharedLessonFromUrl() {
+  if (sharedLessonHandled) return;
+  const id = sharedLessonIdFromLocation();
+  if (!id) return;
+  sharedLessonHandled = true;
+  try {
+    let lesson = lessons.find((item) => item.id === id);
+    if (!lesson) {
+      const shared = await loadSharedLesson(id);
+      if (!shared) return showSharedLessonStatus(null, 'Tuto lekci se nepodařilo najít.');
+      lesson = lessonFromShareData(shared);
+    }
+    if (lesson.status === 'cancelled') return showSharedLessonStatus(lesson, 'Tato lekce byla zrušena. Vyber si prosím jiný termín.');
+    if (new Date(lesson.endsAt) <= new Date()) return showSharedLessonStatus(lesson, 'Tato lekce už proběhla. Vyber si prosím jiný termín.');
+    if (!lessons.some((item) => item.id === lesson.id)) lessons.push(lesson);
+    openBooking(lesson.id);
+  } catch (error) {
+    console.error(error);
+    showSharedLessonStatus(null, 'Lekci se teď nepodařilo načíst. Zkus to prosím znovu.');
+  }
+}
+
 async function loadLessons() {
   const query = new URLSearchParams({
     select: 'id,instructor_id,title,starts_at,ends_at,capacity,booked_count,location,language,payment_mode,price_czk,payment_note,minimum_attendance,low_attendance_confirmed_at,instructors(name)',
@@ -394,9 +516,11 @@ async function loadLessons() {
     renderLessons(document.querySelector('.filter.active')?.dataset.filter || 'all');
     renderNextClass();
     renderPublicCalendar(publicStudioBlocksError);
+    await openSharedLessonFromUrl();
   } catch (error) {
     console.error(error);
     showToast('Živé termíny se nepodařilo načíst. Zobrazuji poslední dostupný přehled.');
+    await openSharedLessonFromUrl();
   }
 }
 
@@ -1313,11 +1437,12 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
     const deleteAction = adminCanDeleteLessons
       ? `<button class="text-button danger" data-delete-lesson="${lesson.id}">Trvale smazat</button>`
       : '';
+    const shareAction = `<button class="text-button admin-lesson-share" type="button" data-copy-lesson="${lesson.id}">Kopírovat odkaz</button>`;
     const actions = cancelled
-      ? `<div class="lesson-actions-stack${deleteAction ? '' : ' lesson-actions-disabled'}"><span class="lesson-action-state">Bez dalších akcí</span>${deleteAction}</div>`
+      ? `<div class="lesson-actions-stack${deleteAction ? '' : ' lesson-actions-disabled'}"><span class="lesson-action-state">Bez dalších akcí</span>${shareAction}${deleteAction}</div>`
       : ended
-        ? `<div class="lesson-actions-stack"><button class="button button-small" data-payment-lesson="${lesson.id}">Platby a příspěvky</button>${deleteAction}</div>`
-        : `<div class="lesson-actions-stack"><div class="lesson-action-primary">${attendanceAction}</div><div class="lesson-action-buttons"><button class="button button-small" data-edit-lesson="${lesson.id}">Upravit</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div>${deleteAction}</div>`;
+        ? `<div class="lesson-actions-stack"><button class="button button-small" data-payment-lesson="${lesson.id}">Platby a příspěvky</button>${shareAction}${deleteAction}</div>`
+        : `<div class="lesson-actions-stack"><div class="lesson-action-primary">${attendanceAction}</div><div class="lesson-action-buttons"><button class="button button-small" data-edit-lesson="${lesson.id}">Upravit</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div>${shareAction}${deleteAction}</div>`;
     const payment = lesson.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : `${lesson.priceCzk ?? 0} Kč`;
     return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span></td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
   }).join('');
@@ -1529,6 +1654,7 @@ function renderAdmin(tab) {
   if (tab === 'content') panel.innerHTML = newsPanel();
   if (tab === 'accounts') panel.innerHTML = accountsPanel();
   if (tab === 'settings') panel.innerHTML = settingsPanel();
+  bindLessonShareButtons(panel);
 
   document.querySelectorAll('[data-edit-teacher]').forEach((button) => button.addEventListener('click', () => openTeacherEditor(button.dataset.editTeacher)));
   document.querySelector('[data-add-news]')?.addEventListener('click', () => openNewsEditor());

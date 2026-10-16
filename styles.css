@@ -69,6 +69,8 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 
 /* Compact lesson list on tablets and phones. */
 .class-action small{text-align:center}
+.class-action .class-share{width:auto;margin-top:7px;padding:0;color:var(--sage-dark);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.booking-share{display:flex;margin:14px auto 0;color:var(--sage-dark);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .class-time-compact{display:none}
 .class-list-more{display:flex;justify-content:center;padding:28px 0 4px}
 .class-list-empty{padding:28px 8px;color:var(--muted);border-bottom:1px solid var(--line)}
@@ -290,6 +292,7 @@ footer .brand-logo{height:72px}
 .lesson-actions-stack{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:start}
 .lesson-actions-stack .button-secondary{grid-column:1/-1}
 .lesson-actions-stack .button{min-width:0;width:100%;padding:11px 12px;white-space:normal}
+.lesson-actions-stack .admin-lesson-share{justify-self:center;padding:2px 0;color:var(--sage-dark);font-size:12px;text-decoration:underline;text-underline-offset:3px}
 .lesson-actions-stack>div{display:flex;gap:8px}
 .settings-form{display:grid;gap:28px}
 .settings-section{display:grid;gap:16px;padding-top:24px;border-top:1px solid var(--line)}
