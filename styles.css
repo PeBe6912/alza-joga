@@ -187,6 +187,7 @@ footer .brand-logo{height:72px}
 .legal-page{min-height:100vh;background:var(--paper)}
 .legal-header{position:static}
 .legal-header .brand{margin-right:auto}
+.journey-page .legal-header>.button{flex:none;margin-left:18px}
 .legal-main{width:min(860px,calc(100% - 44px));margin:0 auto;padding:72px 0 110px}
 .legal-main h1{margin:0 0 18px;font-family:"Newsreader",serif;font-size:clamp(44px,7vw,72px);font-weight:400;line-height:1}
 .legal-intro{margin:0 0 46px;color:var(--muted);font-size:17px;line-height:1.7}
@@ -544,7 +545,7 @@ footer .brand-logo{height:72px}
 .journey-visibility-form{display:grid;gap:18px;max-width:620px}
 .journey-visibility-form .button{justify-self:start}
 .journey-page{background:#fbfaf7}
-.journey-hero{display:grid;grid-template-columns:1.2fr .8fr;align-items:center;gap:8vw;min-height:620px;padding:90px max(5vw,calc((100vw - 1440px)/2 + 5vw));background:var(--paper);overflow:hidden}
+.journey-hero{display:grid;grid-template-columns:1.2fr .8fr;align-items:center;gap:8vw;min-height:620px;padding:90px max(6vw,calc((100% - 1440px)/2));background:var(--paper);overflow:hidden}
 .journey-hero h1{margin:0 0 26px;font-family:"Newsreader",serif;font-size:clamp(54px,7vw,94px);font-weight:400;line-height:.95;letter-spacing:-.03em}
 .journey-hero>div>p:not(.eyebrow){max-width:650px;color:var(--muted);font-size:18px;line-height:1.7}
 .journey-mandala{position:relative;display:grid;place-items:center;aspect-ratio:1;border:1px solid rgba(62,86,72,.25);border-radius:50%}
@@ -560,9 +561,9 @@ footer .brand-logo{height:72px}
 .journey-milestone-grid h3{margin:28px 0 7px;font-family:"Newsreader",serif;font-size:25px;font-weight:400}
 .journey-milestone-grid p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
 .journey-milestone-grid article:last-child p{color:rgba(255,255,255,.68)}
-.journey-context{margin:24px 0 0;color:var(--muted);font-size:13px}
+.journey-context{margin:24px auto 0;color:var(--muted);font-size:13px}
 .journey-community{background:var(--cream)}
-.journey-leaderboard{margin:48px 0 24px;background:#fff;border-top:1px solid var(--ink)}
+.journey-leaderboard{margin:48px auto 24px;background:#fff;border-top:1px solid var(--ink)}
 .journey-leaderboard-row{display:grid;grid-template-columns:70px 1fr auto;align-items:center;gap:20px;padding:21px 26px;border-bottom:1px solid var(--line)}
 .journey-position{font-family:"Newsreader",serif;font-size:28px;color:var(--clay)}
 .journey-leaderboard-row div{display:grid;gap:4px}
