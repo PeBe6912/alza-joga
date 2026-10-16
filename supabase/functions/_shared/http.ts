@@ -139,7 +139,8 @@ export async function sendBrevoEmail(message: {
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;border-collapse:collapse">
             <tr><td style="padding:22px 28px;background:#3e5648;color:#fff">
               <table role="presentation" cellspacing="0" cellpadding="0"><tr>
-                <td style="padding-right:14px"><a href="${escapeHtml(siteUrl)}"><img src="${escapeHtml(siteUrl)}/assets/joga-na-hallu-logo.png" alt="" width="58" height="58" style="display:block;width:58px;height:58px;object-fit:contain"></a></td>
+                <td width="70" height="70" align="center" bgcolor="#f5f1e9" style="width:70px;height:70px;background:#f5f1e9;border-radius:4px"><a href="${escapeHtml(siteUrl)}" style="display:block"><img src="${escapeHtml(siteUrl)}/assets/joga-na-hallu-logo.png" alt="" width="58" height="58" style="display:block;width:58px;height:58px;object-fit:contain;margin:0 auto"></a></td>
+                <td width="14" style="width:14px"></td>
                 <td><a href="${escapeHtml(siteUrl)}" style="color:#fff;text-decoration:none;font-family:Georgia,serif;font-size:25px">Jóga na HALLU</a></td>
               </tr></table>
             </td></tr>
