@@ -276,13 +276,17 @@ Deno.serve(async (req: Request) => {
       const cancellationHours = Number(body.cancellationHours);
       const minimumAttendance = Number(body.minimumAttendance);
       const defaultPaidPrice = Number(body.defaultPaidPrice);
+      const studioCapacity = Number(body.studioCapacity);
       if (!Number.isInteger(cancellationHours) || cancellationHours < 0 || cancellationHours > 168) throw new Error('INVALID_CANCELLATION_HOURS');
       if (!Number.isInteger(minimumAttendance) || minimumAttendance < 1 || minimumAttendance > 100) throw new Error('INVALID_MINIMUM_ATTENDANCE');
       if (!Number.isInteger(defaultPaidPrice) || defaultPaidPrice < 0 || defaultPaidPrice > 10000) throw new Error('INVALID_DEFAULT_PRICE');
+      if (!Number.isInteger(studioCapacity) || studioCapacity < 1 || studioCapacity > 100) throw new Error('INVALID_STUDIO_CAPACITY');
+      if (minimumAttendance > studioCapacity) throw new Error('INVALID_MINIMUM_ATTENDANCE');
       const settings = await callRpc<Record<string, number>>('admin_update_booking_settings', {
         p_cancellation_hours: cancellationHours,
         p_minimum_attendance: minimumAttendance,
         p_default_paid_price: defaultPaidPrice,
+        p_studio_capacity: studioCapacity,
       });
       return json(req, { ok: true, action, settings });
     }
@@ -525,6 +529,8 @@ Deno.serve(async (req: Request) => {
     console.error('manage-lesson failed', code);
     const message = code === 'FORBIDDEN'
       ? 'Tento účet nemá oprávnění správce.'
+      : code === 'INVALID_CAPACITY_OVER_STUDIO_LIMIT'
+        ? 'Kapacita lekce nemůže překročit kapacitu studia nastavenou ve správě.'
       : status === 409
         ? code.includes('CANCELLATION_NOT_ALLOWED')
           ? 'Rezervaci už nelze zrušit nebo už byla zrušená.'
