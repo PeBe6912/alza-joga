@@ -246,13 +246,13 @@ Deno.serve(async (req: Request) => {
       const password = String(body.password ?? '');
       if (!password) return json(req, { message: 'Pro smazání účtu zadej své současné heslo.' }, 400);
       const verificationToken = await verifyPassword(user.email, password, user.id);
+      await revokeVerificationSession(verificationToken);
       const isAdmin = user.app_metadata?.role === 'admin';
       const dashboard = await callRpc<Dashboard>('account_dashboard', { p_user_id: user.id });
       const fullName = dashboard.profile?.fullName || String(metadata.full_name ?? user.email);
 
       if (isAdmin) {
         await callRpc('account_delete_participant_profile', { p_user_id: user.id });
-        await revokeVerificationSession(verificationToken);
       } else {
         await deleteAuthUser(user.id);
       }
