@@ -152,7 +152,7 @@ Deno.serve(async (req: Request) => {
     requestedAction = action;
     const canManageAdmins = adminUser.id === OWNER_ADMIN_USER_ID;
     if (action === 'capabilities') {
-      return json(req, { ok: true, action, canManageAdmins });
+      return json(req, { ok: true, action, canManageAdmins, canDeleteLessons: canManageAdmins });
     }
     if (action === 'create-admin') {
       if (!canManageAdmins) throw new Error('OWNER_ONLY');
@@ -285,6 +285,22 @@ Deno.serve(async (req: Request) => {
         p_default_paid_price: defaultPaidPrice,
       });
       return json(req, { ok: true, action, settings });
+    }
+
+    if (action === 'delete-lesson') {
+      if (!canManageAdmins) throw new Error('OWNER_ONLY');
+      const lessonId = String(body.lessonId ?? '');
+      if (!/^[0-9a-f-]{36}$/i.test(lessonId)) throw new Error('INVALID_LESSON');
+      const deleted = await callRpc<{ lesson_id: string; title: string; deleted_reservations: number }>('admin_delete_lesson', {
+        p_lesson_id: lessonId,
+      });
+      return json(req, {
+        ok: true,
+        action,
+        lessonId: deleted.lesson_id,
+        title: deleted.title,
+        deletedReservations: deleted.deleted_reservations,
+      });
     }
 
     if (action === 'payment-preview') {
@@ -505,7 +521,7 @@ Deno.serve(async (req: Request) => {
     return json(req, { ok: true, action: change.action, notified, failed });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('STUDIO_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') || code === 'OWNER_SELF_DELETE' ? 400 : code.includes('RESERVATION_NOT_FOUND') || code === 'ADMIN_NOT_FOUND' ? 404 : 500;
+    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('STUDIO_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') || code === 'OWNER_SELF_DELETE' ? 400 : code.includes('RESERVATION_NOT_FOUND') || code === 'ADMIN_NOT_FOUND' || code === 'LESSON_NOT_FOUND' ? 404 : 500;
     console.error('manage-lesson failed', code);
     const message = code === 'FORBIDDEN'
       ? 'Tento účet nemá oprávnění správce.'
@@ -533,6 +549,8 @@ Deno.serve(async (req: Request) => {
           ? 'Seznam administrátorů se nepodařilo načíst.'
         : requestedAction === 'delete-admin'
           ? 'Administrátora se nepodařilo smazat.'
+        : requestedAction === 'delete-lesson'
+          ? code === 'LESSON_NOT_FOUND' ? 'Lekce už neexistuje.' : 'Lekci se nepodařilo trvale smazat.'
         : requestedAction === 'change-password'
           ? 'Heslo se nepodařilo změnit.'
         : requestedAction.startsWith('payment-')

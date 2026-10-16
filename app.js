@@ -72,6 +72,7 @@ let publicStudioBlocks = [];
 let publicStudioBlocksError = '';
 let adminStudioBlocks = [];
 let adminCanManageAdmins = false;
+let adminCanDeleteLessons = false;
 let adminAccounts = [];
 let publicSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
@@ -1232,6 +1233,7 @@ async function loadAdminSettings() {
 async function loadAdminCapabilities() {
   const capabilities = await manageLesson({ action: 'capabilities' });
   adminCanManageAdmins = capabilities.canManageAdmins === true;
+  adminCanDeleteLessons = capabilities.canDeleteLessons === true;
 }
 
 async function loadAdminAccounts() {
@@ -1308,11 +1310,14 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
     const attendanceAction = belowMinimum && !lesson.lowAttendanceConfirmedAt
       ? `<button class="button button-small button-secondary" data-confirm-lesson="${lesson.id}">Lekce se koná</button>`
       : `<span class="lesson-action-state">${belowMinimum ? 'Koná se i v menším počtu' : 'Minimum splněno'}</span>`;
+    const deleteAction = adminCanDeleteLessons
+      ? `<button class="text-button danger" data-delete-lesson="${lesson.id}">Trvale smazat</button>`
+      : '';
     const actions = cancelled
-      ? '<div class="lesson-actions-stack lesson-actions-disabled"><span class="lesson-action-state">Bez dalších akcí</span></div>'
+      ? `<div class="lesson-actions-stack${deleteAction ? '' : ' lesson-actions-disabled'}"><span class="lesson-action-state">Bez dalších akcí</span>${deleteAction}</div>`
       : ended
-        ? `<button class="button button-small" data-payment-lesson="${lesson.id}">Platby a příspěvky</button>`
-        : `<div class="lesson-actions-stack"><div class="lesson-action-primary">${attendanceAction}</div><div class="lesson-action-buttons"><button class="button button-small" data-edit-lesson="${lesson.id}">Upravit</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div></div>`;
+        ? `<div class="lesson-actions-stack"><button class="button button-small" data-payment-lesson="${lesson.id}">Platby a příspěvky</button>${deleteAction}</div>`
+        : `<div class="lesson-actions-stack"><div class="lesson-action-primary">${attendanceAction}</div><div class="lesson-action-buttons"><button class="button button-small" data-edit-lesson="${lesson.id}">Upravit</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div>${deleteAction}</div>`;
     const payment = lesson.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : `${lesson.priceCzk ?? 0} Kč`;
     return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">EN</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span></td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
   }).join('');
@@ -1544,6 +1549,7 @@ function renderAdmin(tab) {
     renderAdmin('calendar');
   });
   document.querySelectorAll('[data-cancel-lesson]').forEach((button) => button.addEventListener('click', () => cancelLesson(button.dataset.cancelLesson)));
+  document.querySelectorAll('[data-delete-lesson]').forEach((button) => button.addEventListener('click', () => deleteLesson(button.dataset.deleteLesson)));
   document.querySelectorAll('[data-confirm-lesson]').forEach((button) => button.addEventListener('click', () => confirmLowAttendance(button.dataset.confirmLesson)));
   document.querySelectorAll('[data-payment-lesson]').forEach((button) => button.addEventListener('click', () => openPaymentEmails(button.dataset.paymentLesson)));
   document.querySelectorAll('[data-open-participants]').forEach((button) => button.addEventListener('click', () => {
@@ -2112,6 +2118,20 @@ async function cancelLesson(id) {
     await Promise.all([loadLessons(), loadAdminLessons()]);
     renderAdmin('overview');
     showToast(result.failed ? `Lekce je zrušená. ${result.failed} e-mailů se nepodařilo odeslat.` : `Lekce je zrušená. Odesláno e-mailů: ${result.notified}.`);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function deleteLesson(id) {
+  const lesson = adminLessons.find((item) => item.id === id);
+  if (!lesson || !adminCanDeleteLessons) return;
+  if (!confirm(`Opravdu TRVALE smazat lekci „${lesson.title}“ ${lesson.date} v ${lesson.time} včetně všech souvisejících rezervací? Tuto akci nelze vrátit zpět a neodesílá žádné e-maily.`)) return;
+  try {
+    const result = await manageLesson({ lessonId: id, action: 'delete-lesson' });
+    await Promise.all([loadLessons(), loadAdminLessons(), loadAdminReservations()]);
+    renderAdmin(activeAdminTab);
+    showToast(`Lekce byla trvale smazána včetně ${result.deletedReservations} rezervací.`);
   } catch (error) {
     showToast(error.message);
   }
