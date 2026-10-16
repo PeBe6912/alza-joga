@@ -76,7 +76,8 @@ const allowedOrigins = new Set([
   'https://www.joganahallu.cz',
 ]);
 
-const DONATION_PAYMENT_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. Platba prostřednictvím QR kódu směřuje přímo na účet organizace Dobrý anděl.';
+const DONATION_BOOKING_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. QR kód k příspěvku bude odeslán po skončení lekce a platba směřuje přímo na účet organizace Dobrý anděl.';
+const DONATION_PAYMENT_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. QR kód níže směřuje přímo na účet organizace Dobrý anděl.';
 
 const OWNER_ADMIN_USER_ID = '3f8ca22d-aa9a-4cad-bb14-8e4fbfae1c97';
 
@@ -397,7 +398,7 @@ Deno.serve(async (req: Request) => {
         ? instructorPayment.payment_note
         : paymentMode === 'paid'
           ? `Platba ${priceCzk} Kč. QR kód bude odeslán po skončení lekce.`
-          : DONATION_PAYMENT_COPY;
+          : DONATION_BOOKING_COPY;
 
       const created = await callRpc<{ created: number; lesson_ids: string[] }>('admin_create_lessons', {
         p_title: title,
@@ -447,7 +448,7 @@ Deno.serve(async (req: Request) => {
         ? instructorPayment.payment_note
         : paymentMode === 'paid'
           ? `Platba ${priceCzk} Kč. QR kód bude odeslán po skončení lekce.`
-          : DONATION_PAYMENT_COPY;
+          : DONATION_BOOKING_COPY;
       change = await callRpc<LessonChange>('admin_update_lesson', {
         p_lesson_id: lessonId,
         p_title: title,
@@ -493,6 +494,7 @@ Deno.serve(async (req: Request) => {
         htmlContent: `<p>${escapeHtml(czechSalutation(participant.name))},</p>
           <p>${updated ? 'údaje lekce byly změněny' : rescheduled ? 'čas lekce byl změněn' : 'lekce byla zrušena'}: <strong>${escapeHtml(change.title)}</strong>.</p>
           ${details}
+          ${updated ? '<p>QR kód k platbě nebo dobrovolnému příspěvku ti pošleme e-mailem až po skončení lekce.</p>' : ''}
           <p>${escapeHtml(change.location)}</p>
           <p>${updated || rescheduled ? 'Těšíme se na podložce.' : 'Omlouváme se za komplikace.'}</p>`,
       });
