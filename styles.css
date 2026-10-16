@@ -554,10 +554,14 @@ footer .brand-logo{height:72px}
 .journey-mandala span:nth-child(3){width:24%;height:24%;background:var(--cream);border:0}
 .journey-mandala b{z-index:1;font-family:"Newsreader",serif;font-size:64px;font-weight:400;color:var(--sage-dark)}
 .journey-milestones-section{background:#fff}
+.journey-icon-sprite{position:absolute;width:0;height:0;overflow:hidden}
 .journey-milestone-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:48px}
 .journey-milestone-grid article{min-height:185px;padding:26px;background:var(--paper);border-top:3px solid var(--sage)}
 .journey-milestone-grid article:last-child{background:var(--ink);color:#fff;border-color:var(--clay)}
+.journey-milestone-top{display:flex;align-items:center;justify-content:space-between;gap:20px}
 .journey-milestone-grid span{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:var(--cream);color:var(--ink);font-family:"Newsreader",serif;font-size:20px}
+.journey-milestone-top svg{width:46px;height:46px;fill:none;stroke:var(--sage-dark);stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;opacity:.78}
+.journey-milestone-grid article:last-child .journey-milestone-top svg{stroke:var(--cream);opacity:.9}
 .journey-milestone-grid h3{margin:28px 0 7px;font-family:"Newsreader",serif;font-size:25px;font-weight:400}
 .journey-milestone-grid p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
 .journey-milestone-grid article:last-child p{color:rgba(255,255,255,.68)}

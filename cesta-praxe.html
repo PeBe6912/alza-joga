@@ -9,9 +9,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2026101620" />
+  <link rel="stylesheet" href="styles.css?v=2026101621" />
 </head>
 <body class="journey-page">
+  <svg class="journey-icon-sprite" aria-hidden="true">
+    <defs>
+      <symbol id="journey-icon-breath" viewBox="0 0 48 48"><path d="M6 17h20c7 0 7-10 1-10-4 0-5 3-5 5M6 24h30c8 0 8 12 0 12-4 0-6-3-6-6M6 31h13"/></symbol>
+      <symbol id="journey-icon-sun" viewBox="0 0 48 48"><circle cx="24" cy="24" r="8"/><path d="M24 5v7M24 36v7M5 24h7M36 24h7M10.5 10.5l5 5M32.5 32.5l5 5M37.5 10.5l-5 5M15.5 32.5l-5 5"/></symbol>
+      <symbol id="journey-icon-wave" viewBox="0 0 48 48"><path d="M5 17c6-7 12-7 18 0s12 7 20 0M5 25c6-7 12-7 18 0s12 7 20 0M5 33c6-7 12-7 18 0s12 7 20 0"/></symbol>
+      <symbol id="journey-icon-mountain" viewBox="0 0 48 48"><path d="M5 39 19 14l7 11 5-8 12 22H5Z"/><path d="m15 39 9-16 9 16"/></symbol>
+      <symbol id="journey-icon-flow" viewBox="0 0 48 48"><path d="M10 28a15 15 0 0 0 27 5M38 20A15 15 0 0 0 11 15"/><path d="m8 10 3 5 5-3M40 38l-3-5-5 3"/></symbol>
+      <symbol id="journey-icon-balance" viewBox="0 0 48 48"><path d="M24 7v34M11 14h26M13 14 7 27h12l-6-13ZM35 14l-6 13h12l-6-13ZM14 41h20"/><path d="M7 27c1 5 11 5 12 0M29 27c1 5 11 5 12 0"/></symbol>
+      <symbol id="journey-icon-lotus" viewBox="0 0 48 48"><path d="M24 38c-8-6-10-16 0-28 10 12 8 22 0 28Z"/><path d="M24 38C13 37 6 31 7 20c9 1 15 6 17 18ZM24 38c11-1 18-7 17-18-9 1-15 6-17 18ZM11 38h26"/></symbol>
+      <symbol id="journey-icon-heart" viewBox="0 0 48 48"><path d="M24 40S7 30 7 18c0-9 12-12 17-4 5-8 17-5 17 4 0 12-17 22-17 22Z"/><path d="M16 23h5l3-6 4 12 3-6h5"/></symbol>
+      <symbol id="journey-icon-star" viewBox="0 0 48 48"><path d="m24 5 4.5 14.5L43 24l-14.5 4.5L24 43l-4.5-14.5L5 24l14.5-4.5L24 5Z"/></symbol>
+    </defs>
+  </svg>
   <header class="site-header legal-header">
     <a class="brand" href="index.html" aria-label="Jóga na HALLU – domů">
       <img class="brand-logo" src="assets/joga-na-hallu-logo.svg" alt="Jóga na HALLU" />
@@ -44,19 +57,19 @@
         <p>Počítají se pouze lekce, u kterých lektor potvrdil skutečnou účast. Rezervace, zrušené lekce ani absence se nezapočítávají.</p>
       </div>
       <div class="journey-milestone-grid">
-        <article><span>1</span><h3>První nádech</h3><p>Začátek cesty</p></article>
-        <article><span>5</span><h3>Pozdrav slunci</h3><p>První pravidelnější praxe</p></article>
-        <article><span>10</span><h3>V rytmu dechu</h3><p>Pohyb a dech se propojují</p></article>
-        <article><span>20</span><h3>Pevný základ</h3><p>Praxe už má své místo</p></article>
-        <article><span>30</span><h3>Vinyasa</h3><p>Jednotlivé lekce se spojují v cestu</p></article>
-        <article><span>50</span><h3>Ve flow</h3><p>Pohyb začíná přirozeně plynout</p></article>
-        <article><span>75</span><h3>Klid v pohybu</h3><p>Stabilita i během náročnější praxe</p></article>
-        <article><span>100</span><h3>Stálá praxe</h3><p>Výrazný milník pravidelnosti</p></article>
-        <article><span>150</span><h3>Vnitřní rovnováha</h3><p>Síla a uvolnění v rovnováze</p></article>
-        <article><span>200</span><h3>Sthira sukham</h3><p>Stabilita a lehkost</p></article>
-        <article><span>300</span><h3>Hluboká praxe</h3><p>Dlouhodobá cesta bez spěchu</p></article>
-        <article><span>400</span><h3>Srdce komunity</h3><p>Společná praxe vytváří atmosféru</p></article>
-        <article><span>500</span><h3>Mistr praxe</h3><p>Výjimečný milník vytrvalosti</p></article>
+        <article><div class="journey-milestone-top"><span>1</span><svg aria-hidden="true"><use href="#journey-icon-breath"/></svg></div><h3>První nádech</h3><p>Začátek cesty</p></article>
+        <article><div class="journey-milestone-top"><span>5</span><svg aria-hidden="true"><use href="#journey-icon-sun"/></svg></div><h3>Pozdrav slunci</h3><p>První pravidelnější praxe</p></article>
+        <article><div class="journey-milestone-top"><span>10</span><svg aria-hidden="true"><use href="#journey-icon-wave"/></svg></div><h3>V rytmu dechu</h3><p>Pohyb a dech se propojují</p></article>
+        <article><div class="journey-milestone-top"><span>20</span><svg aria-hidden="true"><use href="#journey-icon-mountain"/></svg></div><h3>Pevný základ</h3><p>Praxe už má své místo</p></article>
+        <article><div class="journey-milestone-top"><span>30</span><svg aria-hidden="true"><use href="#journey-icon-flow"/></svg></div><h3>Vinyasa</h3><p>Jednotlivé lekce se spojují v cestu</p></article>
+        <article><div class="journey-milestone-top"><span>50</span><svg aria-hidden="true"><use href="#journey-icon-wave"/></svg></div><h3>Ve flow</h3><p>Pohyb začíná přirozeně plynout</p></article>
+        <article><div class="journey-milestone-top"><span>75</span><svg aria-hidden="true"><use href="#journey-icon-balance"/></svg></div><h3>Klid v pohybu</h3><p>Stabilita i během náročnější praxe</p></article>
+        <article><div class="journey-milestone-top"><span>100</span><svg aria-hidden="true"><use href="#journey-icon-sun"/></svg></div><h3>Stálá praxe</h3><p>Výrazný milník pravidelnosti</p></article>
+        <article><div class="journey-milestone-top"><span>150</span><svg aria-hidden="true"><use href="#journey-icon-balance"/></svg></div><h3>Vnitřní rovnováha</h3><p>Síla a uvolnění v rovnováze</p></article>
+        <article><div class="journey-milestone-top"><span>200</span><svg aria-hidden="true"><use href="#journey-icon-lotus"/></svg></div><h3>Sthira sukham</h3><p>Stabilita a lehkost</p></article>
+        <article><div class="journey-milestone-top"><span>300</span><svg aria-hidden="true"><use href="#journey-icon-lotus"/></svg></div><h3>Hluboká praxe</h3><p>Dlouhodobá cesta bez spěchu</p></article>
+        <article><div class="journey-milestone-top"><span>400</span><svg aria-hidden="true"><use href="#journey-icon-heart"/></svg></div><h3>Srdce komunity</h3><p>Společná praxe vytváří atmosféru</p></article>
+        <article><div class="journey-milestone-top"><span>500</span><svg aria-hidden="true"><use href="#journey-icon-star"/></svg></div><h3>Mistr praxe</h3><p>Výjimečný milník vytrvalosti</p></article>
       </div>
       <p class="journey-context">„Mistr praxe“ je slavnostní milník účasti, nikoliv učitelská kvalifikace.</p>
     </section>
