@@ -710,6 +710,32 @@ function accountLessonCard(reservation, upcoming) {
   return `<article class="account-lesson-card"><div><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(reservation.teacher)} · ${escapeHtml(reservation.location)}</p></div>${canCancel ? `<button class="button button-small button-secondary" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</article>`;
 }
 
+function openAccountDeletion() {
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="account-delete-form"><p class="eyebrow">Smazání účtu</p><h2>Opravdu smazat účet?</h2><p class="form-hint">Profil bude odstraněn a dřívější rezervace se od něj odpojí. Tuto akci nelze vrátit zpět.</p><div class="field"><label for="account-delete-password">Současné heslo</label><input id="account-delete-password" name="password" type="password" autocomplete="current-password" required></div><div class="field"><label for="account-delete-confirmation">Pro potvrzení napiš SMAZAT</label><input id="account-delete-confirmation" name="confirmation" autocomplete="off" required></div><button class="button" type="submit">Smazat účet</button></form>`;
+  document.querySelector('#account-delete-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const data = new FormData(event.target);
+    if (String(data.get('confirmation')).trim().toLocaleUpperCase('cs-CZ') !== 'SMAZAT') {
+      return showToast('Pro potvrzení napiš přesně SMAZAT.');
+    }
+    if (!confirm('Opravdu chceš účet trvale smazat?')) return;
+    button.disabled = true;
+    try {
+      const result = await accountApi({ action: 'delete-account', password: data.get('password') });
+      closeDialog();
+      clearUserSession();
+      renderAccountLogin(result.adminAccessPreserved
+        ? 'Účastnický účet byl smazán. Přístup do administrace zůstal zachovaný.'
+        : 'Účet byl smazán.');
+    } catch (error) {
+      button.disabled = false;
+      showToast(error.message);
+    }
+  });
+  dialog.showModal();
+}
+
 function bindAccountDashboard() {
   accountPanel.querySelector('#account-profile-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -758,6 +784,7 @@ function bindAccountDashboard() {
     clearUserSession();
     renderAccountLogin('Byl/a jsi odhlášen/a.');
   });
+  accountPanel.querySelector('[data-account-delete]')?.addEventListener('click', openAccountDeletion);
 }
 
 async function renderAccountDashboard() {
@@ -772,6 +799,7 @@ async function renderAccountDashboard() {
       <section class="account-card"><h2>Moje údaje</h2><form id="account-profile-form" class="account-form"><div class="field"><label for="account-full-name">Jméno a příjmení</label><input id="account-full-name" name="fullName" maxlength="120" value="${escapeHtml(data.profile.fullName)}" autocomplete="name" required></div><div class="field"><label for="account-relation">Jdu jako</label><select id="account-relation" name="relation"><option value="employee" ${data.profile.relation === 'employee' ? 'selected' : ''}>Zaměstnanec Alzy</option><option value="guest" ${data.profile.relation === 'guest' ? 'selected' : ''}>Host / externista</option></select></div><button class="button button-small" type="submit">Uložit údaje</button></form></section>
       <section class="account-card account-history"><h2>Historie lekcí</h2><div class="account-lesson-list">${history.map((item) => accountLessonCard(item, false)).join('') || '<p class="account-empty">Historie je zatím prázdná.</p>'}</div></section>
       <section class="account-card"><h2>${accountRecoveryMode ? 'Nové heslo' : 'Změna hesla'}</h2><form id="account-password-form" class="account-form"><div class="field"><label for="account-password-new">Nové heslo</label><input id="account-password-new" name="password" type="password" minlength="12" autocomplete="new-password" required><small>Alespoň 12 znaků.</small></div><div class="field"><label for="account-password-confirm">Nové heslo znovu</label><input id="account-password-confirm" name="passwordConfirm" type="password" minlength="12" autocomplete="new-password" required></div><button class="button button-small" type="submit">Změnit heslo</button></form></section>
+      <section class="account-card"><h2>Smazání účtu</h2><p class="form-hint">Účet můžeš kdykoli kompletně smazat. Rezervační záznamy se od profilu odpojí a zůstanou jen po dobu uvedenou v ochraně osobních údajů.</p><button class="text-button danger" type="button" data-account-delete>Smazat účet</button></section>
     </div>`;
   bindAccountDashboard();
 }

@@ -40,6 +40,8 @@ const accountErrors: Record<string, [number, string]> = {
   INVALID_NAME: [400, 'Zkontroluj prosím jméno.'],
   INVALID_RELATION: [400, 'Zvol prosím, zda jdeš jako zaměstnanec nebo host.'],
   ACCOUNT_NOT_FOUND: [404, 'Uživatelský účet se nepodařilo najít.'],
+  ACCOUNT_DISABLED: [410, 'Účastnický účet byl smazán.'],
+  INCORRECT_PASSWORD: [401, 'Zadané heslo není správné.'],
   RESERVATION_NOT_FOUND: [404, 'Rezervaci se nepodařilo najít.'],
   CANCELLATION_NOT_ALLOWED: [409, 'Tuto rezervaci už není možné zrušit.'],
   CANCELLATION_DEADLINE_PASSED: [409, 'Lhůta pro bezplatné zrušení této rezervace už uplynula.'],
@@ -82,6 +84,41 @@ async function updatePassword(userId: string, password: string): Promise<void> {
   if (!response.ok) {
     const result = await response.json().catch(() => ({}));
     throw new Error(String(result?.msg || result?.message || 'PASSWORD_UPDATE_FAILED'));
+  }
+}
+
+async function verifyPassword(email: string, password: string, expectedUserId: string): Promise<string> {
+  const { url, secretKey } = supabaseConfig();
+  const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: authHeaders(secretKey),
+    body: JSON.stringify({ email, password }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result?.user?.id !== expectedUserId || !result?.access_token) {
+    throw new Error('INCORRECT_PASSWORD');
+  }
+  return String(result.access_token);
+}
+
+async function revokeVerificationSession(accessToken: string): Promise<void> {
+  const { url, secretKey } = supabaseConfig();
+  const response = await fetch(`${url}/auth/v1/logout?scope=local`, {
+    method: 'POST',
+    headers: { apikey: secretKey, authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) console.warn('Temporary password-verification session could not be revoked');
+}
+
+async function deleteAuthUser(userId: string): Promise<void> {
+  const { url, secretKey } = supabaseConfig();
+  const response = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(userId)}?should_soft_delete=false`, {
+    method: 'DELETE',
+    headers: authHeaders(secretKey),
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(String(result?.msg || result?.message || 'ACCOUNT_DELETE_FAILED'));
   }
 }
 
@@ -203,6 +240,34 @@ Deno.serve(async (req: Request) => {
         htmlContent: '<p>Dobrý den,</p><p>heslo k tvému účtu Jóga na HALLU bylo právě změněno.</p><p>Pokud jsi změnu neprovedl/a, obrať se prosím co nejdříve na správce webu.</p>',
       });
       return json(req, { ok: true });
+    }
+
+    if (action === 'delete-account') {
+      const password = String(body.password ?? '');
+      if (!password) return json(req, { message: 'Pro smazání účtu zadej své současné heslo.' }, 400);
+      const verificationToken = await verifyPassword(user.email, password, user.id);
+      const isAdmin = user.app_metadata?.role === 'admin';
+      const dashboard = await callRpc<Dashboard>('account_dashboard', { p_user_id: user.id });
+      const fullName = dashboard.profile?.fullName || String(metadata.full_name ?? user.email);
+
+      if (isAdmin) {
+        await callRpc('account_delete_participant_profile', { p_user_id: user.id });
+        await revokeVerificationSession(verificationToken);
+      } else {
+        await deleteAuthUser(user.id);
+      }
+
+      const emailResult = await sendBrevoEmail({
+        toEmail: user.email,
+        toName: fullName,
+        subject: 'Účet byl smazán | Jóga na HALLU',
+        htmlContent: isAdmin
+          ? `<p>${escapeHtml(czechSalutation(fullName))},</p><p>tvůj účastnický profil na webu Jóga na HALLU byl smazán a dřívější rezervace už nejsou s profilem propojené.</p><p>Administrátorský přístup zůstal zachovaný.</p>`
+          : `<p>${escapeHtml(czechSalutation(fullName))},</p><p>tvůj uživatelský účet na webu Jóga na HALLU byl smazán. Dřívější rezervace už nejsou s účtem propojené.</p>`,
+      });
+      if (!emailResult.sent) console.warn('Account deletion email failed', emailResult.error);
+
+      return json(req, { ok: true, adminAccessPreserved: isAdmin });
     }
 
     return json(req, { error: 'UNKNOWN_ACTION' }, 400);
