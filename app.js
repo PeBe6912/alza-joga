@@ -42,6 +42,10 @@ let teachers = fallbackTeachers;
 let newsItems = [];
 
 const savedBookings = JSON.parse(localStorage.getItem('alzaYogaBookings') || '[]');
+let userSession = JSON.parse(localStorage.getItem('jogaUserSession') || 'null');
+let userRefreshPromise = null;
+let accountData = null;
+let accountRecoveryMode = false;
 let adminSession = JSON.parse(sessionStorage.getItem('jogaAdminSession') || 'null');
 let adminRefreshPromise = null;
 let adminLessons = [];
@@ -244,18 +248,27 @@ document.querySelectorAll('.filter').forEach((button) => button.addEventListener
   renderLessons(button.dataset.filter);
 }));
 
-function openBooking(id) {
+async function openBooking(id) {
   const lesson = lessons.find((item) => item.id === id);
   if (!lesson) return;
+  if (userSession && !accountData) {
+    try {
+      accountData = await loadAccountData();
+    } catch {
+      clearUserSession();
+    }
+  }
+  const signedIn = Boolean(userSession && accountData?.profile);
   const languageNote = lesson.language === 'en' ? '<span class="language-badge">Lekce v angličtině</span>' : '';
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="booking-form">
     <p class="eyebrow">Rezervace místa</p><h2>${escapeHtml(lesson.title)}</h2>
     <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(lesson.teacher)}</small><br>${languageNote}</span><span>${escapeHtml(lesson.price)}</span></div>
     <p class="form-hint">Bezplatné zrušení je možné nejpozději ${settingNumber('cancellation_hours')} hodin před začátkem.</p>
     <div class="form-grid">
-      <div class="field"><label for="name">Jméno a příjmení</label><input id="name" name="name" required autocomplete="name"></div>
+      ${signedIn ? `<div class="account-booking-identity field full"><strong>${escapeHtml(accountData.profile.fullName)}</strong><span>${escapeHtml(accountData.email)} · ${accountData.profile.relation === 'guest' ? 'Host / externista' : 'Zaměstnanec Alzy'}</span><a href="#ucet">Upravit údaje v mém účtu</a></div>` : `<div class="field"><label for="name">Jméno a příjmení</label><input id="name" name="name" required autocomplete="name"></div>
       <div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" required autocomplete="email"></div>
       <div class="field full"><label for="relation">Jdu jako</label><select id="relation" name="relation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host / externista</option></select></div>
+      <p class="field full form-hint">Máš účet? <a href="#ucet" data-booking-account>Přihlas se</a> a příště už údaje vyplňovat nemusíš.</p>`}
       <label class="checkbox field full"><input type="checkbox" required><span>Souhlasím s <a href="podminky.html" target="_blank" rel="noopener">podmínkami rezervace</a> a potvrzuji, že jsem se seznámil/a s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>
     </div><button class="button" type="submit">Potvrdit rezervaci</button>
   </form>`;
@@ -268,12 +281,12 @@ function openBooking(id) {
     try {
       const response = await fetch(`${SUPABASE_URL}/functions/v1/book-lesson`, {
         method: 'POST',
-        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json', ...(signedIn ? { Authorization: `Bearer ${userSession.access_token}` } : {}) },
         body: JSON.stringify({
           lessonId: id,
-          name: data.get('name'),
-          email: data.get('email'),
-          relation: data.get('relation'),
+          name: signedIn ? accountData.profile.fullName : data.get('name'),
+          email: signedIn ? accountData.email : data.get('email'),
+          relation: signedIn ? accountData.profile.relation : data.get('relation'),
         }),
       });
       const result = await response.json();
@@ -289,6 +302,7 @@ function openBooking(id) {
         document.querySelector('[data-dialog-done]').addEventListener('click', closeDialog);
       }
       await loadLessons();
+      if (signedIn) accountData = await loadAccountData();
       showToast(result.emailSent ? 'Místo je rezervované. Potvrzení jsme poslali e-mailem.' : 'Místo je rezervované. Ulož si odkaz pro zrušení.');
     } catch (error) {
       submitButton.disabled = false;
@@ -296,6 +310,7 @@ function openBooking(id) {
       showToast(error.message);
     }
   });
+  document.querySelector('[data-booking-account]')?.addEventListener('click', closeDialog);
   dialog.showModal();
 }
 
@@ -615,8 +630,234 @@ function showToast(message) {
 dialog.addEventListener('submit', () => dialog.querySelector('.dialog-feedback')?.remove(), true);
 
 const publicView = document.querySelector('#public-view');
+const accountView = document.querySelector('#account-view');
+const accountPanel = document.querySelector('#account-panel');
 const adminView = document.querySelector('#admin-view');
 const adminSidebar = document.querySelector('.admin-sidebar');
+
+function saveUserSession(result) {
+  userSession = {
+    access_token: result.access_token,
+    refresh_token: result.refresh_token,
+    expires_at: result.expires_at || Math.floor(Date.now() / 1000) + Number(result.expires_in || 3600),
+  };
+  localStorage.setItem('jogaUserSession', JSON.stringify(userSession));
+}
+
+function clearUserSession() {
+  userSession = null;
+  accountData = null;
+  accountRecoveryMode = false;
+  localStorage.removeItem('jogaUserSession');
+}
+
+async function refreshUserSession() {
+  if (!userSession?.refresh_token) return false;
+  if (userRefreshPromise) return userRefreshPromise;
+  userRefreshPromise = (async () => {
+    try {
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: userSession.refresh_token }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.access_token || !result.refresh_token) {
+        clearUserSession();
+        return false;
+      }
+      saveUserSession(result);
+      return true;
+    } catch {
+      clearUserSession();
+      return false;
+    } finally {
+      userRefreshPromise = null;
+    }
+  })();
+  return userRefreshPromise;
+}
+
+async function accountApi(payload, retry = true) {
+  if (userSession?.expires_at && userSession.expires_at <= Math.floor(Date.now() / 1000) + 30) {
+    await refreshUserSession();
+  }
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/account`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      'Content-Type': 'application/json',
+      ...(userSession?.access_token ? { Authorization: `Bearer ${userSession.access_token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (response.status === 401 && retry && await refreshUserSession()) return accountApi(payload, false);
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.message || 'Požadavek se nepodařilo dokončit.');
+  return result;
+}
+
+async function loadAccountData() {
+  const result = await accountApi({ action: 'dashboard' });
+  accountData = result;
+  return result;
+}
+
+function accountLessonCard(reservation, upcoming) {
+  const date = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Europe/Prague' }).format(new Date(reservation.startsAt));
+  const status = reservation.status === 'cancelled' ? 'Zrušeno' : reservation.status === 'attended' ? 'Účast potvrzena' : reservation.status === 'no_show' ? 'Nedorazil/a' : upcoming ? 'Rezervováno' : 'Proběhlo';
+  const canCancel = upcoming && reservation.status === 'confirmed' && new Date(reservation.cancelBefore) >= new Date();
+  return `<article class="account-lesson-card"><div><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(reservation.teacher)} · ${escapeHtml(reservation.location)}</p></div>${canCancel ? `<button class="button button-small button-secondary" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</article>`;
+}
+
+function bindAccountDashboard() {
+  accountPanel.querySelector('#account-profile-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const data = new FormData(event.target);
+    button.disabled = true;
+    try {
+      await accountApi({ action: 'update-profile', fullName: data.get('fullName'), relation: data.get('relation') });
+      await renderAccountDashboard();
+      showToast('Údaje jsou uložené.');
+    } catch (error) {
+      button.disabled = false;
+      showToast(error.message);
+    }
+  });
+  accountPanel.querySelector('#account-password-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const data = new FormData(event.target);
+    if (data.get('password') !== data.get('passwordConfirm')) return showToast('Zadaná hesla se neshodují.');
+    button.disabled = true;
+    try {
+      await accountApi({ action: 'change-password', password: data.get('password') });
+      accountRecoveryMode = false;
+      event.target.reset();
+      showToast('Heslo bylo změněno.');
+      await renderAccountDashboard();
+    } catch (error) {
+      button.disabled = false;
+      showToast(error.message);
+    }
+  });
+  accountPanel.querySelectorAll('[data-account-cancel]').forEach((button) => button.addEventListener('click', async () => {
+    if (!confirm('Opravdu chceš tuto rezervaci zrušit?')) return;
+    button.disabled = true;
+    try {
+      await accountApi({ action: 'cancel-reservation', reservationId: button.dataset.accountCancel });
+      await Promise.all([renderAccountDashboard(), loadLessons()]);
+      showToast('Rezervace byla zrušená.');
+    } catch (error) {
+      button.disabled = false;
+      showToast(error.message);
+    }
+  }));
+  accountPanel.querySelector('[data-account-logout]')?.addEventListener('click', () => {
+    clearUserSession();
+    renderAccountLogin('Byl/a jsi odhlášen/a.');
+  });
+}
+
+async function renderAccountDashboard() {
+  const data = await loadAccountData();
+  const now = new Date();
+  const upcoming = data.reservations.filter((item) => new Date(item.startsAt) >= now && item.status !== 'cancelled').sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
+  const history = data.reservations.filter((item) => new Date(item.startsAt) < now || item.status === 'cancelled').sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
+  accountPanel.innerHTML = `${accountRecoveryMode ? '<div class="account-notice"><strong>Nastav si nové heslo.</strong> Odkaz z e-mailu byl ověřený.</div>' : ''}
+    <div class="account-dashboard-heading"><p>Přihlášený e-mail: <strong>${escapeHtml(data.email)}</strong></p><button class="text-button" type="button" data-account-logout>Odhlásit se</button></div>
+    <div class="account-dashboard-grid">
+      <section class="account-card account-reservations"><h2>Naplánované lekce</h2><div class="account-lesson-list">${upcoming.map((item) => accountLessonCard(item, true)).join('') || '<p class="account-empty">Zatím nemáš žádnou naplánovanou lekci. <a href="#lekce">Vyber si termín.</a></p>'}</div></section>
+      <section class="account-card"><h2>Moje údaje</h2><form id="account-profile-form" class="account-form"><div class="field"><label for="account-full-name">Jméno a příjmení</label><input id="account-full-name" name="fullName" maxlength="120" value="${escapeHtml(data.profile.fullName)}" autocomplete="name" required></div><div class="field"><label for="account-relation">Jdu jako</label><select id="account-relation" name="relation"><option value="employee" ${data.profile.relation === 'employee' ? 'selected' : ''}>Zaměstnanec Alzy</option><option value="guest" ${data.profile.relation === 'guest' ? 'selected' : ''}>Host / externista</option></select></div><button class="button button-small" type="submit">Uložit údaje</button></form></section>
+      <section class="account-card account-history"><h2>Historie lekcí</h2><div class="account-lesson-list">${history.map((item) => accountLessonCard(item, false)).join('') || '<p class="account-empty">Historie je zatím prázdná.</p>'}</div></section>
+      <section class="account-card"><h2>${accountRecoveryMode ? 'Nové heslo' : 'Změna hesla'}</h2><form id="account-password-form" class="account-form"><div class="field"><label for="account-password-new">Nové heslo</label><input id="account-password-new" name="password" type="password" minlength="12" autocomplete="new-password" required><small>Alespoň 12 znaků.</small></div><div class="field"><label for="account-password-confirm">Nové heslo znovu</label><input id="account-password-confirm" name="passwordConfirm" type="password" minlength="12" autocomplete="new-password" required></div><button class="button button-small" type="submit">Změnit heslo</button></form></section>
+    </div>`;
+  bindAccountDashboard();
+}
+
+function openRecoveryRequest() {
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="recovery-form"><p class="eyebrow">Obnova přístupu</p><h2>Zapomenuté heslo</h2><p class="form-hint">Pošleme ti bezpečný odkaz pro nastavení nového hesla.</p><div class="field"><label for="recovery-email">E-mail</label><input id="recovery-email" name="email" type="email" autocomplete="email" required></div><button class="button" type="submit">Odeslat odkaz</button></form>`;
+  document.querySelector('#recovery-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    button.disabled = true;
+    try {
+      const result = await accountApi({ action: 'recover', email: new FormData(event.target).get('email') });
+      closeDialog();
+      showToast(result.message);
+    } catch (error) {
+      button.disabled = false;
+      showToast(error.message);
+    }
+  });
+  dialog.showModal();
+}
+
+function renderAccountLogin(message = '') {
+  accountPanel.innerHTML = `${message ? `<p class="account-notice">${escapeHtml(message)}</p>` : ''}<div class="account-grid">
+    <form class="account-card account-form" id="account-login-form"><p class="eyebrow">Mám účet</p><h2>Přihlášení</h2><div class="field"><label for="user-login-email">E-mail</label><input id="user-login-email" name="email" type="email" autocomplete="email" required></div><div class="field"><label for="user-login-password">Heslo</label><input id="user-login-password" name="password" type="password" autocomplete="current-password" required></div><button class="button" type="submit">Přihlásit se</button><button class="text-button account-recovery-link" type="button" data-account-recovery>Zapomenuté heslo</button></form>
+    <form class="account-card account-form" id="account-register-form"><p class="eyebrow">Nový účet</p><h2>Vytvoření účtu</h2><p class="form-hint">Účet je dobrovolný. Existující správce se může přihlásit stejným e-mailem a heslem jako do administrace.</p><div class="field"><label for="user-register-name">Jméno a příjmení</label><input id="user-register-name" name="fullName" maxlength="120" autocomplete="name" required></div><div class="field"><label for="user-register-email">E-mail</label><input id="user-register-email" name="email" type="email" maxlength="320" autocomplete="email" required></div><div class="field"><label for="user-register-relation">Jdu jako</label><select id="user-register-relation" name="relation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host / externista</option></select></div><div class="field"><label for="user-register-password">Heslo</label><input id="user-register-password" name="password" type="password" minlength="12" autocomplete="new-password" required><small>Alespoň 12 znaků.</small></div><label class="checkbox"><input name="consent" type="checkbox" required><span>Souhlasím s <a href="podminky.html" target="_blank" rel="noopener">podmínkami</a> a seznámil/a jsem se s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">ochranou osobních údajů</a>.</span></label><button class="button" type="submit">Vytvořit účet</button></form>
+  </div>`;
+  accountPanel.querySelector('#account-login-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const data = new FormData(event.target);
+    button.disabled = true;
+    try {
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: data.get('email'), password: data.get('password') }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error('E-mail nebo heslo není správné.');
+      saveUserSession(result);
+      await renderAccountDashboard();
+    } catch (error) {
+      button.disabled = false;
+      showToast(error.message);
+    }
+  });
+  accountPanel.querySelector('#account-register-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const data = new FormData(event.target);
+    button.disabled = true;
+    try {
+      const result = await accountApi({ action: 'register', fullName: data.get('fullName'), email: data.get('email'), relation: data.get('relation'), password: data.get('password') });
+      event.target.reset();
+      button.disabled = false;
+      showToast(result.message);
+    } catch (error) {
+      button.disabled = false;
+      showToast(error.message);
+    }
+  });
+  accountPanel.querySelector('[data-account-recovery]').addEventListener('click', openRecoveryRequest);
+}
+
+async function openAccount() {
+  publicView.hidden = true;
+  adminView.hidden = true;
+  accountView.hidden = false;
+  document.querySelector('.site-header').hidden = false;
+  document.querySelector('.announcement').hidden = true;
+  document.querySelector('footer').hidden = false;
+  try {
+    if (userSession) await renderAccountDashboard();
+    else renderAccountLogin();
+  } catch {
+    clearUserSession();
+    renderAccountLogin('Přihlášení vypršelo. Přihlas se prosím znovu.');
+  }
+  window.scrollTo(0, 0);
+}
+
+function showPublicView() {
+  adminView.hidden = true;
+  accountView.hidden = true;
+  publicView.hidden = false;
+  document.querySelector('.site-header').hidden = false;
+  document.querySelector('.announcement').hidden = false;
+  document.querySelector('footer').hidden = false;
+}
 
 function setAdminAuthenticatedLayout(isAuthenticated) {
   adminView.classList.toggle('admin-login-mode', !isAuthenticated);
@@ -628,6 +869,7 @@ async function openAdmin({ updateUrl = true } = {}) {
     history.pushState({}, '', `${location.pathname}${location.search}#admin`);
   }
   publicView.hidden = true;
+  accountView.hidden = true;
   document.querySelector('.site-header').hidden = true;
   document.querySelector('.announcement').hidden = true;
   document.querySelector('footer').hidden = true;
@@ -644,11 +886,7 @@ async function openAdmin({ updateUrl = true } = {}) {
 }
 
 function closeAdmin() {
-  adminView.hidden = true;
-  publicView.hidden = false;
-  document.querySelector('.site-header').hidden = false;
-  document.querySelector('.announcement').hidden = false;
-  document.querySelector('footer').hidden = false;
+  showPublicView();
   window.scrollTo(0, 0);
 }
 
@@ -662,9 +900,10 @@ document.querySelector('#close-admin').addEventListener('click', () => {
   closeAdmin();
 });
 
-window.addEventListener('hashchange', () => {
-  if (location.hash === '#admin') openAdmin({ updateUrl: false });
-  else if (!adminView.hidden) closeAdmin();
+window.addEventListener('hashchange', async () => {
+  if (location.hash === '#admin') await openAdmin({ updateUrl: false });
+  else if (location.hash === '#ucet') await openAccount();
+  else if (!adminView.hidden || !accountView.hidden) showPublicView();
 });
 
 function clearAdminSession() {
@@ -1776,6 +2015,25 @@ refreshPublicSettings();
 loadLessons();
 loadPublicStudioBlocks();
 loadPublicContent();
-const cancellationToken = new URLSearchParams(location.search).get('cancel');
-if (cancellationToken) openCancellation(cancellationToken);
-else if (location.hash === '#admin') openAdmin({ updateUrl: false });
+
+async function initializeRoute() {
+  const authFragment = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
+  if (authFragment.get('access_token') && authFragment.get('refresh_token')) {
+    saveUserSession({
+      access_token: authFragment.get('access_token'),
+      refresh_token: authFragment.get('refresh_token'),
+      expires_in: Number(authFragment.get('expires_in') || 3600),
+    });
+    accountRecoveryMode = authFragment.get('type') === 'recovery' || new URLSearchParams(location.search).get('account') === 'recovery';
+    history.replaceState({}, '', `${location.pathname}#ucet`);
+    await openAccount();
+    showToast(accountRecoveryMode ? 'Odkaz je ověřený. Nastav si nové heslo.' : 'E-mail je potvrzený. Účet je připravený.');
+    return;
+  }
+  const cancellationToken = new URLSearchParams(location.search).get('cancel');
+  if (cancellationToken) openCancellation(cancellationToken);
+  else if (location.hash === '#admin') await openAdmin({ updateUrl: false });
+  else if (location.hash === '#ucet') await openAccount();
+}
+
+initializeRoute();

@@ -60,6 +60,25 @@ export async function callRpc<T>(name: string, payload: Record<string, unknown>)
   return body as T;
 }
 
+export type AuthenticatedUser = {
+  id: string;
+  email: string;
+  user_metadata?: Record<string, unknown>;
+  app_metadata?: Record<string, unknown>;
+};
+
+export async function authenticatedUser(req: Request): Promise<AuthenticatedUser | null> {
+  const authorization = req.headers.get('authorization');
+  if (!authorization?.toLowerCase().startsWith('bearer ')) return null;
+  const { url, secretKey } = supabaseConfig();
+  const response = await fetch(`${url}/auth/v1/user`, {
+    headers: { apikey: secretKey, authorization },
+  });
+  if (!response.ok) return null;
+  const user = await response.json();
+  return user?.id && user?.email ? user as AuthenticatedUser : null;
+}
+
 export function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -111,6 +130,30 @@ export async function sendBrevoEmail(message: {
   const senderEmail = Deno.env.get('BREVO_SENDER_EMAIL');
   if (!apiKey || !senderEmail) return { sent: false, error: 'BREVO_NOT_CONFIGURED' };
 
+  const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
+  const brandedContent = `<!doctype html>
+    <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+    <body style="margin:0;padding:0;background:#f5f1e9;color:#1f2824;font-family:Arial,sans-serif">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f1e9;padding:28px 12px">
+        <tr><td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;border-collapse:collapse">
+            <tr><td style="padding:22px 28px;background:#3e5648;color:#fff">
+              <a href="${escapeHtml(siteUrl)}" style="display:inline-flex;align-items:center;color:#fff;text-decoration:none">
+                <img src="${escapeHtml(siteUrl)}/assets/joga-na-hallu-logo.png" alt="" width="58" height="58" style="display:block;width:58px;height:58px;object-fit:contain;margin-right:14px">
+                <span style="font-family:Georgia,serif;font-size:25px">Jóga na HALLU</span>
+              </a>
+            </td></tr>
+            <tr><td style="padding:34px 32px;background:#fff;border-left:1px solid rgba(31,40,36,.12);border-right:1px solid rgba(31,40,36,.12);font-size:16px;line-height:1.65">
+              ${message.htmlContent}
+            </td></tr>
+            <tr><td style="padding:18px 28px;background:#ebe3d6;border-top:3px solid #b87854;color:#66706b;font-size:12px;line-height:1.5">
+              Jóga na HALLU · 3. patro · Pro zaměstnance Alzy a jejich hosty
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </body></html>`;
+
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
@@ -122,7 +165,7 @@ export async function sendBrevoEmail(message: {
       sender: { name: 'Jóga na HALLU', email: senderEmail },
       to: [{ email: message.toEmail, name: message.toName }],
       subject: message.subject,
-      htmlContent: message.htmlContent,
+      htmlContent: brandedContent,
       tags: ['joga-na-hallu'],
     }),
   });

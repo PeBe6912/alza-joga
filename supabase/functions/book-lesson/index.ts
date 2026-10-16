@@ -1,4 +1,5 @@
 import {
+  authenticatedUser,
   callRpc,
   corsHeaders,
   czechSalutation,
@@ -41,9 +42,16 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const lessonId = String(body.lessonId ?? '');
-    const name = String(body.name ?? '').trim();
-    const email = String(body.email ?? '').trim().toLowerCase();
-    const relation = body.relation === 'guest' ? 'guest' : 'employee';
+    const user = await authenticatedUser(req);
+    let name = String(body.name ?? '').trim();
+    let email = String(body.email ?? '').trim().toLowerCase();
+    let relation = body.relation === 'guest' ? 'guest' : 'employee';
+    if (user) {
+      const dashboard = await callRpc<{ profile?: { fullName?: string; relation?: string } }>('account_dashboard', { p_user_id: user.id });
+      name = String(dashboard.profile?.fullName ?? '').trim();
+      email = user.email.trim().toLowerCase();
+      relation = dashboard.profile?.relation === 'guest' ? 'guest' : 'employee';
+    }
     if (!/^[0-9a-f-]{36}$/i.test(lessonId)) return json(req, { error: 'INVALID_LESSON', message: 'Neplatná lekce.' }, 400);
 
     const token = randomToken();
@@ -54,6 +62,7 @@ Deno.serve(async (req: Request) => {
       p_attendee_email: email,
       p_attendee_relation: relation,
       p_cancellation_token_hash: tokenHash,
+      p_user_id: user?.id ?? null,
     });
 
     const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');

@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2026101606" />
+  <link rel="stylesheet" href="styles.css?v=2026101613" />
 </head>
 <body>
   <div class="announcement">Nové termíny na příští týden jsou otevřené <a href="#lekce">Rezervovat místo →</a></div>
@@ -26,6 +26,7 @@
       <a href="#novinky">Novinky a jógové tipy</a>
       <a href="#informace">Informace</a>
       <a href="#soukrome-lekce">Soukromé lekce</a>
+      <a href="#ucet">Můj účet</a>
     </nav>
     <div class="header-actions">
       <a class="button button-small" href="#lekce">Vybrat lekci</a>
@@ -201,6 +202,16 @@
     </section>
   </main>
 
+  <main id="account-view" class="account-page" hidden>
+    <section class="section account-section">
+      <div class="section-heading split">
+        <div><p class="eyebrow">Rezervace na jednom místě</p><h1>Můj účet</h1></div>
+        <p>Po přihlášení si lekci rezervuješ bez opakovaného vyplňování údajů. Uvidíš také naplánované i proběhlé lekce a rezervaci můžeš včas zrušit přímo tady.</p>
+      </div>
+      <div id="account-panel" aria-live="polite"></div>
+    </section>
+  </main>
+
   <main id="admin-view" class="admin-shell" hidden>
     <aside class="admin-sidebar">
       <a class="brand admin-brand" href="#top" aria-label="Zpět na veřejný web"><img class="brand-logo" src="assets/joga-na-hallu-logo.svg" alt="Jóga na HALLU" /></a>
@@ -226,7 +237,7 @@
   <footer>
     <div class="brand"><img class="brand-logo" src="assets/joga-na-hallu-logo.svg" alt="Jóga na HALLU" /></div>
     <p>Jóga na HALLU · 3. patro · Pro zaměstnance Alzy a jejich hosty</p>
-    <div><a href="podminky.html">Podmínky</a><a href="ochrana-osobnich-udaju.html">Ochrana osobních údajů</a><a class="footer-admin-link" href="#admin" data-open-admin>Admin</a></div>
+    <div><a href="podminky.html">Podmínky</a><a href="ochrana-osobnich-udaju.html">Ochrana osobních údajů</a><a href="#ucet">Můj účet</a><a class="footer-admin-link" href="#admin" data-open-admin>Admin</a></div>
   </footer>
 
   <dialog id="booking-dialog">
@@ -234,6 +245,6 @@
     <div id="booking-content"></div>
   </dialog>
   <div class="toast" id="toast" role="status"></div>
-  <script src="app.js?v=2026101602"></script>
+  <script src="app.js?v=2026101613"></script>
 </body>
 </html>

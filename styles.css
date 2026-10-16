@@ -466,3 +466,44 @@ footer .brand-logo{height:72px}
   .gallery-quote{min-height:220px;padding:34px 24px}
 }
 
+/* Optional participant account, visually aligned with the public website. */
+.account-page{min-height:calc(100vh - 180px);background:var(--paper)}
+.account-section{padding-top:82px}
+.account-section>.section-heading,.account-section>#account-panel{width:min(100%,1200px);margin-left:auto;margin-right:auto}
+.account-section h1{margin:0;font-family:"Newsreader",serif;font-size:clamp(48px,6vw,76px);font-weight:400;line-height:1}
+#account-panel{margin-top:46px}
+.account-grid,.account-dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.account-dashboard-grid{align-items:start}
+.account-card{padding:34px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.account-card h2{margin:0 0 22px;font-family:"Newsreader",serif;font-size:32px;font-weight:400}
+.account-card .form-hint{margin-top:0}
+.account-form{display:grid;align-content:start;gap:16px}
+.account-form .button{justify-self:start;margin-top:4px}
+.account-form small{color:var(--muted)}
+.account-recovery-link{justify-self:start;padding:2px 0;border-bottom:1px solid currentColor}
+.account-dashboard-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px;padding:16px 20px;background:var(--cream);border-left:4px solid var(--clay)}
+.account-dashboard-heading p{margin:0}
+.account-reservations,.account-history{grid-column:1/-1}
+.account-lesson-list{display:grid;gap:10px}
+.account-lesson-card{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:19px 0;border-top:1px solid var(--line)}
+.account-lesson-card:first-child{border-top:0}
+.account-lesson-card h3{margin:9px 0 5px;font-family:"Newsreader",serif;font-size:24px;font-weight:400}
+.account-lesson-card p,.account-empty{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.account-empty a{color:var(--sage-dark);font-weight:700;border-bottom:1px solid currentColor}
+.account-notice{margin:0 0 18px;padding:16px 19px;background:#e4eee8;border-left:4px solid var(--sage-dark);line-height:1.5}
+.account-booking-identity{padding:16px 18px;background:var(--paper);border-left:4px solid var(--sage-dark)}
+.account-booking-identity span{display:block;margin-top:4px;color:var(--muted);font-size:13px}
+.account-booking-identity a{display:inline-block;margin-top:10px;color:var(--sage-dark);font-size:12px;font-weight:700;border-bottom:1px solid currentColor}
+
+@media(max-width:800px){
+  .account-section{padding-top:58px}
+  .account-grid,.account-dashboard-grid{grid-template-columns:1fr}
+  .account-reservations,.account-history{grid-column:auto}
+}
+
+@media(max-width:600px){
+  .account-card{padding:26px 22px}
+  .account-dashboard-heading,.account-lesson-card{align-items:flex-start;flex-direction:column}
+  .account-lesson-card .button{width:100%}
+}
+
