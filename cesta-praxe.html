@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Cesta praxe – společné jógové milníky na Józe na HALLU." />
+  <title>Cesta praxe | Jóga na HALLU</title>
+  <link rel="icon" type="image/svg+xml" href="assets/joga-na-hallu-logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=2026101618" />
+</head>
+<body class="journey-page">
+  <header class="site-header legal-header">
+    <a class="brand" href="index.html" aria-label="Jóga na HALLU – domů">
+      <img class="brand-logo" src="assets/joga-na-hallu-logo.svg" alt="Jóga na HALLU" />
+      <span class="brand-name">Jóga na <strong>HALLU</strong></span>
+    </a>
+    <nav aria-label="Navigace Cesty praxe">
+      <a href="#milniky">Milníky</a>
+      <a href="#komunita">Společně na cestě</a>
+    </nav>
+    <a class="button button-small" href="index.html#ucet">Moje cesta</a>
+  </header>
+
+  <main>
+    <section class="journey-hero">
+      <div>
+        <p class="eyebrow">Cesta praxe</p>
+        <h1>Každá lekce je<br>jeden krok na cestě.</h1>
+        <p>Statusy připomínají čas, který jsme společně strávili na podložce. Nehodnotí pokročilost, flexibilitu ani úroveň jógové praxe.</p>
+        <div class="hero-actions">
+          <a class="button" href="#milniky">Prohlédnout milníky</a>
+          <a class="button button-secondary" href="index.html#ucet">Otevřít můj účet</a>
+        </div>
+      </div>
+      <div class="journey-mandala" aria-hidden="true"><span></span><span></span><span></span><b>✦</b></div>
+    </section>
+
+    <section class="section journey-milestones-section" id="milniky">
+      <div class="section-heading split">
+        <div><p class="eyebrow">Milníky</p><h2>Praxe bez spěchu</h2></div>
+        <p>Počítají se pouze lekce, u kterých lektor potvrdil skutečnou účast. Rezervace, zrušené lekce ani absence se nezapočítávají.</p>
+      </div>
+      <div class="journey-milestone-grid">
+        <article><span>1</span><h3>První nádech</h3><p>Začátek cesty</p></article>
+        <article><span>5</span><h3>Pozdrav slunci</h3><p>První pravidelnější praxe</p></article>
+        <article><span>10</span><h3>V rytmu dechu</h3><p>Pohyb a dech se propojují</p></article>
+        <article><span>20</span><h3>Pevný základ</h3><p>Praxe už má své místo</p></article>
+        <article><span>30</span><h3>Vinyasa</h3><p>Jednotlivé lekce se spojují v cestu</p></article>
+        <article><span>50</span><h3>Ve flow</h3><p>Pohyb začíná přirozeně plynout</p></article>
+        <article><span>75</span><h3>Klid v pohybu</h3><p>Stabilita i během náročnější praxe</p></article>
+        <article><span>100</span><h3>Stálá praxe</h3><p>Výrazný milník pravidelnosti</p></article>
+        <article><span>150</span><h3>Vnitřní rovnováha</h3><p>Síla a uvolnění v rovnováze</p></article>
+        <article><span>200</span><h3>Sthira sukham</h3><p>Stabilita a lehkost</p></article>
+        <article><span>300</span><h3>Hluboká praxe</h3><p>Dlouhodobá cesta bez spěchu</p></article>
+        <article><span>400</span><h3>Srdce komunity</h3><p>Společná praxe vytváří atmosféru</p></article>
+        <article><span>500</span><h3>Mistr praxe</h3><p>Výjimečný milník vytrvalosti</p></article>
+      </div>
+      <p class="journey-context">„Mistr praxe“ je slavnostní milník účasti, nikoliv učitelská kvalifikace.</p>
+    </section>
+
+    <section class="section journey-community" id="komunita">
+      <div class="section-heading split">
+        <div><p class="eyebrow">Dobrovolně a společně</p><h2>Společně na cestě</h2></div>
+        <p>Zobrazuje se nejvýše prvních 20 lidí, kteří si veřejné zobrazení sami zapnuli. Každý používá vlastní veřejné jméno nebo přezdívku.</p>
+      </div>
+      <div class="journey-leaderboard" id="journey-leaderboard" aria-live="polite">
+        <p class="journey-loading">Načítám společnou cestu…</p>
+      </div>
+      <div class="journey-community-note">
+        <p><strong>Chceš se přidat?</strong> V účtu otevři záložku Moje cesta, zvol si veřejné jméno a dobrovolně zapni zobrazení.</p>
+        <a class="button button-small" href="index.html#ucet">Nastavit v účtu</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="brand"><img class="brand-logo" src="assets/joga-na-hallu-logo.svg" alt="Jóga na HALLU" /></div>
+    <p>Každá lekce se počítá. Na další není kam spěchat.</p>
+    <div><a href="index.html">Domů</a><a href="podminky.html">Podmínky</a><a href="ochrana-osobnich-udaju.html">Ochrana osobních údajů</a></div>
+  </footer>
+
+  <script>
+    const SUPABASE_URL = 'https://zltcizbzckyazlxilzwq.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_X1KLjQkjhSe3Sl-McSQNBA_hz9d5HKR';
+    const milestones = [
+      [1, 'První nádech'], [5, 'Pozdrav slunci'], [10, 'V rytmu dechu'],
+      [20, 'Pevný základ'], [30, 'Vinyasa'], [50, 'Ve flow'],
+      [75, 'Klid v pohybu'], [100, 'Stálá praxe'], [150, 'Vnitřní rovnováha'],
+      [200, 'Sthira sukham'], [300, 'Hluboká praxe'], [400, 'Srdce komunity'],
+      [500, 'Mistr praxe']
+    ];
+
+    function statusFor(count) {
+      return [...milestones].reverse().find(([minimum]) => count >= minimum)?.[1] || 'Na začátku cesty';
+    }
+
+    function participantRow(participant) {
+      const row = document.createElement('div');
+      row.className = 'journey-leaderboard-row';
+      const position = document.createElement('span');
+      position.className = 'journey-position';
+      position.textContent = `${participant.position}.`;
+      const person = document.createElement('div');
+      const name = document.createElement('strong');
+      name.textContent = participant.display_name;
+      const status = document.createElement('small');
+      status.textContent = statusFor(participant.attended_count);
+      person.append(name, status);
+      const count = document.createElement('b');
+      count.textContent = `${participant.attended_count} ${participant.attended_count === 1 ? 'lekce' : participant.attended_count < 5 ? 'lekce' : 'lekcí'}`;
+      row.append(position, person, count);
+      return row;
+    }
+
+    async function loadLeaderboard() {
+      const container = document.querySelector('#journey-leaderboard');
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/public_journey_leaderboard`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        if (!response.ok) throw new Error('LEADERBOARD_UNAVAILABLE');
+        const participants = await response.json();
+        container.replaceChildren();
+        if (!participants.length) {
+          const empty = document.createElement('p');
+          empty.className = 'journey-empty';
+          empty.textContent = 'Veřejná společná cesta zatím čeká na první dobrovolné účastníky.';
+          container.append(empty);
+          return;
+        }
+        participants.slice(0, 20).forEach((participant) => container.append(participantRow(participant)));
+      } catch {
+        container.innerHTML = '<p class="journey-empty">Společnou cestu se teď nepodařilo načíst. Zkus to prosím později.</p>';
+      }
+    }
+
+    loadLeaderboard();
+  </script>
+</body>
+</html>

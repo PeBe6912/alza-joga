@@ -7,6 +7,21 @@ const PUBLIC_SETTING_DEFAULTS = {
   studio_capacity: 20,
 };
 const DONATION_PAYMENT_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. Platba prostřednictvím QR kódu směřuje přímo na účet organizace Dobrý anděl.';
+const JOURNEY_MILESTONES = [
+  { count: 1, name: 'První nádech', note: 'Začátek cesty' },
+  { count: 5, name: 'Pozdrav slunci', note: 'První pravidelnější praxe' },
+  { count: 10, name: 'V rytmu dechu', note: 'Pohyb a dech se propojují' },
+  { count: 20, name: 'Pevný základ', note: 'Praxe už má své místo' },
+  { count: 30, name: 'Vinyasa', note: 'Jednotlivé lekce se spojují v cestu' },
+  { count: 50, name: 'Ve flow', note: 'Pohyb začíná přirozeně plynout' },
+  { count: 75, name: 'Klid v pohybu', note: 'Stabilita i během náročnější praxe' },
+  { count: 100, name: 'Stálá praxe', note: 'Výrazný milník pravidelnosti' },
+  { count: 150, name: 'Vnitřní rovnováha', note: 'Síla a uvolnění v rovnováze' },
+  { count: 200, name: 'Sthira sukham', note: 'Stabilita a lehkost' },
+  { count: 300, name: 'Hluboká praxe', note: 'Dlouhodobá cesta bez spěchu' },
+  { count: 400, name: 'Srdce komunity', note: 'Společná praxe vytváří atmosféru' },
+  { count: 500, name: 'Mistr praxe', note: 'Výjimečný milník vytrvalosti' },
+];
 
 async function loadPublicSettings() {
   try {
@@ -69,6 +84,9 @@ const classList = document.querySelector('#class-list');
 const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
 
+document.querySelector('#main-menu a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="cesta-praxe.html">Cesta praxe</a>');
+document.querySelector('footer a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="cesta-praxe.html">Cesta praxe</a>');
+
 function spotsLeft(lesson) {
   return Math.max(lesson.capacity - lesson.booked, 0);
 }
@@ -80,6 +98,20 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function journeyMilestone(attendedCount) {
+  return [...JOURNEY_MILESTONES].reverse().find((item) => attendedCount >= item.count) || { count: 0, name: 'Na začátku cesty', note: 'První milník čeká po absolvované lekci' };
+}
+
+function nextJourneyMilestone(attendedCount) {
+  return JOURNEY_MILESTONES.find((item) => attendedCount < item.count) || null;
+}
+
+function journeyProgress(attendedCount, current, next) {
+  if (!next) return 100;
+  const span = Math.max(next.count - current.count, 1);
+  return Math.max(0, Math.min(100, ((attendedCount - current.count) / span) * 100));
 }
 
 function startOfWeek(value) {
@@ -704,6 +736,70 @@ async function loadAccountData() {
   return result;
 }
 
+async function journeyRpc(functionName, payload = {}) {
+  if (userSession?.expires_at && userSession.expires_at <= Math.floor(Date.now() / 1000) + 30) {
+    await refreshUserSession();
+  }
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${userSession.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const result = response.status === 204 ? null : await response.json().catch(() => null);
+  if (!response.ok) {
+    const code = result?.message || '';
+    if (code.includes('PUBLIC_NAME_REQUIRED')) throw new Error('Pro veřejné zobrazení vyplň veřejné jméno.');
+    if (code.includes('INVALID_PUBLIC_NAME')) throw new Error('Veřejné jméno musí mít 2 až 40 znaků.');
+    throw new Error('Nastavení Cesty praxe se nepodařilo uložit.');
+  }
+  return result;
+}
+
+function journeyPanel(data) {
+  const attendedCount = Number(data.journey?.attendedCount || 0);
+  const current = journeyMilestone(attendedCount);
+  const next = nextJourneyMilestone(attendedCount);
+  const progress = journeyProgress(attendedCount, current, next);
+  const achieved = JOURNEY_MILESTONES.filter((item) => attendedCount >= item.count);
+  const lessonsLeft = next ? next.count - attendedCount : 0;
+  const remainingText = next
+    ? `${lessonsLeft} ${lessonsLeft === 1 ? 'lekce' : lessonsLeft < 5 ? 'lekce' : 'lekcí'} do milníku ${next.name}`
+    : 'Nejvyšší milník je dosažený';
+  const milestoneNotice = current.count > Number(data.journey?.lastMilestoneSeen || 0)
+    ? `<div class="journey-celebration"><p class="eyebrow">Nový milník</p><h3>${escapeHtml(current.name)}</h3><p>Máš za sebou ${attendedCount} společných ${attendedCount === 1 ? 'lekci' : attendedCount < 5 ? 'lekce' : 'lekcí'}. Děkujeme, že tvoříš Jógu na HALLU s námi.</p></div>`
+    : '';
+
+  return `<div class="account-dashboard-content journey-account">
+    ${milestoneNotice}
+    <section class="journey-summary">
+      <div><p class="eyebrow">Tvůj současný status</p><h2>${escapeHtml(current.name)}</h2><p>${escapeHtml(current.note)}</p></div>
+      <strong>${attendedCount}<small>absolvovaných lekcí</small></strong>
+    </section>
+    <section class="account-card">
+      <div class="journey-progress-copy"><b>${escapeHtml(remainingText)}</b><span>${next ? `${attendedCount} / ${next.count}` : '500+'}</span></div>
+      <div class="journey-progress" role="progressbar" aria-valuenow="${Math.round(progress)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${progress}%"></i></div>
+      <p class="form-hint">Každá lekce se počítá. Na další není kam spěchat.</p>
+    </section>
+    <section class="account-card">
+      <div class="account-card-heading"><div><p class="eyebrow">Tvoje milníky</p><h2>Dosavadní cesta</h2></div><a class="text-button" href="cesta-praxe.html">Zobrazit celou cestu</a></div>
+      <div class="journey-earned">${achieved.length ? achieved.map((item) => `<div><span>${item.count}</span><b>${escapeHtml(item.name)}</b></div>`).join('') : '<p class="account-empty">První milník získáš po své první absolvované lekci.</p>'}</div>
+    </section>
+    <section class="account-card">
+      <div class="account-card-heading"><div><p class="eyebrow">Dobrovolné nastavení</p><h2>Společně na cestě</h2></div></div>
+      <p class="form-hint">Veřejné zobrazení je nepovinné. E-mail ani celé jméno nikdy nezveřejníme.</p>
+      <form class="journey-visibility-form" data-journey-settings>
+        <div class="field"><label for="journey-public-name">Veřejné jméno nebo přezdívka</label><input id="journey-public-name" name="publicDisplayName" maxlength="40" value="${escapeHtml(data.profile.publicDisplayName || '')}" placeholder="Například Petr B."><small>Takto se zobrazíš na veřejné stránce.</small></div>
+        <label class="checkbox"><input name="leaderboardOptIn" type="checkbox" ${data.profile.leaderboardOptIn ? 'checked' : ''}><span>Chci se dobrovolně zobrazovat mezi prvními 20 účastníky na stránce Cesta praxe.</span></label>
+        <button class="button button-small" type="submit">Uložit nastavení</button>
+      </form>
+    </section>
+  </div>`;
+}
+
 function accountLessonCard(reservation, upcoming) {
   const startsAt = new Date(reservation.startsAt);
   const day = new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', timeZone: 'Europe/Prague' }).format(startsAt);
@@ -821,6 +917,29 @@ function bindAccountDashboard() {
   accountPanel.querySelector('[data-account-edit-profile]')?.addEventListener('click', openAccountProfileEditor);
   accountPanel.querySelector('[data-account-edit-password]')?.addEventListener('click', openAccountPasswordEditor);
   accountPanel.querySelector('[data-account-delete]')?.addEventListener('click', openAccountDeletion);
+  accountPanel.querySelector('[data-journey-settings]')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type="submit"]');
+    const formData = new FormData(event.target);
+    const publicDisplayName = String(formData.get('publicDisplayName') || '').trim();
+    const leaderboardOptIn = formData.get('leaderboardOptIn') === 'on';
+    if (leaderboardOptIn && publicDisplayName.length < 2) {
+      showToast('Pro veřejné zobrazení vyplň veřejné jméno.');
+      return;
+    }
+    button.disabled = true;
+    try {
+      await journeyRpc('account_update_journey', {
+        p_public_display_name: publicDisplayName || null,
+        p_leaderboard_opt_in: leaderboardOptIn,
+      });
+      await renderAccountDashboard();
+      showToast('Nastavení Cesty praxe je uložené.');
+    } catch (error) {
+      button.disabled = false;
+      showToast(error.message);
+    }
+  });
 }
 
 async function renderAccountDashboard() {
@@ -831,9 +950,14 @@ async function renderAccountDashboard() {
   const history = data.reservations.filter((item) => new Date(item.startsAt) < now || item.status === 'cancelled').sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
   const relation = data.profile.relation === 'guest' ? 'Host / externista' : 'Zaměstnanec Alzy';
   const lessonsPanel = `<div class="account-dashboard-content"><section class="account-card account-reservations"><div class="account-card-heading"><div><p class="eyebrow">Co tě čeká</p><h2>Naplánované lekce</h2></div>${upcoming.length ? '<a class="text-button" href="#lekce">Vybrat další lekci</a>' : ''}</div><div class="account-lesson-list">${upcoming.map((item) => accountLessonCard(item, true)).join('') || '<div class="account-empty-state"><h3>Zatím nemáš naplánovanou žádnou lekci</h3><p>Vyber si termín, který ti vyhovuje.</p><a class="button button-small" href="#lekce">Vybrat lekci</a></div>'}</div></section><section class="account-card account-history"><div class="account-card-heading"><div><p class="eyebrow">Tvoje praxe</p><h2>Historie lekcí</h2></div></div><div class="account-lesson-list">${history.map((item) => accountLessonCard(item, false)).join('') || '<p class="account-empty">Historie je zatím prázdná.</p>'}</div></section></div>`;
+  const journey = journeyPanel(data);
   const settingsPanel = `<section class="account-card account-settings"><div class="account-card-heading"><div><p class="eyebrow">Přihlášení a profil</p><h2>Nastavení účtu</h2></div></div><div class="account-setting-row"><div><h3>Osobní údaje</h3><p>${escapeHtml(data.profile.fullName)} · ${escapeHtml(relation)}<br>${escapeHtml(data.email)}</p></div><button class="button button-small button-secondary" type="button" data-account-edit-profile>Upravit</button></div><div class="account-setting-row"><div><h3>Heslo</h3><p>Změň si heslo používané k přihlášení.</p></div><button class="button button-small button-secondary" type="button" data-account-edit-password>Změnit heslo</button></div><div class="account-setting-row account-setting-danger"><div><h3>Smazání účtu</h3><p>Profil se odstraní a dřívější rezervace se od něj odpojí.</p></div><button class="text-button danger" type="button" data-account-delete>Smazat účet</button></div></section>`;
-  accountPanel.innerHTML = `${accountRecoveryMode ? '<div class="account-notice"><strong>Nastav si nové heslo.</strong> Odkaz z e-mailu byl ověřený.</div>' : ''}<div class="account-profile-bar"><div class="account-avatar" aria-hidden="true">${escapeHtml(data.profile.fullName.trim().charAt(0).toLocaleUpperCase('cs-CZ'))}</div><div><h2>${escapeHtml(data.profile.fullName)}</h2><p>${escapeHtml(data.email)} <span>·</span> ${escapeHtml(relation)}</p></div><button class="text-button" type="button" data-account-logout>Odhlásit se</button></div><div class="account-tabs" role="tablist" aria-label="Obsah účtu"><button type="button" role="tab" aria-selected="${activeAccountTab === 'lessons'}" class="${activeAccountTab === 'lessons' ? 'active' : ''}" data-account-tab="lessons">Moje lekce</button><button type="button" role="tab" aria-selected="${activeAccountTab === 'settings'}" class="${activeAccountTab === 'settings' ? 'active' : ''}" data-account-tab="settings">Nastavení účtu</button></div>${activeAccountTab === 'settings' ? settingsPanel : lessonsPanel}`;
+  accountPanel.innerHTML = `${accountRecoveryMode ? '<div class="account-notice"><strong>Nastav si nové heslo.</strong> Odkaz z e-mailu byl ověřený.</div>' : ''}<div class="account-profile-bar"><div class="account-avatar" aria-hidden="true">${escapeHtml(data.profile.fullName.trim().charAt(0).toLocaleUpperCase('cs-CZ'))}</div><div><h2>${escapeHtml(data.profile.fullName)}</h2><p>${escapeHtml(data.email)} <span>·</span> ${escapeHtml(relation)}</p></div><button class="text-button" type="button" data-account-logout>Odhlásit se</button></div><div class="account-tabs" role="tablist" aria-label="Obsah účtu"><button type="button" role="tab" aria-selected="${activeAccountTab === 'lessons'}" class="${activeAccountTab === 'lessons' ? 'active' : ''}" data-account-tab="lessons">Moje lekce</button><button type="button" role="tab" aria-selected="${activeAccountTab === 'journey'}" class="${activeAccountTab === 'journey' ? 'active' : ''}" data-account-tab="journey">Moje cesta</button><button type="button" role="tab" aria-selected="${activeAccountTab === 'settings'}" class="${activeAccountTab === 'settings' ? 'active' : ''}" data-account-tab="settings">Nastavení účtu</button></div>${activeAccountTab === 'settings' ? settingsPanel : activeAccountTab === 'journey' ? journey : lessonsPanel}`;
   bindAccountDashboard();
+  const currentMilestone = journeyMilestone(Number(data.journey?.attendedCount || 0));
+  if (activeAccountTab === 'journey' && currentMilestone.count > Number(data.journey?.lastMilestoneSeen || 0)) {
+    journeyRpc('account_mark_milestone_seen', { p_milestone: currentMilestone.count }).catch(() => {});
+  }
   if (accountRecoveryMode && !dialog.open) openAccountPasswordEditor();
 }
 
