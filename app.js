@@ -709,9 +709,22 @@ function accountLessonCard(reservation, upcoming) {
   const day = new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', timeZone: 'Europe/Prague' }).format(startsAt);
   const month = new Intl.DateTimeFormat('cs-CZ', { month: 'short', timeZone: 'Europe/Prague' }).format(startsAt).replace('.', '');
   const date = new Intl.DateTimeFormat('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Prague' }).format(startsAt);
-  const status = reservation.status === 'cancelled' ? 'Zrušeno' : reservation.status === 'attended' ? 'Účast potvrzena' : reservation.status === 'no_show' ? 'Nedorazil/a' : upcoming ? 'Rezervováno' : 'Proběhlo';
+  const status = reservation.status === 'cancelled' ? 'Zrušeno' : reservation.status === 'attended' ? 'Zúčastnil/a ses' : reservation.status === 'no_show' ? 'Nedorazil/a' : upcoming ? 'Rezervováno' : 'Lekce proběhla';
   const canCancel = upcoming && reservation.status === 'confirmed' && new Date(reservation.cancelBefore) >= new Date();
-  return `<article class="account-lesson-card${reservation.status === 'cancelled' ? ' is-cancelled' : ''}"><div class="account-lesson-date"><strong>${escapeHtml(day)}</strong><span>${escapeHtml(month)}</span></div><div class="account-lesson-details"><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(reservation.teacher)} · ${escapeHtml(reservation.location)}</p></div><div class="account-lesson-actions"><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span>${canCancel ? `<button class="text-button" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</div></article>`;
+  const paymentLabel = reservation.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : `${reservation.priceCzk ?? 0} Kč`;
+  const paymentQr = reservation.status === 'attended' && reservation.paymentQrUrl
+    ? `<button class="account-payment-qr" type="button" data-account-payment="${reservation.id}" aria-label="Zvětšit QR kód k platbě"><img src="${escapeHtml(reservation.paymentQrUrl)}" alt=""><span>${escapeHtml(paymentLabel)}</span></button>`
+    : '';
+  return `<article class="account-lesson-card${reservation.status === 'cancelled' ? ' is-cancelled' : ''}"><div class="account-lesson-date"><strong>${escapeHtml(day)}</strong><span>${escapeHtml(month)}</span></div><div class="account-lesson-details"><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(reservation.teacher)} · ${escapeHtml(reservation.location)}</p></div><div class="account-lesson-actions"><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span>${paymentQr}${canCancel ? `<button class="text-button" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</div></article>`;
+}
+
+function openAccountPaymentQr(reservationId) {
+  const reservation = accountData?.reservations.find((item) => item.id === reservationId);
+  if (!reservation?.paymentQrUrl || reservation.status !== 'attended') return;
+  const donation = reservation.paymentMode === 'donation';
+  const paymentLabel = donation ? 'Dobrovolný příspěvek' : `${reservation.priceCzk ?? 0} Kč`;
+  document.querySelector('#booking-content').innerHTML = `<div class="booking-panel account-payment-panel"><p class="eyebrow">Platba po lekci</p><h2>${escapeHtml(reservation.title)}</h2><img class="account-payment-qr-large" src="${escapeHtml(reservation.paymentQrUrl)}" alt="QR kód – ${escapeHtml(paymentLabel)}"><strong class="account-payment-amount">${escapeHtml(paymentLabel)}</strong>${reservation.paymentNote ? `<p class="form-hint">${escapeHtml(reservation.paymentNote)}</p>` : ''}</div>`;
+  dialog.showModal();
 }
 
 function openAccountDeletion() {
@@ -800,6 +813,7 @@ function bindAccountDashboard() {
       showToast(error.message);
     }
   }));
+  accountPanel.querySelectorAll('[data-account-payment]').forEach((button) => button.addEventListener('click', () => openAccountPaymentQr(button.dataset.accountPayment)));
   accountPanel.querySelector('[data-account-logout]')?.addEventListener('click', () => {
     clearUserSession();
     renderAccountLogin('Byl/a jsi odhlášen/a.');

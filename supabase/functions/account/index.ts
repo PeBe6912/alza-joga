@@ -25,6 +25,8 @@ type Dashboard = {
     location: string;
     paymentMode: string;
     priceCzk: number | null;
+    paymentNote: string;
+    paymentQrUrl: string | null;
   }>;
 };
 
