@@ -903,7 +903,7 @@ function journeyPanel(data) {
     <section class="account-card">
       <div class="journey-progress-copy"><b>${escapeHtml(remainingText)}</b><span>${next ? `${attendedCount} / ${next.count}` : '500+'}</span></div>
       <div class="journey-progress" role="progressbar" aria-valuenow="${Math.round(progress)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${progress}%"></i></div>
-      <p class="form-hint">Každá lekce se počítá. Na další není kam spěchat.</p>
+      <p class="form-hint">Každá lekce se počítá. Pravidelnost dělá rozdíl.</p>
     </section>
     <section class="account-card">
       <div class="account-card-heading"><div><p class="eyebrow">Tvoje milníky</p><h2>Dosavadní cesta</h2></div><a class="text-button" href="cesta-praxe.html">Zobrazit celou cestu</a></div>
