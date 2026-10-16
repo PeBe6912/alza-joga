@@ -539,10 +539,27 @@ function closeDialog() {
 document.querySelector('.dialog-close').addEventListener('click', closeDialog);
 
 function showToast(message) {
+  if (dialog.open) {
+    const panel = dialog.querySelector('.booking-panel') || document.querySelector('#booking-content');
+    let feedback = dialog.querySelector('.dialog-feedback');
+    if (!feedback) {
+      feedback = document.createElement('p');
+      feedback.className = 'dialog-feedback';
+      feedback.setAttribute('role', 'alert');
+      const submitButton = panel.querySelector('[type="submit"]');
+      if (submitButton) submitButton.insertAdjacentElement('beforebegin', feedback);
+      else panel.append(feedback);
+    }
+    feedback.textContent = message;
+    feedback.scrollIntoView({ block: 'nearest' });
+    return;
+  }
   toast.textContent = message;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 3800);
 }
+
+dialog.addEventListener('submit', () => dialog.querySelector('.dialog-feedback')?.remove(), true);
 
 const publicView = document.querySelector('#public-view');
 const adminView = document.querySelector('#admin-view');
@@ -1419,6 +1436,9 @@ function openNewLesson() {
   starts.setDate(starts.getDate() + 1);
   starts.setHours(17, 0, 0, 0);
   const ends = new Date(starts.getTime() + 60 * 60 * 1000);
+  const earliestStart = new Date();
+  earliestStart.setSeconds(0, 0);
+  earliestStart.setMinutes(earliestStart.getMinutes() + 1);
   const instructorOptions = adminInstructors.map((instructor) => `<option value="${instructor.id}">${escapeHtml(instructor.name)}</option>`).join('');
   const initialPaymentMode = adminInstructors[0].payment_mode === 'donation' ? 'donation' : 'paid';
   const initialPrice = adminInstructors[0].price_czk ?? Number(adminSettings.default_paid_price);
@@ -1428,7 +1448,7 @@ function openNewLesson() {
       <div class="field full"><label for="new-lesson-title">Název lekce</label><input id="new-lesson-title" name="title" maxlength="120" required></div>
       <div class="field"><label for="new-lesson-instructor">Lektor</label><select id="new-lesson-instructor" name="instructorId" required>${instructorOptions}</select></div>
       <div class="field"><label for="new-lesson-language">Jazyk</label><select id="new-lesson-language" name="language" required><option value="cs" selected>Čeština</option><option value="en">Angličtina</option></select></div>
-      <div class="field"><label for="new-lesson-start">Začátek</label><input id="new-lesson-start" name="startsAt" type="datetime-local" value="${dateTimeLocalValue(starts)}" required></div>
+      <div class="field"><label for="new-lesson-start">Začátek</label><input id="new-lesson-start" name="startsAt" type="datetime-local" min="${dateTimeLocalValue(earliestStart)}" value="${dateTimeLocalValue(starts)}" required></div>
       <div class="field"><label for="new-lesson-end">Konec</label><input id="new-lesson-end" name="endsAt" type="datetime-local" value="${dateTimeLocalValue(ends)}" required></div>
       <div class="field"><label for="new-lesson-capacity">Kapacita</label><input id="new-lesson-capacity" name="capacity" type="number" min="1" max="100" value="20" required></div>
       <div class="field"><label for="new-lesson-repeat">Počet lekcí v sérii</label><input id="new-lesson-repeat" name="repeatCount" type="number" min="1" max="52" value="1" required></div>
@@ -1474,6 +1494,14 @@ async function createLessons(event) {
   const data = new FormData(event.target);
   const startsAt = new Date(data.get('startsAt'));
   const endsAt = new Date(data.get('endsAt'));
+  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
+    showToast('Zkontroluj datum a čas lekce.');
+    return;
+  }
+  if (startsAt <= new Date()) {
+    showToast('Začátek nové lekce musí být v budoucnosti.');
+    return;
+  }
   if (endsAt <= startsAt) {
     showToast('Konec lekce musí být později než začátek.');
     return;
@@ -1494,6 +1522,9 @@ async function createLessons(event) {
       priceCzk: data.get('paymentMode') === 'paid' ? Number(data.get('priceCzk')) : null,
       minimumAttendance: Number(data.get('minimumAttendance')),
     });
+    if (!Number.isInteger(result.created) || result.created < 1) {
+      throw new Error('Lekce nebyla vytvořena. Zkus to prosím znovu.');
+    }
     closeDialog();
     await Promise.all([loadLessons(), loadAdminLessons()]);
     renderAdmin('overview');
