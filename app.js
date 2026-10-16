@@ -59,6 +59,7 @@ let activeAdminTab = 'overview';
 const LESSON_PAGE_SIZE = 6;
 let lessonDisplayLimit = LESSON_PAGE_SIZE;
 let publicCalendarStart = startOfWeek(new Date());
+let adminCalendarMonth = startOfMonth(new Date());
 const classList = document.querySelector('#class-list');
 const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
@@ -84,6 +85,19 @@ function startOfWeek(value) {
   return date;
 }
 
+function startOfMonth(value) {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  date.setDate(1);
+  return date;
+}
+
+function addMonths(value, months) {
+  const date = startOfMonth(value);
+  date.setMonth(date.getMonth() + months);
+  return date;
+}
+
 function addDays(value, days) {
   const date = new Date(value);
   date.setDate(date.getDate() + days);
@@ -104,21 +118,69 @@ function calendarRangeLabel(start) {
   return `${format.format(start)}–${format.format(end)}`;
 }
 
+function calendarMonthLabel(value) {
+  const format = new Intl.DateTimeFormat('cs-CZ', { month: 'long', year: 'numeric', timeZone: 'Europe/Prague' });
+  const label = format.format(value);
+  return label.charAt(0).toLocaleUpperCase('cs-CZ') + label.slice(1);
+}
+
+function calendarEventCard(event, { admin = false } = {}) {
+  const occupiedStart = event.occupiedStartsAt || event.startsAt;
+  const occupiedEnd = event.occupiedEndsAt || event.endsAt;
+  const actions = admin && event.kind === 'private'
+    ? `<div class="calendar-event-actions"><button class="text-button" data-edit-studio-block="${event.id}">Upravit</button><button class="text-button danger" data-delete-studio-block="${event.id}">Smazat</button></div>`
+    : '';
+  return `<article class="calendar-event calendar-event-${event.kind}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
+}
+
 function calendarDays(start, events, { admin = false } = {}) {
   const dayFormat = new Intl.DateTimeFormat('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'Europe/Prague' });
   return Array.from({ length: 7 }, (_, index) => {
     const date = addDays(start, index);
     const key = pragueDateKey(date);
     const dayEvents = events.filter((event) => pragueDateKey(event.startsAt) === key).sort((a, b) => new Date(a.occupiedStartsAt || a.startsAt) - new Date(b.occupiedStartsAt || b.startsAt));
-    const cards = dayEvents.map((event) => {
-      const occupiedStart = event.occupiedStartsAt || event.startsAt;
-      const occupiedEnd = event.occupiedEndsAt || event.endsAt;
-      const actions = admin && event.kind === 'private'
-        ? `<div class="calendar-event-actions"><button class="text-button" data-edit-studio-block="${event.id}">Upravit</button><button class="text-button danger" data-delete-studio-block="${event.id}">Smazat</button></div>`
-        : '';
-      return `<article class="calendar-event calendar-event-${event.kind}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
-    }).join('');
+    const cards = dayEvents.map((event) => calendarEventCard(event, { admin })).join('');
     return `<section class="calendar-day"><h3>${escapeHtml(dayFormat.format(date))}</h3><div>${cards || '<p class="calendar-free">Volno</p>'}</div></section>`;
+  }).join('');
+}
+
+function adminMonthRange(month) {
+  const monthStart = startOfMonth(month);
+  const nextMonth = addMonths(monthStart, 1);
+  const gridStart = startOfWeek(monthStart);
+  const gridEnd = startOfWeek(addDays(nextMonth, 6));
+  return { monthStart, nextMonth, gridStart, gridEnd };
+}
+
+function adminMonthCalendar(month, events) {
+  const { monthStart, nextMonth, gridStart, gridEnd } = adminMonthRange(month);
+  const dayFormat = new Intl.DateTimeFormat('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'Europe/Prague' });
+  const todayKey = pragueDateKey(new Date());
+  const days = [];
+  for (let date = new Date(gridStart); date < gridEnd; date = addDays(date, 1)) {
+    const key = pragueDateKey(date);
+    const outside = date < monthStart || date >= nextMonth;
+    const dayEvents = events.filter((event) => pragueDateKey(event.startsAt) === key).sort((a, b) => new Date(a.occupiedStartsAt || a.startsAt) - new Date(b.occupiedStartsAt || b.startsAt));
+    const cards = dayEvents.map((event) => calendarEventCard(event, { admin: true })).join('');
+    days.push(`<section class="calendar-day month-calendar-day${outside ? ' is-outside-month' : ''}${key === todayKey ? ' is-today' : ''}"><h3>${escapeHtml(dayFormat.format(date))}</h3><div>${cards || '<p class="calendar-free">Volno</p>'}<button class="calendar-add-day" type="button" data-add-studio-block-date="${key}" aria-label="Přidat neveřejnou rezervaci na ${escapeHtml(dayFormat.format(date))}">+ Přidat</button></div></section>`);
+  }
+  return days.join('');
+}
+
+function adminMonthAgenda(month, events) {
+  const { monthStart, nextMonth } = adminMonthRange(month);
+  const dayFormat = new Intl.DateTimeFormat('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Prague' });
+  const monthEvents = events.filter((event) => new Date(event.startsAt) >= monthStart && new Date(event.startsAt) < nextMonth);
+  const grouped = new Map();
+  monthEvents.sort((a, b) => new Date(a.occupiedStartsAt || a.startsAt) - new Date(b.occupiedStartsAt || b.startsAt)).forEach((event) => {
+    const key = pragueDateKey(event.startsAt);
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(event);
+  });
+  if (!grouped.size) return '<p class="admin-calendar-empty">V tomto měsíci nejsou žádné lekce ani rezervace studia.</p>';
+  return [...grouped.entries()].map(([key, dayEvents]) => {
+    const date = new Date(`${key}T12:00:00`);
+    return `<section class="admin-agenda-day"><div class="admin-agenda-heading"><h3>${escapeHtml(dayFormat.format(date))}</h3><button class="text-button" type="button" data-add-studio-block-date="${key}">+ Přidat rezervaci</button></div><div>${dayEvents.map((event) => calendarEventCard(event, { admin: true })).join('')}</div></section>`;
   }).join('');
 }
 
@@ -657,7 +719,7 @@ async function loadAdminReservations() {
 
 async function loadAdminStudioBlocks() {
   const historyStart = new Date();
-  historyStart.setMonth(historyStart.getMonth() - 1);
+  historyStart.setMonth(historyStart.getMonth() - 12);
   const query = new URLSearchParams({
     select: 'id,title,category,starts_at,ends_at,buffer_minutes,contact_name,contact_email,notes,created_at',
     ends_at: `gte.${historyStart.toISOString()}`,
@@ -852,9 +914,7 @@ const STUDIO_BLOCK_CATEGORIES = {
   other: 'Jiná neveřejná akce',
 };
 
-function adminCalendarEvents() {
-  const from = publicCalendarStart;
-  const to = addDays(from, 7);
+function adminCalendarEvents(from, to) {
   const lessonEvents = adminLessons
     .filter((lesson) => lesson.status === 'published' && new Date(lesson.iso) < to && new Date(lesson.endsAt) > from)
     .map((lesson) => ({ id: lesson.id, kind: 'public', title: `${lesson.title} · ${lesson.teacher}`, startsAt: lesson.iso, endsAt: lesson.endsAt }));
@@ -873,22 +933,26 @@ function adminCalendarEvents() {
 }
 
 function calendarPanel() {
-  return `<div class="admin-card"><div class="admin-card-heading"><div><h2>Kalendář studia</h2><p class="admin-help">Veřejné lekce i neveřejné rezervace na jednom místě. Každá neveřejná akce automaticky blokuje dalších 15 minut před začátkem i po konci.</p></div><button class="button button-small" data-add-studio-block>+ Neveřejná rezervace</button></div><div class="calendar-toolbar"><button class="button button-small button-secondary" data-admin-calendar-move="-7">← Předchozí týden</button><strong>${escapeHtml(calendarRangeLabel(publicCalendarStart))}</strong><button class="button button-small button-secondary" data-admin-calendar-move="7">Další týden →</button></div><div class="studio-calendar admin-studio-calendar">${calendarDays(publicCalendarStart, adminCalendarEvents(), { admin: true })}</div><p class="calendar-legend"><span class="legend-public"></span> Veřejná lekce <span class="legend-private"></span> Neveřejná rezervace včetně rezervy</p></div>`;
+  const { gridStart, gridEnd } = adminMonthRange(adminCalendarMonth);
+  const events = adminCalendarEvents(gridStart, gridEnd);
+  return `<div class="admin-card"><div class="admin-card-heading"><div><h2>Kalendář studia</h2><p class="admin-help">Veřejné lekce i neveřejné rezervace na jednom místě. Každá neveřejná akce automaticky blokuje dalších 15 minut před začátkem i po konci.</p></div><button class="button button-small" data-add-studio-block>+ Neveřejná rezervace</button></div><div class="calendar-toolbar admin-calendar-toolbar"><button class="button button-small button-secondary" data-admin-calendar-move="-1">← Předchozí měsíc</button><strong>${escapeHtml(calendarMonthLabel(adminCalendarMonth))}</strong><button class="button button-small button-secondary" data-admin-calendar-today>Dnes</button><button class="button button-small button-secondary" data-admin-calendar-move="1">Další měsíc →</button></div><div class="admin-month-calendar" aria-label="Měsíční kalendář studia">${adminMonthCalendar(adminCalendarMonth, events)}</div><div class="admin-calendar-agenda" aria-label="Agenda studia pro vybraný měsíc">${adminMonthAgenda(adminCalendarMonth, events)}</div><p class="calendar-legend"><span class="legend-public"></span> Veřejná lekce <span class="legend-private"></span> Neveřejná rezervace včetně rezervy</p></div>`;
 }
 
-function studioBlockForm(block = null) {
+function studioBlockForm(block = null, presetStart = null) {
   const defaultStart = new Date();
   defaultStart.setMinutes(Math.ceil(defaultStart.getMinutes() / 15) * 15, 0, 0);
   defaultStart.setHours(defaultStart.getHours() + 1);
-  const start = block?.starts_at || defaultStart;
+  const start = block?.starts_at || presetStart || defaultStart;
   const end = block?.ends_at || new Date(new Date(start).getTime() + 60 * 60_000);
   const options = Object.entries(STUDIO_BLOCK_CATEGORIES).map(([value, label]) => `<option value="${value}" ${block?.category === value ? 'selected' : ''}>${escapeHtml(label)}</option>`).join('');
   return `<form class="booking-panel" id="studio-block-form"><p class="eyebrow">${block ? 'Úprava rezervace' : 'Nová rezervace'}</p><h2>Neveřejná rezervace studia</h2><div class="form-grid"><div class="field full"><label for="studio-block-title">Název pro administraci</label><input id="studio-block-title" name="title" maxlength="120" value="${escapeHtml(block?.title || '')}" placeholder="Např. privátní lekce pro tým HR" required></div><div class="field"><label for="studio-block-category">Typ akce</label><select id="studio-block-category" name="category" required>${options}</select></div><div class="field"><label>Rezerva</label><input value="15 minut před i po akci" disabled></div><div class="field"><label for="studio-block-start">Začátek akce</label><input id="studio-block-start" name="startsAt" type="datetime-local" value="${dateTimeLocalValue(start)}" required></div><div class="field"><label for="studio-block-end">Konec akce</label><input id="studio-block-end" name="endsAt" type="datetime-local" value="${dateTimeLocalValue(end)}" required></div><div class="field"><label for="studio-block-contact">Kontaktní osoba</label><input id="studio-block-contact" name="contactName" maxlength="120" value="${escapeHtml(block?.contact_name || '')}"></div><div class="field"><label for="studio-block-email">Kontaktní e-mail</label><input id="studio-block-email" name="contactEmail" type="email" maxlength="320" value="${escapeHtml(block?.contact_email || '')}"></div><div class="field full"><label for="studio-block-notes">Interní poznámka</label><textarea id="studio-block-notes" name="notes" maxlength="2000">${escapeHtml(block?.notes || '')}</textarea></div></div><p class="form-hint">Na veřejném webu se zobrazí pouze šedý blok „Studio obsazeno“. Název, kontakt ani poznámka se nezveřejní.</p><button class="button" type="submit">${block ? 'Uložit změny' : 'Rezervovat studio'}</button></form>`;
 }
 
-function openStudioBlockEditor(id = '') {
+function openStudioBlockEditor(id = '', requestedDate = '') {
   const block = adminStudioBlocks.find((item) => item.id === id) || null;
-  document.querySelector('#booking-content').innerHTML = studioBlockForm(block);
+  const requestedStart = !block && requestedDate ? new Date(`${requestedDate}T09:00:00`) : null;
+  const presetStart = requestedStart && !Number.isNaN(requestedStart.getTime()) ? requestedStart : null;
+  document.querySelector('#booking-content').innerHTML = studioBlockForm(block, presetStart);
   document.querySelector('#studio-block-start').addEventListener('change', (event) => {
     const start = new Date(event.target.value);
     if (Number.isNaN(start.getTime())) return;
@@ -976,13 +1040,17 @@ function renderAdmin(tab) {
   document.querySelectorAll('[data-delete-news]').forEach((button) => button.addEventListener('click', () => deleteNews(button.dataset.deleteNews)));
   document.querySelectorAll('[data-edit-lesson]').forEach((button) => button.addEventListener('click', () => openLessonEditor(button.dataset.editLesson)));
   document.querySelector('[data-add-studio-block]')?.addEventListener('click', () => openStudioBlockEditor());
+  document.querySelectorAll('[data-add-studio-block-date]').forEach((button) => button.addEventListener('click', () => openStudioBlockEditor('', button.dataset.addStudioBlockDate)));
   document.querySelectorAll('[data-edit-studio-block]').forEach((button) => button.addEventListener('click', () => openStudioBlockEditor(button.dataset.editStudioBlock)));
   document.querySelectorAll('[data-delete-studio-block]').forEach((button) => button.addEventListener('click', () => deleteStudioBlock(button.dataset.deleteStudioBlock)));
   document.querySelectorAll('[data-admin-calendar-move]').forEach((button) => button.addEventListener('click', async () => {
-    publicCalendarStart = addDays(publicCalendarStart, Number(button.dataset.adminCalendarMove));
-    await loadPublicStudioBlocks();
+    adminCalendarMonth = addMonths(adminCalendarMonth, Number(button.dataset.adminCalendarMove));
     renderAdmin('calendar');
   }));
+  document.querySelector('[data-admin-calendar-today]')?.addEventListener('click', () => {
+    adminCalendarMonth = startOfMonth(new Date());
+    renderAdmin('calendar');
+  });
   document.querySelectorAll('[data-cancel-lesson]').forEach((button) => button.addEventListener('click', () => cancelLesson(button.dataset.cancelLesson)));
   document.querySelectorAll('[data-confirm-lesson]').forEach((button) => button.addEventListener('click', () => confirmLowAttendance(button.dataset.confirmLesson)));
   document.querySelectorAll('[data-payment-lesson]').forEach((button) => button.addEventListener('click', () => openPaymentEmails(button.dataset.paymentLesson)));
