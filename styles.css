@@ -372,7 +372,7 @@ footer .brand-logo{height:72px}
 /* Shared public and administrative studio calendar. */
 .studio-cluster{scroll-margin-top:94px}
 .availability-section{background:#f4f5f1}
-.availability-section>*{width:min(100%,1200px)}
+.availability-section>*{width:min(100%,1440px)}
 .calendar-toolbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;margin:30px auto 18px}
 .calendar-toolbar strong{text-align:center;font-family:"Newsreader",serif;font-size:24px;font-weight:400}
 .studio-calendar{display:grid;grid-template-columns:repeat(7,minmax(145px,1fr));gap:10px;overflow-x:auto;padding-bottom:10px}
@@ -388,6 +388,8 @@ footer .brand-logo{height:72px}
 .calendar-legend span{width:14px;height:14px;margin-left:14px;border-radius:2px;background:#e4eee8;border-left:4px solid var(--sage-dark)}
 .calendar-legend span:first-child{margin-left:0}
 .calendar-legend .legend-private{background:#eceeed;border-left-color:#8b918e}
+.calendar-note{margin:26px auto 0;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;line-height:1.6}
+.calendar-note a{color:var(--ink);font-weight:700;border-bottom:1px solid currentColor}
 .calendar-event-actions{display:flex;gap:8px;margin-top:5px;border-top:1px solid rgba(31,40,36,.12);padding-top:5px}
 .calendar-event-actions .text-button{padding:2px 0;font-size:11px}
 .admin-studio-calendar .calendar-day{min-height:240px}
