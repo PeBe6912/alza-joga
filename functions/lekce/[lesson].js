@@ -110,7 +110,7 @@ function stripStaticMetadata(html) {
 }
 
 function addMetadata(html, metadata, canonicalUrl, lesson) {
-  const imageUrl = `${new URL(canonicalUrl).origin}/assets/joga-na-hallu-social-v2.png`;
+  const imageUrl = `${new URL(canonicalUrl).origin}/assets/joga-na-hallu-social-v3.png`;
   const jsonLd = structuredData(lesson, canonicalUrl, imageUrl);
   const tags = `
   <base href="/" />
