@@ -544,7 +544,7 @@ footer .brand-logo{height:72px}
 .journey-visibility-form{display:grid;gap:18px;max-width:620px}
 .journey-visibility-form .button{justify-self:start}
 .journey-page{background:#fbfaf7}
-.journey-hero{display:grid;grid-template-columns:1.2fr .8fr;align-items:center;gap:8vw;min-height:620px;padding:90px 8vw;background:var(--paper);overflow:hidden}
+.journey-hero{display:grid;grid-template-columns:1.2fr .8fr;align-items:center;gap:8vw;min-height:620px;padding:90px max(5vw,calc((100vw - 1440px)/2 + 5vw));background:var(--paper);overflow:hidden}
 .journey-hero h1{margin:0 0 26px;font-family:"Newsreader",serif;font-size:clamp(54px,7vw,94px);font-weight:400;line-height:.95;letter-spacing:-.03em}
 .journey-hero>div>p:not(.eyebrow){max-width:650px;color:var(--muted);font-size:18px;line-height:1.7}
 .journey-mandala{position:relative;display:grid;place-items:center;aspect-ratio:1;border:1px solid rgba(62,86,72,.25);border-radius:50%}
