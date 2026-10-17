@@ -476,6 +476,11 @@ footer .brand-logo{height:72px}
   .gallery-quote{display:grid;grid-column:1/-1;min-height:230px}
 }
 
+@media(min-width:601px) and (max-width:900px){
+  .studio-main img{object-fit:cover;object-position:center 42%}
+  .teacher-photo-portrait img{object-position:center 55%}
+}
+
 @media(max-width:600px){
   .teacher-photo-portrait{height:clamp(420px,100vw,600px)}
   .quote-break{padding:58px 24px}
