@@ -91,7 +91,7 @@ const allowedOrigins = new Set([
 ]);
 
 const DONATION_BOOKING_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. QR kód k příspěvku bude odeslán po skončení lekce a platba směřuje přímo na účet organizace Dobrý anděl.';
-const DONATION_PAYMENT_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. QR kód níže směřuje přímo na účet organizace Dobrý anděl.';
+const DONATION_PAYMENT_COPY = 'Posíláme ti QR kód pro dobrovolný příspěvek. Doporučená částka je 150 Kč, konečná výše příspěvku je ale jen na tobě. Platba směřuje přímo na účet organizace Dobrý anděl.';
 
 const OWNER_ADMIN_USER_ID = '3f8ca22d-aa9a-4cad-bb14-8e4fbfae1c97';
 
@@ -416,7 +416,7 @@ Deno.serve(async (req: Request) => {
         const absent = participant.status === 'no_show';
         const paymentCopy = donation
           ? DONATION_PAYMENT_COPY
-          : `Zaplať prosím ${batch.price_czk ?? 0} Kč pomocí QR kódu níže.`;
+          : `Posíláme ti QR kód pro platbu za lekci. Částka k úhradě je ${batch.price_czk ?? 0} Kč.`;
         const attendanceCopy = absent
           ? `<p>na lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}) jsi měl/a rezervované místo, ale nakonec ses nezúčastnil/a nebo byla rezervace zrušena méně než ${batch.cancellation_hours} hodin před začátkem lekce.</p>
             <p>Rezervaci je možné bez úhrady zrušit nejpozději ${batch.cancellation_hours} hodin před začátkem lekce. Při pozdějším zrušení nebo neúčasti se lekce hradí.</p>`
