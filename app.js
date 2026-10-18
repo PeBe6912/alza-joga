@@ -1337,6 +1337,8 @@ function setAdminTabUrl(tab, { replace = false } = {}) {
 
 function scrollAdminToTop() {
   window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  adminView.scrollTop = 0;
+  document.querySelector('.admin-content').scrollTop = 0;
 }
 
 async function openAdmin({ updateUrl = true } = {}) {

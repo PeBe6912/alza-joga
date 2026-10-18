@@ -103,7 +103,9 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
 .footer-link-conditions{order:1}.footer-link-privacy{order:2}.footer-link-journey{order:3}.footer-link-account{order:4}.footer-admin-link{order:5}
 
 @media(min-width:901px){
+  .admin-shell{height:100vh;min-height:0;overflow:hidden}
   .admin-sidebar{position:sticky;top:0;height:100vh;align-self:start;overflow-y:auto}
+  .admin-content{min-height:0;height:100vh;overflow-y:auto}
 }
 
 @media(max-width:600px){
