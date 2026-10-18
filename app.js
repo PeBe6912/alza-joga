@@ -178,13 +178,24 @@ function calendarMonthLabel(value) {
   return label.charAt(0).toLocaleUpperCase('cs-CZ') + label.slice(1);
 }
 
+function instructorCalendarClass(teacher) {
+  const normalizedName = String(teacher || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  if (normalizedName.includes('daniela stastna')) return ' calendar-instructor-daniela';
+  if (normalizedName.includes('petr bena')) return ' calendar-instructor-petr';
+  return '';
+}
+
 function calendarEventCard(event, { admin = false } = {}) {
   const occupiedStart = event.occupiedStartsAt || event.startsAt;
   const occupiedEnd = event.occupiedEndsAt || event.endsAt;
   const actions = admin && event.kind === 'private'
     ? `<div class="calendar-event-actions"><button class="text-button" data-edit-studio-block="${event.id}">Upravit</button><button class="text-button danger" data-delete-studio-block="${event.id}">Smazat</button></div>`
     : '';
-  return `<article class="calendar-event calendar-event-${event.kind}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
+  const instructorClass = event.kind === 'public' ? instructorCalendarClass(event.teacher) : '';
+  return `<article class="calendar-event calendar-event-${event.kind}${instructorClass}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
 }
 
 function calendarDays(start, events, { admin = false } = {}) {
@@ -684,7 +695,7 @@ function publicCalendarEvents() {
   const to = addDays(from, 7);
   const publicLessons = lessons
     .filter((lesson) => new Date(lesson.iso) < to && new Date(lesson.endsAt) > from)
-    .map((lesson) => ({ id: lesson.id, kind: 'public', title: lesson.title, startsAt: lesson.iso, endsAt: lesson.endsAt }));
+    .map((lesson) => ({ id: lesson.id, kind: 'public', title: `${lesson.title} · ${lesson.teacher}`, teacher: lesson.teacher, startsAt: lesson.iso, endsAt: lesson.endsAt }));
   return [...publicLessons, ...publicStudioBlocks];
 }
 
@@ -1692,7 +1703,7 @@ const STUDIO_BLOCK_CATEGORIES = {
 function adminCalendarEvents(from, to) {
   const lessonEvents = adminLessons
     .filter((lesson) => lesson.status === 'published' && new Date(lesson.iso) < to && new Date(lesson.endsAt) > from)
-    .map((lesson) => ({ id: lesson.id, kind: 'public', title: `${lesson.title} · ${lesson.teacher}`, startsAt: lesson.iso, endsAt: lesson.endsAt }));
+    .map((lesson) => ({ id: lesson.id, kind: 'public', title: `${lesson.title} · ${lesson.teacher}`, teacher: lesson.teacher, startsAt: lesson.iso, endsAt: lesson.endsAt }));
   const privateEvents = adminStudioBlocks
     .filter((block) => new Date(block.starts_at) < to && new Date(block.ends_at) > from)
     .map((block) => ({
@@ -1710,7 +1721,7 @@ function adminCalendarEvents(from, to) {
 function calendarPanel() {
   const { gridStart, gridEnd } = adminMonthRange(adminCalendarMonth);
   const events = adminCalendarEvents(gridStart, gridEnd);
-  return `<div class="admin-card"><div class="admin-card-heading"><div><h2>Kalendář studia</h2><p class="admin-help">Veřejné lekce i neveřejné rezervace na jednom místě. Každá neveřejná akce automaticky blokuje dalších 15 minut před začátkem i po konci.</p></div><button class="button button-small" data-add-studio-block>+ Neveřejná rezervace</button></div><div class="calendar-toolbar admin-calendar-toolbar"><button class="button button-small button-secondary" data-admin-calendar-move="-1">← Předchozí měsíc</button><strong>${escapeHtml(calendarMonthLabel(adminCalendarMonth))}</strong><button class="button button-small button-secondary" data-admin-calendar-today>Dnes</button><button class="button button-small button-secondary" data-admin-calendar-move="1">Další měsíc →</button></div><div class="admin-month-calendar" aria-label="Měsíční kalendář studia">${adminMonthCalendar(adminCalendarMonth, events)}</div><div class="admin-calendar-agenda" aria-label="Agenda studia pro vybraný měsíc">${adminMonthAgenda(adminCalendarMonth, events)}</div><p class="calendar-legend"><span class="legend-public"></span> Veřejná lekce <span class="legend-private"></span> Neveřejná rezervace včetně rezervy</p></div>`;
+  return `<div class="admin-card"><div class="admin-card-heading"><div><h2>Kalendář studia</h2><p class="admin-help">Veřejné lekce i neveřejné rezervace na jednom místě. Každá neveřejná akce automaticky blokuje dalších 15 minut před začátkem i po konci.</p></div><button class="button button-small" data-add-studio-block>+ Neveřejná rezervace</button></div><div class="calendar-toolbar admin-calendar-toolbar"><button class="button button-small button-secondary" data-admin-calendar-move="-1">← Předchozí měsíc</button><strong>${escapeHtml(calendarMonthLabel(adminCalendarMonth))}</strong><button class="button button-small button-secondary" data-admin-calendar-today>Dnes</button><button class="button button-small button-secondary" data-admin-calendar-move="1">Další měsíc →</button></div><div class="admin-month-calendar" aria-label="Měsíční kalendář studia">${adminMonthCalendar(adminCalendarMonth, events)}</div><div class="admin-calendar-agenda" aria-label="Agenda studia pro vybraný měsíc">${adminMonthAgenda(adminCalendarMonth, events)}</div><p class="calendar-legend"><span class="legend-petr"></span> Petr Bena <span class="legend-daniela"></span> Daniela Šťastná <span class="legend-private"></span> Neveřejná rezervace včetně rezervy</p></div>`;
 }
 
 function studioBlockForm(block = null, presetStart = null) {
