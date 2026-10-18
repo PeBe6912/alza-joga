@@ -341,6 +341,11 @@ Deno.serve(async (req: Request) => {
       return json(req, { ok: true, action, ...preview, feedback });
     }
 
+    if (action === 'feedback-overview') {
+      const feedback = await callRpc<Array<Record<string, unknown>>>('admin_lesson_feedback_overview', {});
+      return json(req, { ok: true, action, feedback });
+    }
+
     if (action === 'add-walk-in') {
       const lessonId = String(body.lessonId ?? '');
       const attendeeName = String(body.attendeeName ?? '').trim();
@@ -654,6 +659,8 @@ Deno.serve(async (req: Request) => {
           ? 'E-mail lektora se nepodařilo načíst nebo uložit.'
         : requestedAction === 'update-settings'
           ? 'Nastavení se nepodařilo uložit.'
+        : requestedAction === 'feedback-overview'
+          ? 'Zpětnou vazbu se nepodařilo načíst.'
         : requestedAction === 'create'
           ? 'Nové lekce se nepodařilo vytvořit.'
           : requestedAction === 'confirm-low-attendance'

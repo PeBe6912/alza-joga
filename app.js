@@ -69,6 +69,7 @@ let adminLessons = [];
 let adminInstructors = [];
 let adminNews = [];
 let adminReservations = [];
+let adminFeedback = [];
 let publicStudioBlocks = [];
 let publicStudioBlocksError = '';
 let adminStudioBlocks = [];
@@ -83,6 +84,7 @@ const ADMIN_TAB_SLUGS = Object.freeze({
   overview: 'lekce',
   calendar: 'kalendar',
   completed: 'probehle-lekce',
+  feedback: 'zpetna-vazba',
   people: 'ucastnici',
   content: 'novinky',
   teachers: 'lektori',
@@ -1378,6 +1380,7 @@ function clearAdminSession() {
   adminInstructors = [];
   adminNews = [];
   adminReservations = [];
+  adminFeedback = [];
   adminStudioBlocks = [];
   adminCanManageAdmins = false;
   adminAccounts = [];
@@ -1492,6 +1495,11 @@ async function loadAdminReservations() {
   adminReservations = (await response.json()).sort((a, b) => new Date(a.lessons.starts_at) - new Date(b.lessons.starts_at));
 }
 
+async function loadAdminFeedback() {
+  const result = await manageLesson({ action: 'feedback-overview' });
+  adminFeedback = result.feedback || [];
+}
+
 async function loadAdminStudioBlocks() {
   const historyStart = new Date();
   historyStart.setMonth(historyStart.getMonth() - 12);
@@ -1529,7 +1537,7 @@ async function loadAdminAccounts() {
 
 async function loadAdminData() {
   await loadAdminCapabilities();
-  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations(), loadAdminStudioBlocks(), loadAdminSettings(), loadAdminAccounts()]);
+  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations(), loadAdminFeedback(), loadAdminStudioBlocks(), loadAdminSettings(), loadAdminAccounts()]);
 }
 
 function renderAdminLogin(message = '') {
@@ -1589,6 +1597,14 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
         ? '<br><span class="attendance-note confirmed">Minimum splněno</span>'
         : '';
     const status = cancelled ? 'Zrušeno' : ended ? 'Proběhla' : 'Otevřeno';
+    const feedback = ended ? adminFeedback.find((item) => item.lesson_id === lesson.id) : null;
+    const feedbackLabel = !ended || cancelled
+      ? ''
+      : feedback?.requested
+        ? feedback.total
+          ? `Zpětná vazba: ${feedback.total} ${feedback.total === 1 ? 'odpověď' : feedback.total < 5 ? 'odpovědi' : 'odpovědí'}`
+          : 'Zpětná vazba: zatím bez odpovědi'
+        : 'Zpětná vazba: nevyžádána';
     const attendanceAction = belowMinimum && !lesson.lowAttendanceConfirmedAt
       ? `<button class="button button-small button-secondary" data-confirm-lesson="${lesson.id}">Lekce se koná</button>`
       : `<span class="lesson-action-state">${belowMinimum ? 'Koná se i v menším počtu' : 'Minimum splněno'}</span>`;
@@ -1605,7 +1621,7 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
     const payment = lesson.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : `${lesson.priceCzk ?? 0} Kč`;
     const weekday = new Intl.DateTimeFormat('cs-CZ', { weekday: 'long', timeZone: 'Europe/Prague' }).format(new Date(lesson.iso));
     const weekdayDate = `${weekday.charAt(0).toLocaleUpperCase('cs-CZ')}${weekday.slice(1)} ${lesson.date}`;
-    return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(weekdayDate)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">Angličtina</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span></td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
+    return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(weekdayDate)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">Angličtina</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span>${feedbackLabel ? `<button class="feedback-lesson-state" type="button" data-payment-lesson="${lesson.id}">${escapeHtml(feedbackLabel)}</button>` : ''}</td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
   }).join('');
   return `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Obsazeno</th><th>Stav</th><th>Akce</th></tr></thead><tbody>${rows || `<tr><td colspan="6">${escapeHtml(emptyMessage)}</td></tr>`}</tbody></table></div>`;
 }
@@ -1622,6 +1638,33 @@ function adminLessonTools() {
 function filteredAdminLessons(sourceLessons) {
   if (adminLessonInstructorFilter === 'all') return sourceLessons;
   return sourceLessons.filter((lesson) => lesson.instructorId === adminLessonInstructorFilter);
+}
+
+function feedbackPanel() {
+  const feedback = adminLessonInstructorFilter === 'all'
+    ? adminFeedback
+    : adminFeedback.filter((item) => item.instructor_id === adminLessonInstructorFilter);
+  const totals = feedback.reduce((summary, item) => ({
+    total: summary.total + Number(item.total || 0),
+    great: summary.great + Number(item.ratings?.great || 0),
+    good: summary.good + Number(item.ratings?.good || 0),
+    notRight: summary.notRight + Number(item.ratings?.not_right || 0),
+  }), { total: 0, great: 0, good: 0, notRight: 0 });
+  const cards = feedback.map((item) => {
+    const responses = Number(item.total || 0);
+    const responseLabel = responses ? `${responses} ${responses === 1 ? 'odpověď' : responses < 5 ? 'odpovědi' : 'odpovědí'}` : 'Zatím bez odpovědi';
+    return `<article class="feedback-overview-item">
+      <div class="feedback-overview-heading"><div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(formatAdminDate(item.starts_at))} · ${escapeHtml(item.teacher)}</p></div><span class="status-pill${responses ? '' : ' done'}">${escapeHtml(responseLabel)}</span></div>
+      ${responses ? `<div class="feedback-result-counts"><span><b>${item.ratings?.great || 0}</b> Skvěle</span><span><b>${item.ratings?.good || 0}</b> Dobře</span><span><b>${item.ratings?.not_right || 0}</b> Něco mi nesedlo</span></div>
+      ${item.topics?.length ? `<p class="feedback-overview-topics"><b>Nejčastěji označeno:</b> ${item.topics.map((topic) => `${escapeHtml(topic.topic)} (${topic.count})`).join(', ')}</p>` : ''}
+      ${item.comments?.length ? `<div class="feedback-comments"><b>Anonymní komentáře</b>${item.comments.map((comment) => `<blockquote>${escapeHtml(comment)}</blockquote>`).join('')}</div>` : ''}` : '<p class="admin-help">O zpětnou vazbu bylo požádáno, ale zatím nikdo neodpověděl.</p>'}
+      <button class="text-button inline-link" type="button" data-payment-lesson="${item.lesson_id}">Otevřít docházku a platby</button>
+    </article>`;
+  }).join('');
+  return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Zpětná vazba</h2><p class="admin-help">Anonymní hodnocení z proběhlých lekcí, u kterých byla zpětná vazba vyžádána.</p></div>${adminLessonFilter()}</div>
+    <div class="feedback-overview-totals"><span><b>${totals.total}</b> odpovědí celkem</span><span><b>${totals.great}</b> Skvěle</span><span><b>${totals.good}</b> Dobře</span><span><b>${totals.notRight}</b> Něco mi nesedlo</span></div>
+    <div class="feedback-overview-list">${cards || '<p>Tomuto filtru neodpovídá žádná vyžádaná zpětná vazba.</p>'}</div>
+  </div>`;
 }
 
 function overviewPanel() {
@@ -1814,7 +1857,7 @@ function renderAdmin(tab) {
   const panel = document.querySelector('#admin-panel');
   activeAdminTab = tab;
   document.querySelectorAll('.admin-nav').forEach((button) => button.classList.toggle('active', button.dataset.adminTab === tab));
-  const titles = { overview: 'Lekce', calendar: 'Kalendář studia', completed: 'Proběhlé lekce a platby', people: 'Účastníci', content: 'Novinky a jógové tipy', teachers: 'Profily lektorů', accounts: 'Administrátoři', settings: 'Nastavení' };
+  const titles = { overview: 'Lekce', calendar: 'Kalendář studia', completed: 'Proběhlé lekce a platby', feedback: 'Zpětná vazba', people: 'Účastníci', content: 'Novinky a jógové tipy', teachers: 'Profily lektorů', accounts: 'Administrátoři', settings: 'Nastavení' };
   const addButton = document.querySelector('#add-lesson');
   addButton.hidden = tab !== 'overview';
   document.querySelector('#admin-logout').hidden = false;
@@ -1823,6 +1866,7 @@ function renderAdmin(tab) {
   if (tab === 'overview') panel.innerHTML = overviewPanel();
   if (tab === 'calendar') panel.innerHTML = calendarPanel();
   if (tab === 'completed') panel.innerHTML = `<div class="admin-card"><div class="admin-list-heading"><div><h2>Proběhlé lekce a platby</h2><p class="admin-help">U každé lekce jednou potvrď docházku. Platební nebo příspěvkové e-maily se odešlou automaticky.</p></div>${adminLessonFilter()}</div>${lessonTable(filteredAdminLessons(adminLessons.filter((lesson) => new Date(lesson.endsAt) <= new Date()).reverse()), 'Tomuto filtru neodpovídá žádná proběhlá lekce.')}</div>`;
+  if (tab === 'feedback') panel.innerHTML = feedbackPanel();
   if (tab === 'teachers') panel.innerHTML = teachersPanel();
   if (tab === 'people') panel.innerHTML = bookingsPanel();
   if (tab === 'content') panel.innerHTML = newsPanel();
@@ -2294,7 +2338,7 @@ async function sendPaymentEmails(event, lessonId) {
   try {
     const feedbackRequested = Boolean(event.target.elements.feedbackRequested?.checked);
     const result = await manageLesson({ lessonId, action: 'payment-send', attendance, feedbackRequested });
-    await Promise.all([loadAdminLessons(), loadAdminReservations()]);
+    await Promise.all([loadAdminLessons(), loadAdminReservations(), loadAdminFeedback()]);
     closeDialog();
     renderAdmin(activeAdminTab);
     showToast(!result.sent && !result.failed
@@ -2645,7 +2689,9 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
   button.classList.add('active');
   const tab = button.dataset.adminTab;
   try {
-    if (tab === 'overview' || tab === 'completed') await Promise.all([loadAdminLessons(), loadAdminReservations()]);
+    if (tab === 'overview') await Promise.all([loadAdminLessons(), loadAdminReservations()]);
+    if (tab === 'completed') await Promise.all([loadAdminLessons(), loadAdminReservations(), loadAdminFeedback()]);
+    if (tab === 'feedback') await Promise.all([loadAdminFeedback(), loadAdminInstructors()]);
     if (tab === 'calendar') await Promise.all([loadAdminLessons(), loadAdminStudioBlocks(), loadPublicStudioBlocks()]);
     if (tab === 'teachers') await loadAdminInstructors();
     if (tab === 'people') await loadAdminReservations();
