@@ -98,7 +98,7 @@ const classList = document.querySelector('#class-list');
 const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
 
-document.querySelector('#main-menu a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="/cesta-praxe">Cesta praxe</a>');
+document.querySelector('#main-menu a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="/cesta-praxe">Cesta jógové praxe</a>');
 
 function spotsLeft(lesson) {
   return Math.max(lesson.capacity - lesson.booked, 0);
@@ -114,7 +114,10 @@ function escapeHtml(value) {
 }
 
 function renderNewsText(value) {
-  return escapeHtml(value).replaceAll('Cesta praxe', '<a class="inline-link" href="/cesta-praxe">Cesta praxe</a>');
+  const journeyLink = '<a class="inline-link" href="/cesta-praxe">Cesta jógové praxe</a>';
+  return escapeHtml(value)
+    .replaceAll('Cesta jógové praxe', journeyLink)
+    .replaceAll('Cesta praxe', journeyLink);
 }
 
 function journeyMilestone(attendedCount) {
@@ -1043,7 +1046,7 @@ function journeyPanel(data) {
       <p class="form-hint">Každá lekce se počítá. Pravidelnost dělá rozdíl.</p>
     </section>
     <section class="account-card">
-      <div class="account-card-heading"><div><p class="eyebrow">Tvoje milníky</p><h2>Dosavadní cesta</h2></div><a class="text-button" href="/cesta-praxe">Zobrazit celou cestu</a></div>
+      <div class="account-card-heading"><div><p class="eyebrow">Tvoje milníky</p><h2>Dosavadní cesta</h2></div><a class="text-button" href="/cesta-praxe">Zobrazit Cestu jógové praxe</a></div>
       <div class="journey-earned">${achieved.length ? achieved.map((item) => `<div><span>${item.count}</span><b>${escapeHtml(item.name)}</b></div>`).join('') : '<p class="account-empty">První milník získáš po své první absolvované lekci.</p>'}</div>
     </section>
     <section class="account-card">
@@ -1051,7 +1054,7 @@ function journeyPanel(data) {
       <p class="form-hint">Veřejné zobrazení je nepovinné. E-mail ani celé jméno nikdy nezveřejníme.</p>
       <form class="journey-visibility-form" data-journey-settings>
         <div class="field"><label for="journey-public-name">Veřejné jméno nebo přezdívka</label><input id="journey-public-name" name="publicDisplayName" maxlength="40" value="${escapeHtml(data.profile.publicDisplayName || '')}" placeholder="Například Petr B."><small>Takto se zobrazíš na veřejné stránce.</small></div>
-        <label class="checkbox"><input name="leaderboardOptIn" type="checkbox" ${data.profile.leaderboardOptIn ? 'checked' : ''}><span>Chci se dobrovolně zobrazovat mezi prvními 20 účastníky na stránce Cesta praxe.</span></label>
+        <label class="checkbox"><input name="leaderboardOptIn" type="checkbox" ${data.profile.leaderboardOptIn ? 'checked' : ''}><span>Chci se dobrovolně zobrazovat mezi prvními 20 účastníky na stránce Cesta jógové praxe.</span></label>
         <button class="button button-small" type="submit">Uložit nastavení</button>
       </form>
     </section>

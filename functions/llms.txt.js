@@ -16,7 +16,7 @@ const CONTENT = `# Jóga na HALLU
 ## Důležité stránky
 
 - Web: https://joganahallu.cz/
-- Cesta praxe a milníky: https://joganahallu.cz/cesta-praxe
+- Cesta jógové praxe a milníky: https://joganahallu.cz/cesta-praxe
 - Podmínky: https://joganahallu.cz/podminky
 - Ochrana osobních údajů: https://joganahallu.cz/ochrana-osobnich-udaju
 - XML sitemap: https://joganahallu.cz/sitemap.xml
