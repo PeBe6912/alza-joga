@@ -2190,7 +2190,7 @@ async function openPaymentEmails(lessonId) {
     </div>` : '';
     document.querySelector('#booking-content').innerHTML = `<form class="booking-panel payment-panel" id="payment-email-form">
       <p class="eyebrow">Docházka a platby</p><h2>${escapeHtml(preview.title)}</h2>
-      <p><b>${escapeHtml(preview.teacher)}</b> · ${escapeHtml(formatAdminDate(preview.starts_at))}</p>
+      <p>Lektor: <b>${escapeHtml(preview.teacher)}</b> · ${escapeHtml(formatAdminDate(preview.starts_at))}</p>
       <p class="form-hint">Souhrn odeslání dostane lektor na <b>${escapeHtml(preview.instructor_email || 'nenastavený e-mail')}</b>.</p>
       <div class="payment-preview">${qrPath ? `<img src="${escapeHtml(qrPath)}" alt="${escapeHtml(paymentText)}">` : '<div class="payment-qr-missing">QR kód chybí</div>'}<div><b>${escapeHtml(paymentText)}</b><p>${escapeHtml(preview.payment_note || '')}</p>${qrPath ? '' : '<p class="attendance-note">Nejdřív doplň QR kód v profilu lektora.</p>'}</div></div>
       <div class="payment-list-heading"><b>Potvrď skutečnou účast</b><span>${unsentCount} neodeslaných plateb</span></div>
