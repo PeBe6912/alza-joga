@@ -103,6 +103,10 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
+function renderNewsText(value) {
+  return escapeHtml(value).replaceAll('Cesta praxe', '<a class="inline-link" href="/cesta-praxe">Cesta praxe</a>');
+}
+
 function journeyMilestone(attendedCount) {
   return [...JOURNEY_MILESTONES].reverse().find((item) => attendedCount >= item.count) || { count: 0, name: 'Na začátku cesty', note: 'První milník čeká po absolvované lekci' };
 }
@@ -644,9 +648,9 @@ function openNewsDetail(id) {
   document.querySelector('#booking-content').innerHTML = `<article class="booking-panel news-detail">
     <p class="eyebrow">Novinky a jógové tipy</p>
     <h2>${escapeHtml(item.title)}</h2>
-    ${item.summary ? `<p class="news-detail-summary">${escapeHtml(item.summary)}</p>` : ''}
+    ${item.summary ? `<p class="news-detail-summary">${renderNewsText(item.summary)}</p>` : ''}
     ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="">` : ''}
-    <div class="news-detail-body">${escapeHtml(item.body || item.summary || '')}</div>
+    <div class="news-detail-body">${renderNewsText(item.body || item.summary || '')}</div>
   </article>`;
   dialog.showModal();
 }
