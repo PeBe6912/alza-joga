@@ -1344,8 +1344,16 @@ async function openAdmin({ updateUrl = true } = {}) {
   adminView.hidden = false;
   setAdminAuthenticatedLayout(false);
   if (adminSession && await isAdminSessionValid()) {
-    await loadAdminData();
-    renderAdmin(requestedTab);
+    setAdminAuthenticatedLayout(true);
+    document.querySelector('#admin-panel').innerHTML = '<div class="admin-card"><p>Načítám administraci…</p></div>';
+    try {
+      await loadAdminCapabilities();
+      await loadAdminTabData(requestedTab);
+      renderAdmin(requestedTab);
+    } catch (error) {
+      document.querySelector('#admin-panel').innerHTML = '<div class="admin-card"><h2>Administraci se nepodařilo načíst</h2><p>Zkus prosím záložku otevřít znovu.</p></div>';
+      showToast(error.message);
+    }
   } else {
     clearAdminSession();
     renderAdminLogin();
@@ -1535,9 +1543,16 @@ async function loadAdminAccounts() {
   adminAccounts = result.admins || [];
 }
 
-async function loadAdminData() {
-  await loadAdminCapabilities();
-  await Promise.all([loadAdminLessons(), loadAdminInstructors(), loadAdminNews(), loadAdminReservations(), loadAdminFeedback(), loadAdminStudioBlocks(), loadAdminSettings(), loadAdminAccounts()]);
+async function loadAdminTabData(tab) {
+  if (tab === 'overview') await Promise.all([loadAdminLessons(), loadAdminReservations(), loadAdminInstructors()]);
+  if (tab === 'completed') await Promise.all([loadAdminLessons(), loadAdminReservations(), loadAdminFeedback(), loadAdminInstructors()]);
+  if (tab === 'feedback') await Promise.all([loadAdminFeedback(), loadAdminInstructors()]);
+  if (tab === 'calendar') await Promise.all([loadAdminLessons(), loadAdminStudioBlocks(), loadPublicStudioBlocks()]);
+  if (tab === 'teachers') await loadAdminInstructors();
+  if (tab === 'people') await loadAdminReservations();
+  if (tab === 'content') await loadAdminNews();
+  if (tab === 'accounts') await loadAdminAccounts();
+  if (tab === 'settings') await Promise.all([loadAdminSettings(), loadAdminInstructors()]);
 }
 
 function renderAdminLogin(message = '') {
@@ -1576,8 +1591,10 @@ async function signInAdmin(event) {
     if (!response.ok) throw new Error('Přihlášení se nezdařilo. Zkontroluj e-mail a heslo.');
     if (result.user?.app_metadata?.role !== 'admin' || !result.access_token || !result.refresh_token) throw new Error('Tento účet nemá oprávnění správce.');
     saveAdminSession(result);
-    await loadAdminData();
-    renderAdmin(adminTabFromHash() || 'overview');
+    const requestedTab = adminTabFromHash() || 'overview';
+    await loadAdminCapabilities();
+    await loadAdminTabData(requestedTab);
+    renderAdmin(requestedTab);
   } catch (error) {
     clearAdminSession();
     renderAdminLogin(error.message);
@@ -2701,20 +2718,14 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
   button.classList.add('active');
   const tab = button.dataset.adminTab;
   try {
-    if (tab === 'overview') await Promise.all([loadAdminLessons(), loadAdminReservations()]);
-    if (tab === 'completed') await Promise.all([loadAdminLessons(), loadAdminReservations(), loadAdminFeedback()]);
-    if (tab === 'feedback') await Promise.all([loadAdminFeedback(), loadAdminInstructors()]);
-    if (tab === 'calendar') await Promise.all([loadAdminLessons(), loadAdminStudioBlocks(), loadPublicStudioBlocks()]);
-    if (tab === 'teachers') await loadAdminInstructors();
-    if (tab === 'people') await loadAdminReservations();
-    if (tab === 'content') await loadAdminNews();
-    if (tab === 'accounts' && adminCanManageAdmins) await loadAdminAccounts();
-    if (tab === 'settings') await Promise.all([loadAdminSettings(), loadAdminInstructors()]);
+    document.querySelector('#admin-panel').innerHTML = '<div class="admin-card"><p>Načítám…</p></div>';
+    await loadAdminTabData(tab);
     setAdminTabUrl(tab);
     renderAdmin(tab);
     document.querySelector('#admin-menu').classList.remove('is-open');
     document.querySelector('#admin-menu-toggle').setAttribute('aria-expanded', 'false');
   } catch (error) {
+    document.querySelector('#admin-panel').innerHTML = '<div class="admin-card"><h2>Záložku se nepodařilo načíst</h2><p>Zkus ji prosím otevřít znovu.</p></div>';
     showToast(error.message);
   }
 }));
