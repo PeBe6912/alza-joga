@@ -90,6 +90,7 @@ const ADMIN_TAB_SLUGS = Object.freeze({
 });
 const ADMIN_SLUG_TABS = Object.fromEntries(Object.entries(ADMIN_TAB_SLUGS).map(([tab, slug]) => [slug, tab]));
 const LESSON_PAGE_SIZE = 6;
+const BOOKING_GRACE_MINUTES = 15;
 let lessonDisplayLimit = LESSON_PAGE_SIZE;
 let sharedLessonHandled = false;
 let publicCalendarStart = startOfWeek(new Date());
@@ -487,6 +488,10 @@ document.querySelectorAll('.filter').forEach((button) => button.addEventListener
 async function openBooking(id) {
   const lesson = lessons.find((item) => item.id === id);
   if (!lesson) return;
+  if (new Date(lesson.iso).getTime() + BOOKING_GRACE_MINUTES * 60_000 < Date.now()) {
+    showSharedLessonStatus(lesson, 'Rezervace na tuto lekci už byla uzavřena. Vyber si prosím jiný termín.');
+    return;
+  }
   if (spotsLeft(lesson) <= 0) {
     showSharedLessonStatus(lesson, 'Tato lekce je už obsazená. Odkaz můžeš přesto sdílet.');
     return;
@@ -632,7 +637,7 @@ async function openSharedLessonFromUrl() {
       lesson = lessonFromShareData(shared);
     }
     if (lesson.status === 'cancelled') return showSharedLessonStatus(lesson, 'Tato lekce byla zrušena. Vyber si prosím jiný termín.');
-    if (new Date(lesson.endsAt) <= new Date()) return showSharedLessonStatus(lesson, 'Tato lekce už proběhla. Vyber si prosím jiný termín.');
+    if (new Date(lesson.iso).getTime() + BOOKING_GRACE_MINUTES * 60_000 < Date.now()) return showSharedLessonStatus(lesson, 'Rezervace na tuto lekci už byla uzavřena. Vyber si prosím jiný termín.');
     if (!lessons.some((item) => item.id === lesson.id)) lessons.push(lesson);
     openBooking(lesson.id);
   } catch (error) {
@@ -642,10 +647,11 @@ async function openSharedLessonFromUrl() {
 }
 
 async function loadLessons() {
+  const bookingCutoff = new Date(Date.now() - BOOKING_GRACE_MINUTES * 60_000);
   const query = new URLSearchParams({
     select: 'id,instructor_id,title,starts_at,ends_at,capacity,booked_count,location,language,payment_mode,price_czk,payment_note,minimum_attendance,low_attendance_confirmed_at,instructors(name)',
     status: 'eq.published',
-    starts_at: `gte.${new Date().toISOString()}`,
+    starts_at: `gte.${bookingCutoff.toISOString()}`,
     order: 'starts_at.asc',
   });
   try {
