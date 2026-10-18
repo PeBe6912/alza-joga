@@ -2194,8 +2194,8 @@ async function openPaymentEmails(lessonId) {
       <p class="form-hint">Souhrn odeslání dostane lektor na <b>${escapeHtml(preview.instructor_email || 'nenastavený e-mail')}</b>.</p>
       <div class="payment-preview">${qrPath ? `<img src="${escapeHtml(qrPath)}" alt="${escapeHtml(paymentText)}">` : '<div class="payment-qr-missing">QR kód chybí</div>'}<div><b>${escapeHtml(paymentText)}</b><p>${escapeHtml(preview.payment_note || '')}</p>${qrPath ? '' : '<p class="attendance-note">Nejdřív doplň QR kód v profilu lektora.</p>'}</div></div>
       <div class="payment-list-heading"><b>Potvrď skutečnou účast</b><span>${unsentCount} neodeslaných plateb</span></div>
-      <div class="payment-recipient-list">${participantRows || '<p>Na této lekci nejsou žádní aktivní účastníci.</p>'}</div>
       <p class="form-hint">Všechny rezervace jsou předvyplněné jako „Účast potvrzena“. Změň pouze výjimky. Volba „Bez platby“ neodešle e-mail a účast nezapočítá.</p>
+      <div class="payment-recipient-list">${participantRows || '<p>Na této lekci nejsou žádní aktivní účastníci.</p>'}</div>
       <label class="feedback-request-choice"><input type="checkbox" name="feedbackRequested" ${feedback.requested ? 'checked' : ''}><span><b>Požádat o krátkou zpětnou vazbu</b><small>Odkaz na anonymní hodnocení dostanou pouze lidé s potvrzenou účastí.</small></span></label>
       ${feedback.total ? `<section class="feedback-summary"><p class="eyebrow">Zpětná vazba · ${feedback.total} ${feedback.total === 1 ? 'odpověď' : feedback.total < 5 ? 'odpovědi' : 'odpovědí'}</p>${ratingSummary}</section>` : ''}
       ${preview.instructor_email ? '' : '<p class="attendance-note">Nejdřív doplň e-mail lektora v jeho profilu.</p>'}
