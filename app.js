@@ -1372,6 +1372,7 @@ async function openAdmin({ updateUrl = true } = {}) {
 }
 
 function closeAdmin() {
+  setAdminMenuOpen(false);
   showPublicView();
   window.scrollTo(0, 0);
 }
@@ -1381,10 +1382,10 @@ document.querySelectorAll('[data-open-admin]').forEach((button) => button.addEve
   openAdmin();
 }));
 
-document.querySelector('#close-admin').addEventListener('click', () => {
+document.querySelectorAll('[data-close-admin]').forEach((button) => button.addEventListener('click', () => {
   history.pushState({}, '', `${location.pathname}${location.search}#top`);
   closeAdmin();
-});
+}));
 
 window.addEventListener('hashchange', async () => {
   if (adminTabFromHash()) await openAdmin({ updateUrl: false });
@@ -2736,8 +2737,7 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
     renderAdmin(tab);
     scrollAdminToTop();
     requestAnimationFrame(scrollAdminToTop);
-    document.querySelector('#admin-menu').classList.remove('is-open');
-    document.querySelector('#admin-menu-toggle').setAttribute('aria-expanded', 'false');
+    setAdminMenuOpen(false);
   } catch (error) {
     document.querySelector('#admin-panel').innerHTML = '<div class="admin-card"><h2>Záložku se nepodařilo načíst</h2><p>Zkus ji prosím otevřít znovu.</p></div>';
     showToast(error.message);
@@ -2751,9 +2751,14 @@ document.querySelector('#admin-logout').addEventListener('click', () => {
 });
 const adminMenuToggle = document.querySelector('#admin-menu-toggle');
 const adminMenu = document.querySelector('#admin-menu');
-adminMenuToggle.addEventListener('click', () => {
-  const open = adminMenu.classList.toggle('is-open');
+function setAdminMenuOpen(open) {
+  adminMenu.classList.toggle('is-open', open);
   adminMenuToggle.setAttribute('aria-expanded', String(open));
+  adminMenuToggle.setAttribute('aria-label', open ? 'Zavřít menu správy' : 'Otevřít menu správy');
+  adminMenuToggle.querySelector('span').textContent = open ? '×' : '☰';
+}
+adminMenuToggle.addEventListener('click', () => {
+  setAdminMenuOpen(!adminMenu.classList.contains('is-open'));
 });
 const menuToggle = document.querySelector('.menu-toggle');
 const mainMenu = document.querySelector('#main-menu');

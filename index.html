@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2026101905" />
+  <link rel="stylesheet" href="styles.css?v=2026102015" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -271,7 +271,7 @@
   <main id="admin-view" class="admin-shell" hidden>
     <aside class="admin-sidebar">
       <a class="brand admin-brand" href="#top" aria-label="Zpět na veřejný web"><img class="brand-logo" src="assets/joga-na-hallu-logo.svg" alt="Jóga na HALLU" /></a>
-      <button class="admin-menu-toggle" id="admin-menu-toggle" type="button" aria-expanded="false" aria-controls="admin-menu">☰ Menu správy</button>
+      <button class="admin-menu-toggle" id="admin-menu-toggle" type="button" aria-expanded="false" aria-controls="admin-menu" aria-label="Otevřít menu správy"><span aria-hidden="true">☰</span></button>
       <nav id="admin-menu">
         <button class="admin-nav active" data-admin-tab="overview">Lekce</button>
         <button class="admin-nav" data-admin-tab="completed">Proběhlé lekce a platby</button>
@@ -282,8 +282,9 @@
         <button class="admin-nav" data-admin-tab="teachers">Profily lektorů</button>
         <button class="admin-nav" data-admin-tab="accounts">Administrátoři</button>
         <button class="admin-nav" data-admin-tab="settings">Nastavení</button>
+        <button class="admin-back admin-back-mobile" data-close-admin>← Zpět na web</button>
       </nav>
-      <button class="admin-back" id="close-admin">← Zpět na web</button>
+      <button class="admin-back admin-back-desktop" data-close-admin>← Zpět na web</button>
     </aside>
     <section class="admin-content">
       <div class="admin-topbar"><div><p class="eyebrow">Správa studia</p><h1 id="admin-title">Dobrý den, Petře</h1></div><div class="admin-topbar-actions"><button class="button" id="add-lesson">+ Nová lekce</button><button class="text-button" id="admin-logout">Odhlásit se</button></div></div>
@@ -316,6 +317,6 @@
     <div id="booking-content"></div>
   </dialog>
   <div class="toast" id="toast" role="status"></div>
-  <script src="app.js?v=2026101905"></script>
+  <script src="app.js?v=2026102015"></script>
 </body>
 </html>
