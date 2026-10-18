@@ -1466,9 +1466,7 @@ function filteredAdminLessons(sourceLessons) {
 
 function overviewPanel() {
   const upcomingLessons = adminLessons.filter((lesson) => lesson.status === 'published' && new Date(lesson.endsAt) > new Date());
-  const openLessons = adminLessons.filter((lesson) => lesson.status === 'published' && new Date(lesson.endsAt) > new Date());
-  const nextLesson = openLessons[0];
-  return `<div class="stats"><div class="stat-card"><span>AKTIVNÍ REZERVACE</span><strong>${openLessons.reduce((sum, lesson) => sum + lesson.booked, 0)}</strong><small>v budoucích lekcích</small></div><div class="stat-card"><span>NEJBLIŽŠÍ LEKCE</span><strong>${nextLesson ? `${nextLesson.booked} / ${nextLesson.capacity}` : '—'}</strong><small>${nextLesson ? `${escapeHtml(nextLesson.date)} v ${escapeHtml(nextLesson.time.split('–')[0])}` : 'Bez termínu'}</small></div><div class="stat-card"><span>NAPLÁNOVANÉ LEKCE</span><strong>${openLessons.length}</strong><small>budoucích termínů</small></div></div><div class="admin-card admin-card-spaced"><div class="admin-list-heading"><div><h2>Naplánované lekce</h2><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p></div>${adminLessonFilter()}</div>${lessonTable(filteredAdminLessons(upcomingLessons), 'Tomuto filtru neodpovídá žádná naplánovaná lekce.')}</div>`;
+  return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Naplánované lekce</h2><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p></div>${adminLessonFilter()}</div>${lessonTable(filteredAdminLessons(upcomingLessons), 'Tomuto filtru neodpovídá žádná naplánovaná lekce.')}</div>`;
 }
 
 function teachersPanel() {
