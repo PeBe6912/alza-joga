@@ -36,7 +36,14 @@
         "url": "https://joganahallu.cz/",
         "name": "Jóga na HALLU",
         "description": "Lekce jógy pro zaměstnance Alzy a jejich hosty.",
-        "inLanguage": "cs-CZ"
+        "inLanguage": "cs-CZ",
+        "creator": { "@id": "https://joganahallu.cz/#operator" }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://joganahallu.cz/#operator",
+        "name": "Petr Bena",
+        "email": "mailto:petr.bena@alza.cz"
       },
       {
         "@type": "SportsActivityLocation",
@@ -45,7 +52,12 @@
         "url": "https://joganahallu.cz/",
         "image": "https://joganahallu.cz/assets/joga-na-hallu-social-v3.png",
         "description": "Jógové studio ve 3. patře budovy HALL pro zaměstnance Alzy a jejich hosty.",
-        "address": "Jógová místnost, 3. patro, budova HALL"
+        "address": "Jógová místnost, 3. patro, budova HALL",
+        "email": "petr.bena@alza.cz",
+        "audience": {
+          "@type": "Audience",
+          "audienceType": "Zaměstnanci Alzy a jejich hosté"
+        }
       }
     ]
   }
@@ -214,6 +226,18 @@
         <details><summary>Jak funguje zrušení?</summary><p>Rezervaci můžeš bezplatně zrušit do <span data-setting="cancellation_hours">24</span> hodin před lekcí. Později je lekce účtována, můžeš ale poslat náhradníka.</p></details>
       </div>
       </div>
+      <section class="quick-facts" aria-labelledby="quick-facts-title">
+        <p class="eyebrow">Jóga na HALLU v kostce</p>
+        <h3 id="quick-facts-title">Praktické informace na jednom místě</h3>
+        <dl>
+          <div><dt>Pro koho</dt><dd>Zaměstnanci Alzy a jejich hosté</dd></div>
+          <div><dt>Kde</dt><dd>Jógová místnost, 3. patro budovy HALL, vedle zasedací místnosti Metro</dd></div>
+          <div><dt>Délka</dt><dd>Obvykle 60 minut</dd></div>
+          <div><dt>Kapacita</dt><dd><span data-setting="studio_capacity">20</span> lidí</dd></div>
+          <div><dt>Co s sebou</dt><dd>Vlastní podložku, pohodlné oblečení a případně vodu</dd></div>
+          <div><dt>Cena</dt><dd>Podle termínu <span data-setting="default_paid_price">150</span> Kč nebo dobrovolný příspěvek na charitu</dd></div>
+        </dl>
+      </section>
     </section>
 
     <section class="section private-lessons-section" id="soukrome-lekce">
@@ -279,7 +303,7 @@
         <div class="brand"><img class="brand-logo" src="assets/joga-na-hallu-logo.svg" alt="Jóga na HALLU" /></div>
         <p>Jóga na HALLU · 3. patro<br />Pro zaměstnance Alzy a jejich hosty</p>
       </div>
-      <div><a href="podminky.html">Podmínky</a><a href="ochrana-osobnich-udaju.html">Ochrana osobních údajů</a><a href="#ucet">Můj účet</a><a class="footer-admin-link" href="#admin" data-open-admin>Admin</a></div>
+      <div><a href="/podminky">Podmínky</a><a href="/ochrana-osobnich-udaju">Ochrana osobních údajů</a><a href="#ucet">Můj účet</a><a class="footer-admin-link" href="#admin" data-open-admin>Admin</a></div>
     </div>
   </footer>
 

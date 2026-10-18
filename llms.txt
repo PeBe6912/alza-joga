@@ -1,0 +1,27 @@
+# Jóga na HALLU
+
+> Rezervační web pro lekce jógy ve 3. patře budovy HALL, určené zaměstnancům Alzy a jejich hostům.
+
+## Hlavní informace
+
+- Veřejný web: https://joganahallu.cz/
+- Lekce a rezervace: https://joganahallu.cz/#lekce
+- Studio: jógová místnost ve 3. patře budovy HALL vedle zasedací místnosti Metro
+- Lektoři: Daniela Šťastná a Petr Bena
+- Délka běžné lekce: 60 minut
+- Kapacita studia: 20 lidí
+- Vybavení: účastníci si přinášejí vlastní podložku a pohodlné oblečení
+- Cena: podle konkrétní lekce 150 Kč nebo dobrovolný příspěvek na charitu
+- Rezervaci lze standardně bezplatně zrušit nejpozději 24 hodin před začátkem
+- Kontakt provozovatele webu: petr.bena@alza.cz
+
+## Důležité stránky
+
+- Cesta praxe: https://joganahallu.cz/cesta-praxe
+- Podmínky rezervace: https://joganahallu.cz/podminky
+- Ochrana osobních údajů: https://joganahallu.cz/ochrana-osobnich-udaju
+- Sitemap: https://joganahallu.cz/sitemap.xml
+
+## Poznámka
+
+Aktuální termíny, ceny, jazyk lekce, dostupná místa a jméno pořadatele jsou vždy uvedeny u konkrétní lekce. Každou lekci samostatně pořádá lektor uvedený v jejím detailu.

@@ -78,13 +78,9 @@ function structuredData(lesson, canonicalUrl, imageUrl) {
       address: 'Budova HALL, 3. patro',
     },
     organizer: {
-      '@type': 'Organization',
-      name: 'Jóga na HALLU',
-      url: new URL(canonicalUrl).origin,
-    },
-    performer: {
       '@type': 'Person',
       name: lesson.teacher,
+      url: new URL(canonicalUrl).origin,
     },
   };
   if (lesson.payment_mode !== 'donation') {

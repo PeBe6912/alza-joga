@@ -87,8 +87,8 @@ const classList = document.querySelector('#class-list');
 const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
 
-document.querySelector('#main-menu a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="cesta-praxe.html">Cesta praxe</a>');
-document.querySelector('footer a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="cesta-praxe.html">Cesta praxe</a>');
+document.querySelector('#main-menu a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="/cesta-praxe">Cesta praxe</a>');
+document.querySelector('footer a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="/cesta-praxe">Cesta praxe</a>');
 
 function spotsLeft(lesson) {
   return Math.max(lesson.capacity - lesson.booked, 0);
@@ -370,7 +370,7 @@ async function openBooking(id) {
       <div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" required autocomplete="email"></div>
       <div class="field full"><label for="relation">Jdu jako</label><select id="relation" name="relation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host / externista</option></select></div>
       <p class="field full form-hint">Máš účet? <a href="#ucet" data-booking-account>Přihlas se</a> a příště už údaje vyplňovat nemusíš.</p>
-      <label class="checkbox field full"><input type="checkbox" required><span>Souhlasím s <a href="podminky.html" target="_blank" rel="noopener">podmínkami rezervace</a> a potvrzuji, že jsem se seznámil/a s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>`}
+      <label class="checkbox field full"><input type="checkbox" required><span>Souhlasím s <a href="/podminky" target="_blank" rel="noopener">podmínkami rezervace</a> a potvrzuji, že jsem se seznámil/a s <a href="/ochrana-osobnich-udaju" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>`}
     </div><button class="button" type="submit">Potvrdit rezervaci</button><button class="text-button booking-share" type="button" data-share-lesson="${lesson.id}">Sdílet lekci</button>
   </form>`;
   bindLessonShareButtons(document.querySelector('#booking-content'));
@@ -662,7 +662,7 @@ function openPrivateLessonInquiry(instructorName) {
       <div class="field full"><label for="private-phone">Telefon (nepovinné)</label><input id="private-phone" name="phone" type="tel" maxlength="40" autocomplete="tel"></div>
       <div class="field full"><label for="private-message">Co bys od lekce potřeboval/a?</label><textarea id="private-message" name="message" rows="5" minlength="10" maxlength="2000" required></textarea></div>
       <div hidden aria-hidden="true"><label>Web<input name="website" tabindex="-1" autocomplete="off"></label></div>
-      <label class="checkbox field full"><input name="consent" type="checkbox" required><span>Souhlasím s odesláním údajů vybranému lektorovi a potvrzuji, že jsem se seznámil/a s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>
+      <label class="checkbox field full"><input name="consent" type="checkbox" required><span>Souhlasím s odesláním údajů vybranému lektorovi a potvrzuji, že jsem se seznámil/a s <a href="/ochrana-osobnich-udaju" target="_blank" rel="noopener">informacemi o zpracování osobních údajů</a>.</span></label>
     </div>
     <button class="button" type="submit">Odeslat poptávku</button>
   </form>`;
@@ -907,7 +907,7 @@ function journeyPanel(data) {
       <p class="form-hint">Každá lekce se počítá. Pravidelnost dělá rozdíl.</p>
     </section>
     <section class="account-card">
-      <div class="account-card-heading"><div><p class="eyebrow">Tvoje milníky</p><h2>Dosavadní cesta</h2></div><a class="text-button" href="cesta-praxe.html">Zobrazit celou cestu</a></div>
+      <div class="account-card-heading"><div><p class="eyebrow">Tvoje milníky</p><h2>Dosavadní cesta</h2></div><a class="text-button" href="/cesta-praxe">Zobrazit celou cestu</a></div>
       <div class="journey-earned">${achieved.length ? achieved.map((item) => `<div><span>${item.count}</span><b>${escapeHtml(item.name)}</b></div>`).join('') : '<p class="account-empty">První milník získáš po své první absolvované lekci.</p>'}</div>
     </section>
     <section class="account-card">
@@ -1104,7 +1104,7 @@ function openRecoveryRequest() {
 function renderAccountLogin(message = '') {
   accountPanel.innerHTML = `${message ? `<p class="account-notice">${escapeHtml(message)}</p>` : ''}<div class="account-grid">
     <form class="account-card account-form" id="account-login-form"><p class="eyebrow">Mám účet</p><h2>Přihlášení</h2><div class="field"><label for="user-login-email">E-mail</label><input id="user-login-email" name="email" type="email" autocomplete="email" required></div><div class="field"><label for="user-login-password">Heslo</label><input id="user-login-password" name="password" type="password" autocomplete="current-password" required></div><button class="button" type="submit">Přihlásit se</button><button class="text-button account-recovery-link" type="button" data-account-recovery>Zapomenuté heslo</button></form>
-    <form class="account-card account-form" id="account-register-form"><p class="eyebrow">Nový účet</p><h2>Vytvoření účtu</h2><p class="form-hint">Účet je dobrovolný. Existující správce se může přihlásit stejným e-mailem a heslem jako do administrace.</p><div class="field"><label for="user-register-name">Jméno a příjmení</label><input id="user-register-name" name="fullName" maxlength="120" autocomplete="name" required></div><div class="field"><label for="user-register-email">E-mail</label><input id="user-register-email" name="email" type="email" maxlength="320" autocomplete="email" required></div><div class="field"><label for="user-register-relation">Jdu jako</label><select id="user-register-relation" name="relation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host / externista</option></select></div><div class="field"><label for="user-register-password">Heslo</label><input id="user-register-password" name="password" type="password" minlength="12" autocomplete="new-password" required><small>Alespoň 12 znaků.</small></div><label class="checkbox"><input name="consent" type="checkbox" required><span>Souhlasím s <a href="podminky.html" target="_blank" rel="noopener">podmínkami</a> a seznámil/a jsem se s <a href="ochrana-osobnich-udaju.html" target="_blank" rel="noopener">ochranou osobních údajů</a>.</span></label><button class="button" type="submit">Vytvořit účet</button></form>
+    <form class="account-card account-form" id="account-register-form"><p class="eyebrow">Nový účet</p><h2>Vytvoření účtu</h2><p class="form-hint">Účet je dobrovolný. Existující správce se může přihlásit stejným e-mailem a heslem jako do administrace.</p><div class="field"><label for="user-register-name">Jméno a příjmení</label><input id="user-register-name" name="fullName" maxlength="120" autocomplete="name" required></div><div class="field"><label for="user-register-email">E-mail</label><input id="user-register-email" name="email" type="email" maxlength="320" autocomplete="email" required></div><div class="field"><label for="user-register-relation">Jdu jako</label><select id="user-register-relation" name="relation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host / externista</option></select></div><div class="field"><label for="user-register-password">Heslo</label><input id="user-register-password" name="password" type="password" minlength="12" autocomplete="new-password" required><small>Alespoň 12 znaků.</small></div><label class="checkbox"><input name="consent" type="checkbox" required><span>Souhlasím s <a href="/podminky" target="_blank" rel="noopener">podmínkami</a> a seznámil/a jsem se s <a href="/ochrana-osobnich-udaju" target="_blank" rel="noopener">ochranou osobních údajů</a>.</span></label><button class="button" type="submit">Vytvořit účet</button></form>
   </div>`;
   accountPanel.querySelector('#account-login-form').addEventListener('submit', async (event) => {
     event.preventDefault();

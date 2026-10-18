@@ -391,6 +391,9 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
 .quote-break{width:100%;margin:0;padding:78px 6vw;background:var(--sage-dark);color:#fff;text-align:center}
 .quote-break p{max-width:920px;margin:0 auto;font-family:"Newsreader",serif;font-size:clamp(30px,3.4vw,50px);line-height:1.2}
 .feature-list [data-setting="studio_capacity"]{color:inherit;font:inherit;margin:0}
+.quick-facts{width:min(100%,1440px);margin:72px auto 0;padding-top:48px;border-top:1px solid var(--line)}.quick-facts h3{margin:0 0 28px;font-family:"Newsreader",serif;font-size:clamp(30px,3vw,44px);font-weight:400}.quick-facts dl{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:0;background:var(--line);border:1px solid var(--line)}.quick-facts dl>div{min-width:0;padding:24px;background:#fff}.quick-facts dt{margin-bottom:9px;color:var(--clay);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.quick-facts dd{margin:0;line-height:1.55;color:var(--ink)}.quick-facts [data-setting]{font:inherit;color:inherit}
+@media(max-width:900px){.quick-facts dl{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.quick-facts{margin-top:52px;padding-top:36px}.quick-facts dl{grid-template-columns:1fr}}
 .admin-teacher blockquote{margin:8px 0 0;color:var(--ink);font-family:"Newsreader",serif;font-size:15px;line-height:1.4}
 .participant-actions{white-space:nowrap}
 .participant-actions .button{padding:9px 14px}
