@@ -304,6 +304,117 @@ function bindLessonShareButtons(root = document) {
   }));
 }
 
+function preferredCalendarProvider() {
+  const userAgent = navigator.userAgent || '';
+  const isIPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  if (/Android/i.test(userAgent)) return 'google';
+  if (/iPad|iPhone|iPod/i.test(userAgent) || isIPad) return 'ics';
+  return 'ics';
+}
+
+function calendarLessonById(id, source = 'lesson') {
+  if (source === 'account') return accountData?.reservations.find((item) => item.id === id) || null;
+  return lessonById(id);
+}
+
+function calendarLessonData(item, source = 'lesson') {
+  if (!item) return null;
+  const startsAt = item.iso || item.startsAt;
+  const endsAt = item.endsAt;
+  if (!startsAt || !endsAt) return null;
+  const lessonUrl = source === 'account' ? `${location.origin}/#ucet` : lessonShareUrl(item);
+  return {
+    id: `${source}-${item.id}`,
+    title: `${item.title} · Jóga na HALLU`,
+    startsAt,
+    endsAt,
+    location: item.location || 'Jógová místnost, 3. patro, HALL',
+    description: `Lektor: ${item.teacher}\nJóga na HALLU`,
+    url: lessonUrl,
+  };
+}
+
+function calendarTimestamp(value) {
+  return new Date(value).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+function escapeCalendarText(value) {
+  return String(value || '')
+    .replaceAll('\\', '\\\\')
+    .replaceAll('\n', '\\n')
+    .replaceAll(',', '\\,')
+    .replaceAll(';', '\\;');
+}
+
+function calendarFile(events) {
+  const stamp = calendarTimestamp(new Date());
+  const entries = events.map((event) => [
+    'BEGIN:VEVENT',
+    `UID:${escapeCalendarText(event.id)}@joganahallu.cz`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART:${calendarTimestamp(event.startsAt)}`,
+    `DTEND:${calendarTimestamp(event.endsAt)}`,
+    `SUMMARY:${escapeCalendarText(event.title)}`,
+    `LOCATION:${escapeCalendarText(event.location)}`,
+    `DESCRIPTION:${escapeCalendarText(event.description)}`,
+    `URL:${event.url}`,
+    'STATUS:CONFIRMED',
+    'END:VEVENT',
+  ].join('\r\n')).join('\r\n');
+  return `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Joga na HALLU//Lekce//CS\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n${entries}\r\nEND:VCALENDAR\r\n`;
+}
+
+function downloadCalendar(events, filename = 'joga-na-hallu.ics') {
+  if (!events.length) return showToast('Nejsou vybrané žádné budoucí lekce.');
+  const url = URL.createObjectURL(new Blob([calendarFile(events)], { type: 'text/calendar;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function googleCalendarUrl(event) {
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.title,
+    dates: `${calendarTimestamp(event.startsAt)}/${calendarTimestamp(event.endsAt)}`,
+    details: `${event.description}\n${event.url}`,
+    location: event.location,
+  });
+  return `https://calendar.google.com/calendar/render?${params}`;
+}
+
+function addLessonToCalendar(item, source, provider) {
+  const event = calendarLessonData(item, source);
+  if (!event) return showToast('Kalendář pro tuto lekci se nepodařilo připravit.');
+  if (provider === 'google') {
+    window.open(googleCalendarUrl(event), '_blank', 'noopener');
+    return;
+  }
+  downloadCalendar([event], `joga-na-hallu-${String(item.title || 'lekce').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.ics`);
+}
+
+function calendarControls(id, source = 'lesson', compact = false) {
+  const preferred = preferredCalendarProvider();
+  const alternative = preferred === 'google' ? 'ics' : 'google';
+  const alternativeLabel = alternative === 'google' ? 'Google kalendář' : 'Soubor .ics';
+  return `<div class="calendar-actions${compact ? ' calendar-actions-compact' : ''}"><button class="${compact ? 'text-button' : 'button'}" type="button" data-calendar-add="${escapeHtml(id)}" data-calendar-source="${source}" data-calendar-provider="${preferred}">${compact ? 'Do kalendáře' : 'Přidat do kalendáře'}</button><button class="text-button calendar-alternative" type="button" data-calendar-add="${escapeHtml(id)}" data-calendar-source="${source}" data-calendar-provider="${alternative}">${alternativeLabel}</button></div>`;
+}
+
+function bindCalendarButtons(root = document) {
+  root.querySelectorAll('[data-calendar-add]').forEach((button) => button.addEventListener('click', () => {
+    const source = button.dataset.calendarSource || 'lesson';
+    addLessonToCalendar(calendarLessonById(button.dataset.calendarAdd, source), source, button.dataset.calendarProvider);
+  }));
+  root.querySelector('[data-calendar-export]')?.addEventListener('click', () => {
+    const futureLessons = filteredAdminLessons(adminLessons.filter((lesson) => lesson.status === 'published' && new Date(lesson.endsAt) > new Date()));
+    downloadCalendar(futureLessons.map((lesson) => calendarLessonData(lesson)).filter(Boolean), 'joga-na-hallu-budouci-lekce.ics');
+  });
+}
+
 function settingNumber(key) {
   const value = Number(publicSettings[key] ?? PUBLIC_SETTING_DEFAULTS[key]);
   return Number.isFinite(value) ? value : Number(PUBLIC_SETTING_DEFAULTS[key]);
@@ -408,15 +519,14 @@ async function openBooking(id) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Rezervaci se nepodařilo uložit.');
 
-      if (result.emailSent) {
-        closeDialog();
-      } else {
-        const fallbackLink = result.cancelUrl
+      const confirmation = result.emailSent
+        ? '<p>Potvrzení jsme poslali e-mailem.</p>'
+        : result.cancelUrl
           ? `<p>E-mail se nepodařilo odeslat. Ulož si proto tento odkaz: <a href="${escapeHtml(result.cancelUrl)}">zrušit rezervaci</a>.</p>`
           : '<p>Potvrzení se nepodařilo odeslat. Obrať se prosím na lektora.</p>';
-        document.querySelector('#booking-content').innerHTML = `<div class="booking-panel"><p class="eyebrow">Místo je rezervované</p>${fallbackLink}<button class="button" type="button" data-dialog-done>Zavřít</button></div>`;
-        document.querySelector('[data-dialog-done]').addEventListener('click', closeDialog);
-      }
+      document.querySelector('#booking-content').innerHTML = `<div class="booking-panel booking-confirmation"><p class="eyebrow">Místo je rezervované</p><h2>${escapeHtml(lesson.title)}</h2>${confirmation}${calendarControls(lesson.id)}<button class="text-button booking-done" type="button" data-dialog-done>Zavřít</button></div>`;
+      bindCalendarButtons(document.querySelector('#booking-content'));
+      document.querySelector('[data-dialog-done]').addEventListener('click', closeDialog);
       await loadLessons();
       if (signedIn) accountData = await loadAccountData();
       showToast(result.emailSent ? 'Místo je rezervované. Potvrzení jsme poslali e-mailem.' : 'Místo je rezervované. Ulož si odkaz pro zrušení.');
@@ -445,6 +555,7 @@ function lessonFromDatabase(row) {
     date: dateParts,
     iso: row.starts_at,
     endsAt: row.ends_at,
+    location: row.location || 'Jógová místnost, 3. patro, HALL',
     time,
     title: row.title,
     teacher: instructor.name,
@@ -947,7 +1058,8 @@ function accountLessonCard(reservation, upcoming) {
   const paymentQr = reservation.status === 'attended' && reservation.paymentQrUrl
     ? `<button class="account-payment-qr" type="button" data-account-payment="${reservation.id}" aria-label="Zvětšit QR kód k platbě"><img src="${escapeHtml(reservation.paymentQrUrl)}" alt=""><span>${escapeHtml(paymentLabel)}</span></button>`
     : '';
-  return `<article class="account-lesson-card${reservation.status === 'cancelled' ? ' is-cancelled' : ''}"><div class="account-lesson-date"><strong>${escapeHtml(day)}</strong><span>${escapeHtml(month)}</span></div><div class="account-lesson-details"><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(reservation.teacher)} · ${escapeHtml(reservation.location)}</p></div><div class="account-lesson-actions"><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span>${paymentQr}${canCancel ? `<button class="text-button" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</div></article>`;
+  const calendarAction = upcoming && reservation.status === 'confirmed' ? calendarControls(reservation.id, 'account', true) : '';
+  return `<article class="account-lesson-card${reservation.status === 'cancelled' ? ' is-cancelled' : ''}"><div class="account-lesson-date"><strong>${escapeHtml(day)}</strong><span>${escapeHtml(month)}</span></div><div class="account-lesson-details"><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(reservation.teacher)} · ${escapeHtml(reservation.location)}</p></div><div class="account-lesson-actions"><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span>${calendarAction}${paymentQr}${canCancel ? `<button class="text-button" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</div></article>`;
 }
 
 function openAccountPaymentQr(reservationId) {
@@ -1029,6 +1141,7 @@ function openAccountPasswordEditor() {
 }
 
 function bindAccountDashboard() {
+  bindCalendarButtons(accountPanel);
   accountPanel.querySelectorAll('[data-account-tab]').forEach((button) => button.addEventListener('click', async () => {
     activeAccountTab = button.dataset.accountTab;
     await renderAccountDashboard();
@@ -1463,11 +1576,12 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
       ? `<button class="text-button danger" data-delete-lesson="${lesson.id}">Trvale smazat</button>`
       : '';
     const shareAction = `<button class="text-button admin-lesson-share" type="button" data-copy-lesson="${lesson.id}">Kopírovat odkaz</button>`;
+    const calendarAction = !cancelled && !ended ? calendarControls(lesson.id, 'lesson', true) : '';
     const actions = cancelled
       ? `<div class="lesson-actions-stack${deleteAction ? '' : ' lesson-actions-disabled'}"><span class="lesson-action-state">Bez dalších akcí</span>${shareAction}${deleteAction}</div>`
       : ended
         ? `<div class="lesson-actions-stack"><button class="button button-small" data-payment-lesson="${lesson.id}">Platby a příspěvky</button>${shareAction}${deleteAction}</div>`
-        : `<div class="lesson-actions-stack"><div class="lesson-action-primary">${attendanceAction}</div><div class="lesson-action-buttons"><button class="button button-small" data-edit-lesson="${lesson.id}">Upravit</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div>${shareAction}${deleteAction}</div>`;
+        : `<div class="lesson-actions-stack"><div class="lesson-action-primary">${attendanceAction}</div><div class="lesson-action-buttons"><button class="button button-small" data-edit-lesson="${lesson.id}">Upravit</button><button class="button button-small" data-cancel-lesson="${lesson.id}">Zrušit</button></div>${calendarAction}${shareAction}${deleteAction}</div>`;
     const payment = lesson.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : `${lesson.priceCzk ?? 0} Kč`;
     const weekday = new Intl.DateTimeFormat('cs-CZ', { weekday: 'long', timeZone: 'Europe/Prague' }).format(new Date(lesson.iso));
     const weekdayDate = `${weekday.charAt(0).toLocaleUpperCase('cs-CZ')}${weekday.slice(1)} ${lesson.date}`;
@@ -1481,6 +1595,10 @@ function adminLessonFilter() {
   return `<div class="admin-lesson-filter field"><label for="admin-lesson-instructor">Filtrovat podle lektora</label><select id="admin-lesson-instructor" data-admin-lesson-instructor><option value="all">Všichni lektoři</option>${options}</select></div>`;
 }
 
+function adminLessonTools() {
+  return `<div class="admin-lesson-tools">${adminLessonFilter()}<button class="button button-small button-secondary" type="button" data-calendar-export>Stáhnout termíny</button></div>`;
+}
+
 function filteredAdminLessons(sourceLessons) {
   if (adminLessonInstructorFilter === 'all') return sourceLessons;
   return sourceLessons.filter((lesson) => lesson.instructorId === adminLessonInstructorFilter);
@@ -1488,7 +1606,7 @@ function filteredAdminLessons(sourceLessons) {
 
 function overviewPanel() {
   const upcomingLessons = adminLessons.filter((lesson) => lesson.status === 'published' && new Date(lesson.endsAt) > new Date());
-  return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Naplánované lekce</h2><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p></div>${adminLessonFilter()}</div>${lessonTable(filteredAdminLessons(upcomingLessons), 'Tomuto filtru neodpovídá žádná naplánovaná lekce.')}</div>`;
+  return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Naplánované lekce</h2><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p></div>${adminLessonTools()}</div>${lessonTable(filteredAdminLessons(upcomingLessons), 'Tomuto filtru neodpovídá žádná naplánovaná lekce.')}</div>`;
 }
 
 function teachersPanel() {
@@ -1691,6 +1809,7 @@ function renderAdmin(tab) {
   if (tab === 'accounts') panel.innerHTML = accountsPanel();
   if (tab === 'settings') panel.innerHTML = settingsPanel();
   bindLessonShareButtons(panel);
+  bindCalendarButtons(panel);
 
   document.querySelectorAll('[data-edit-teacher]').forEach((button) => button.addEventListener('click', () => openTeacherEditor(button.dataset.editTeacher)));
   document.querySelector('[data-add-news]')?.addEventListener('click', () => openNewsEditor());

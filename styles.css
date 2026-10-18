@@ -260,6 +260,14 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
 .admin-list-heading .admin-help{margin:0}
 .admin-lesson-filter{min-width:220px}
 .admin-lesson-filter select{padding:11px 36px 11px 13px;font-family:"DM Sans",sans-serif;font-size:14px;font-weight:500;line-height:1.4}
+.admin-lesson-tools{display:flex;align-items:end;gap:10px}
+.calendar-actions{display:grid;justify-items:center;gap:8px;margin-top:22px}
+.calendar-actions .button{margin-top:0}
+.calendar-actions .calendar-alternative{padding:2px 0;color:var(--sage-dark);font-size:12px;border-bottom:1px solid currentColor}
+.calendar-actions-compact{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 12px;margin:0}
+.calendar-actions-compact .text-button{padding:2px 0;color:var(--sage-dark);font-size:12px;border-bottom:1px solid currentColor}
+.booking-confirmation>p{color:var(--muted);line-height:1.55}
+.booking-confirmation .booking-done{display:flex;margin:20px auto 0;padding:4px;color:var(--muted);border-bottom:1px solid currentColor}
 .admin-news-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center;padding:18px 0;border-top:1px solid var(--line)}
 .admin-news-item h3{margin:0 0 6px;font-family:"Newsreader",serif;font-size:22px;font-weight:400}
 .admin-news-item p{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.5}
@@ -300,6 +308,7 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
   .admin-topbar-actions .text-button{padding:8px 0}
   .admin-list-heading{align-items:stretch;flex-direction:column}
   .admin-lesson-filter{min-width:0}
+  .admin-lesson-tools{align-items:stretch;flex-direction:column}
   .admin-news-item{grid-template-columns:1fr;gap:12px}
   .admin-news-actions{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:8px}
   .admin-news-actions>.button{width:100%}
@@ -563,6 +572,7 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
 .account-lesson-card p,.account-empty{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
 .account-lesson-actions{display:grid;justify-items:end;gap:10px}
 .account-lesson-actions .text-button{font-size:12px;border-bottom:1px solid currentColor}
+.account-lesson-actions .calendar-actions{justify-content:end}
 .account-payment-qr{display:grid;justify-items:center;gap:5px;padding:6px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font:600 11px "DM Sans",sans-serif;cursor:pointer}
 .account-payment-qr img{display:block;width:66px;height:66px;object-fit:contain}
 .account-payment-qr span{max-width:92px;line-height:1.2;text-align:center}
@@ -646,7 +656,8 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
   .account-card-heading{align-items:flex-start;flex-direction:column}
   .account-lesson-card{grid-template-columns:48px minmax(0,1fr);gap:14px}
   .account-lesson-date strong{font-size:24px}
-  .account-lesson-actions{grid-column:2;justify-items:start;grid-auto-flow:column;align-items:center}
+  .account-lesson-actions{grid-column:2;justify-items:start;grid-auto-flow:row;align-items:center}
+  .account-lesson-actions .calendar-actions{justify-content:start}
   .account-setting-row{align-items:flex-start;flex-direction:column;gap:16px}
   .account-setting-row .button{width:100%}
   .journey-summary{align-items:flex-start;flex-direction:column;padding:28px}
