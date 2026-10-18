@@ -19,6 +19,15 @@ type PaymentParticipant = {
   payment_email_sent_at?: string | null;
   payment_email_recipient?: string | null;
   payment_email_error?: string | null;
+  feedback_token?: string;
+};
+
+type FeedbackSummary = {
+  requested: boolean;
+  total: number;
+  ratings: { great: number; good: number; not_right: number };
+  topics: Array<{ topic: string; count: number }>;
+  comments: string[];
 };
 
 type PaymentEmailBatch = {
@@ -33,6 +42,7 @@ type PaymentEmailBatch = {
   cancellation_hours: number;
   payment_note: string;
   payment_qr_url: string | null;
+  feedback_requested?: boolean;
   participants: PaymentParticipant[];
 };
 
@@ -321,11 +331,15 @@ Deno.serve(async (req: Request) => {
       const preview = await callRpc<PaymentEmailBatch>('admin_payment_email_preview', {
         p_lesson_id: lessonId,
       });
-      return json(req, { ok: true, action, ...preview });
+      const feedback = await callRpc<FeedbackSummary>('admin_lesson_feedback_summary', {
+        p_lesson_id: lessonId,
+      });
+      return json(req, { ok: true, action, ...preview, feedback });
     }
 
     if (action === 'payment-send') {
       const lessonId = String(body.lessonId ?? '');
+      const feedbackRequested = body.feedbackRequested === true;
       const requestedAttendance = Array.isArray(body.attendance) ? body.attendance : [];
       if (!/^[0-9a-f-]{36}$/i.test(lessonId)) throw new Error('INVALID_LESSON');
       if (requestedAttendance.length < 1 || requestedAttendance.length > 100) throw new Error('INVALID_ATTENDANCE');
@@ -355,6 +369,7 @@ Deno.serve(async (req: Request) => {
       const batch = await callRpc<PaymentEmailBatch>('admin_record_attendance', {
         p_lesson_id: lessonId,
         p_attendance: attendance,
+        p_feedback_requested: feedbackRequested,
       });
 
       const teacherFirstName = batch.teacher.trim().split(/\s+/)[0] || 'Tým';
@@ -372,6 +387,12 @@ Deno.serve(async (req: Request) => {
           ? `<p>na lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}) jsi měl/a rezervované místo, ale nakonec ses nezúčastnil/a nebo byla rezervace zrušena méně než ${batch.cancellation_hours} hodin před začátkem lekce.</p>
             <p>Rezervaci je možné bez úhrady zrušit nejpozději ${batch.cancellation_hours} hodin před začátkem lekce. Při pozdějším zrušení nebo neúčasti se lekce hradí.</p>`
           : `<p>děkujeme za účast na lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}).</p>`;
+        const feedbackCopy = !absent && feedbackRequested && participant.feedback_token
+          ? `<div style="margin:28px 0;padding:20px;background:#f5f1e9;border-left:4px solid #b87854">
+              <p style="margin:0 0 14px"><strong>Jaká pro tebe lekce byla?</strong><br>Krátká anonymní zpětná vazba nám pomůže další lekce vyladit.</p>
+              <p style="margin:0"><a href="${escapeHtml(`${publicSiteUrl}/?feedback=${participant.feedback_token}`)}" style="display:inline-block;padding:12px 18px;border-radius:24px;background:#3e5648;color:#fff;text-decoration:none;font-weight:700">Ohodnotit lekci</a></p>
+            </div>`
+          : '';
         const result = await sendBrevoEmail({
           toEmail: recipientEmail,
           toName: participant.name,
@@ -386,6 +407,7 @@ Deno.serve(async (req: Request) => {
             <p>${escapeHtml(paymentCopy)}</p>
             <p style="text-align:center;margin:28px 0"><a href="${qrUrl}"><img src="${qrUrl}" width="280" alt="${donation ? 'QR kód pro dobrovolný příspěvek' : `QR kód pro platbu ${batch.price_czk ?? 0} Kč – ${escapeHtml(batch.teacher)}`}" style="max-width:100%;height:auto;border:0"></a></p>
             <p style="font-size:13px;color:#66706b">Pokud se obrázek v e-mailu nezobrazí, <a href="${qrUrl}">otevři QR kód v prohlížeči</a>.</p>
+            ${feedbackCopy}
             <p>${absent ? 'Děkujeme za pochopení.' : 'Děkujeme.'}</p>
           </div>`,
         });

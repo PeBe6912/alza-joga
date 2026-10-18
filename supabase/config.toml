@@ -395,6 +395,9 @@ verify_jwt = false
 [functions.account]
 verify_jwt = false
 
+[functions.lesson-feedback]
+verify_jwt = false
+
 [functions.manage-lesson]
 verify_jwt = true
 

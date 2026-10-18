@@ -2175,6 +2175,16 @@ async function openPaymentEmails(lessonId) {
       </article>`;
     }).join('');
     const unsentCount = preview.participants.filter((participant) => !participant.payment_email_sent_at).length;
+    const feedback = preview.feedback || { requested: false, total: 0, ratings: {}, topics: [], comments: [] };
+    const ratingSummary = feedback.total ? `<div class="feedback-results">
+      <div class="feedback-result-counts">
+        <span><b>${feedback.ratings.great || 0}</b> Skvěle</span>
+        <span><b>${feedback.ratings.good || 0}</b> Dobře</span>
+        <span><b>${feedback.ratings.not_right || 0}</b> Něco mi nesedlo</span>
+      </div>
+      ${feedback.topics?.length ? `<p><b>Nejčastěji označeno:</b> ${feedback.topics.map((item) => `${escapeHtml(item.topic)} (${item.count})`).join(', ')}</p>` : ''}
+      ${feedback.comments?.length ? `<div class="feedback-comments"><b>Anonymní komentáře</b>${feedback.comments.map((comment) => `<blockquote>${escapeHtml(comment)}</blockquote>`).join('')}</div>` : ''}
+    </div>` : '';
     document.querySelector('#booking-content').innerHTML = `<form class="booking-panel payment-panel" id="payment-email-form">
       <p class="eyebrow">Docházka a platby</p><h2>${escapeHtml(preview.title)}</h2>
       <p><b>${escapeHtml(preview.teacher)}</b> · ${escapeHtml(formatAdminDate(preview.starts_at))}</p>
@@ -2183,6 +2193,8 @@ async function openPaymentEmails(lessonId) {
       <div class="payment-list-heading"><b>Potvrď skutečnou účast</b><span>${unsentCount} neodeslaných plateb</span></div>
       <div class="payment-recipient-list">${participantRows || '<p>Na této lekci nejsou žádní aktivní účastníci.</p>'}</div>
       <p class="form-hint">Všichni jsou předvyplnění jako „Přišel“. Změň pouze výjimky. Volba „Bez platby“ neodešle e-mail a účast nezapočítá.</p>
+      <label class="feedback-request-choice"><input type="checkbox" name="feedbackRequested" ${feedback.requested ? 'checked' : ''}><span><b>Požádat přítomné účastníky o krátký feedback</b><small>Odkaz na anonymní hodnocení dostanou pouze lidé označení jako „Přišel“.</small></span></label>
+      ${feedback.total ? `<section class="feedback-summary"><p class="eyebrow">Zpětná vazba · ${feedback.total} ${feedback.total === 1 ? 'odpověď' : feedback.total < 5 ? 'odpovědi' : 'odpovědí'}</p>${ratingSummary}</section>` : ''}
       ${preview.instructor_email ? '' : '<p class="attendance-note">Nejdřív doplň e-mail lektora v jeho profilu.</p>'}
       <button class="button" type="submit" ${preview.participants.length ? '' : 'disabled'}>Potvrdit docházku a odeslat</button>
     </form>`;
@@ -2221,7 +2233,8 @@ async function sendPaymentEmails(event, lessonId) {
   button.disabled = true;
   button.textContent = 'Ukládám a odesílám…';
   try {
-    const result = await manageLesson({ lessonId, action: 'payment-send', attendance });
+    const feedbackRequested = Boolean(event.target.elements.feedbackRequested?.checked);
+    const result = await manageLesson({ lessonId, action: 'payment-send', attendance, feedbackRequested });
     await Promise.all([loadAdminLessons(), loadAdminReservations()]);
     closeDialog();
     renderAdmin(activeAdminTab);
@@ -2234,6 +2247,70 @@ async function sendPaymentEmails(event, lessonId) {
     button.disabled = false;
     button.textContent = 'Potvrdit docházku a odeslat';
     showToast(error.message);
+  }
+}
+
+async function feedbackRequest(payload) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/lesson-feedback`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.message || 'Zpětnou vazbu se nepodařilo načíst.');
+  return result;
+}
+
+async function openLessonFeedback(token) {
+  document.querySelector('#booking-content').innerHTML = '<div class="booking-panel"><p>Načítám zpětnou vazbu…</p></div>';
+  dialog.showModal();
+  try {
+    const feedback = await feedbackRequest({ action: 'load', token });
+    const topics = ['Tempo lekce', 'Náročnost', 'Vysvětlení pozic', 'Skladba lekce', 'Atmosféra', 'Hudba', 'Organizace'];
+    const selectedTopics = new Set(feedback.topics || []);
+    document.querySelector('#booking-content').innerHTML = `<form class="booking-panel lesson-feedback-form" id="lesson-feedback-form">
+      <p class="eyebrow">Zpětná vazba po lekci</p>
+      <h2>Jaká pro tebe lekce byla?</h2>
+      <p><b>${escapeHtml(feedback.title)}</b><br>${escapeHtml(formatAdminDate(feedback.starts_at))} · ${escapeHtml(feedback.teacher)}</p>
+      ${feedback.submitted ? '<p class="feedback-saved-note">Odpověď už je uložená. Můžeš ji zde upravit.</p>' : ''}
+      <fieldset class="feedback-rating"><legend>Celkově</legend>
+        <label><input type="radio" name="rating" value="great" ${feedback.rating === 'great' ? 'checked' : ''} required><span>Skvěle</span></label>
+        <label><input type="radio" name="rating" value="good" ${feedback.rating === 'good' ? 'checked' : ''}><span>Dobře</span></label>
+        <label><input type="radio" name="rating" value="not_right" ${feedback.rating === 'not_right' ? 'checked' : ''}><span>Něco mi nesedlo</span></label>
+      </fieldset>
+      <fieldset class="feedback-topics"><legend>Čeho se tvoje hodnocení týká? <small>Volitelné</small></legend>
+        ${topics.map((topic) => `<label><input type="checkbox" name="topics" value="${escapeHtml(topic)}" ${selectedTopics.has(topic) ? 'checked' : ''}><span>${escapeHtml(topic)}</span></label>`).join('')}
+      </fieldset>
+      <label class="field"><span>Komentář <small>Volitelné</small></span><textarea name="comment" rows="4" maxlength="1500" placeholder="Co ti vyhovovalo nebo co by příště mohlo být jinak?">${escapeHtml(feedback.comment || '')}</textarea></label>
+      <p class="form-hint">Odpověď se lektorovi zobrazí anonymně.</p>
+      <button class="button" type="submit">Odeslat zpětnou vazbu</button>
+    </form>`;
+    document.querySelector('#lesson-feedback-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = event.target.querySelector('[type="submit"]');
+      button.disabled = true;
+      button.textContent = 'Ukládám…';
+      try {
+        const data = new FormData(event.target);
+        await feedbackRequest({
+          action: 'submit',
+          token,
+          rating: data.get('rating'),
+          topics: data.getAll('topics'),
+          comment: data.get('comment'),
+        });
+        document.querySelector('#booking-content').innerHTML = `<div class="booking-panel feedback-thanks"><p class="eyebrow">Děkujeme</p><h2>Děkujeme za zpětnou vazbu.</h2><p>Pomáhá nám vytvářet lekce, na kterých se budeš cítit dobře.</p><button class="button" type="button" data-close-feedback>Zavřít</button></div>`;
+        document.querySelector('[data-close-feedback]').addEventListener('click', closeDialog);
+        history.replaceState({}, '', location.pathname);
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = 'Odeslat zpětnou vazbu';
+        showToast(error.message);
+      }
+    });
+  } catch (error) {
+    document.querySelector('#booking-content').innerHTML = `<div class="booking-panel feedback-thanks"><p class="eyebrow">Zpětná vazba</p><h2>Odkaz není dostupný</h2><p>${escapeHtml(error.message)}</p><button class="button" type="button" data-close-feedback>Zavřít</button></div>`;
+    document.querySelector('[data-close-feedback]').addEventListener('click', closeDialog);
   }
 }
 
@@ -2557,6 +2634,11 @@ loadPublicContent();
 
 async function initializeRoute() {
   const accountParams = new URLSearchParams(location.search);
+  const feedbackToken = accountParams.get('feedback');
+  if (feedbackToken) {
+    await openLessonFeedback(feedbackToken);
+    return;
+  }
   const tokenHash = accountParams.get('token_hash');
   const verificationType = accountParams.get('type');
   if (tokenHash && ['signup', 'magiclink', 'recovery'].includes(verificationType)) {
