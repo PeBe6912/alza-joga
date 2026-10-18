@@ -126,6 +126,7 @@ export async function sendBrevoEmail(message: {
   subject: string;
   htmlContent: string;
   signatureName?: string;
+  senderName?: string;
 }): Promise<{ sent: boolean; messageId?: string; error?: string }> {
   const apiKey = Deno.env.get('BREVO_API_KEY');
   const senderEmail = Deno.env.get('BREVO_SENDER_EMAIL');
@@ -134,6 +135,7 @@ export async function sendBrevoEmail(message: {
   const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
   const signatureName = String(message.signatureName ?? '').trim();
   const signature = signatureName ? `${escapeHtml(signatureName)} · Jóga na HALLU` : 'Jóga na HALLU';
+  const senderName = String(message.senderName ?? '').trim() || 'Jóga na HALLU';
   const brandedContent = `<!doctype html>
     <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
     <body style="margin:0;padding:0;background:#f5f1e9;color:#1f2824;font-family:Arial,sans-serif">
@@ -167,7 +169,7 @@ export async function sendBrevoEmail(message: {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: 'Jóga na HALLU', email: senderEmail },
+      sender: { name: senderName.slice(0, 120), email: senderEmail },
       to: [{ email: message.toEmail, name: message.toName }],
       subject: message.subject,
       htmlContent: brandedContent,
