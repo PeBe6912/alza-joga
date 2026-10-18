@@ -106,7 +106,7 @@ function stripStaticMetadata(html) {
 }
 
 function addMetadata(html, metadata, canonicalUrl, lesson) {
-  const imageUrl = `${new URL(canonicalUrl).origin}/assets/joga-na-hallu-og-studio-v1.jpg`;
+  const imageUrl = `${new URL(canonicalUrl).origin}/assets/joga-na-hallu-social-square-v2.jpg`;
   const jsonLd = structuredData(lesson, canonicalUrl, imageUrl);
   const tags = `
   <base href="/" />
@@ -121,7 +121,7 @@ function addMetadata(html, metadata, canonicalUrl, lesson) {
   <meta property="og:image" content="${escapeHtml(imageUrl)}" />
   <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
+  <meta property="og:image:height" content="1200" />
   <meta property="og:image:alt" content="Jógové studio ve 3. patře budovy HALL s proutěnými světly a jógovými obrazy" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(metadata.title)}" />
