@@ -257,7 +257,7 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
 .admin-list-heading h2{margin-bottom:8px}
 .admin-list-heading .admin-help{margin:0}
 .admin-lesson-filter{min-width:220px}
-.admin-lesson-filter select{padding:11px 36px 11px 13px;font-family:"DM Sans",sans-serif}
+.admin-lesson-filter select{padding:11px 36px 11px 13px;font-family:"DM Sans",sans-serif;font-size:14px;font-weight:500;line-height:1.4}
 .admin-news-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center;padding:18px 0;border-top:1px solid var(--line)}
 .admin-news-item h3{margin:0 0 6px;font-family:"Newsreader",serif;font-size:22px;font-weight:400}
 .admin-news-item p{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.5}
