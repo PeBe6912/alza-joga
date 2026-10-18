@@ -99,7 +99,6 @@ const toast = document.querySelector('#toast');
 const dialog = document.querySelector('#booking-dialog');
 
 document.querySelector('#main-menu a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="/cesta-praxe">Cesta praxe</a>');
-document.querySelector('footer a[href="#ucet"]')?.insertAdjacentHTML('beforebegin', '<a href="/cesta-praxe">Cesta praxe</a>');
 
 function spotsLeft(lesson) {
   return Math.max(lesson.capacity - lesson.booked, 0);

@@ -98,7 +98,9 @@ footer{display:block;padding:40px 5vw}
 footer>div.footer-inner{display:flex;align-items:center;justify-content:space-between;gap:48px;max-width:1440px;margin:0 auto}
 .footer-brand{display:flex;align-items:center;gap:24px;min-width:0}
 .footer-brand>p{margin:0;line-height:1.5}
-.footer-inner>div:last-child{display:flex;justify-content:flex-end;gap:20px;flex-wrap:wrap}
+.footer-links{display:flex;justify-content:flex-end;gap:20px;flex-wrap:wrap}
+.footer-link-group{display:contents}
+.footer-link-conditions{order:1}.footer-link-privacy{order:2}.footer-link-journey{order:3}.footer-link-account{order:4}.footer-admin-link{order:5}
 
 @media(min-width:901px){
   .admin-sidebar{position:sticky;top:0;height:100vh;align-self:start;overflow-y:auto}
@@ -493,7 +495,7 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
   .studio-main img{object-fit:cover;object-position:center 42%}
   .teacher-photo-portrait img{object-position:center 55%}
   footer>div.footer-inner{align-items:flex-start;flex-direction:column;gap:22px}
-  .footer-inner>div:last-child{justify-content:flex-start;row-gap:10px}
+  .footer-links{justify-content:flex-start;row-gap:10px}
 }
 
 @media(max-width:600px){
@@ -503,7 +505,9 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
   footer{padding:32px 24px}
   footer>div.footer-inner{display:flex;align-items:flex-start;flex-direction:column;gap:20px}
   .footer-brand{align-items:flex-start;gap:16px}
-  .footer-inner>div:last-child{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;width:100%}
+  .footer-links{display:grid;grid-template-columns:1fr;gap:18px;width:100%}
+  .footer-link-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px}
+  .footer-link-primary{padding-bottom:18px;border-bottom:1px solid var(--line);color:var(--ink);font-weight:600}
 }
 
 @media(min-width:1400px){
