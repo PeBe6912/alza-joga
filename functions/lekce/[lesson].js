@@ -106,7 +106,7 @@ function stripStaticMetadata(html) {
 }
 
 function addMetadata(html, metadata, canonicalUrl, lesson) {
-  const imageUrl = `${new URL(canonicalUrl).origin}/assets/joga-na-hallu-social-v3.png`;
+  const imageUrl = `${new URL(canonicalUrl).origin}/assets/joga-na-hallu-og-studio-v1.jpg`;
   const jsonLd = structuredData(lesson, canonicalUrl, imageUrl);
   const tags = `
   <base href="/" />
@@ -119,13 +119,15 @@ function addMetadata(html, metadata, canonicalUrl, lesson) {
   <meta property="og:description" content="${escapeHtml(metadata.description)}" />
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
   <meta property="og:image" content="${escapeHtml(imageUrl)}" />
-  <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="1734" />
-  <meta property="og:image:height" content="907" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Jógové studio ve 3. patře budovy HALL s proutěnými světly a jógovými obrazy" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(metadata.title)}" />
   <meta name="twitter:description" content="${escapeHtml(metadata.description)}" />
   <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
+  <meta name="twitter:image:alt" content="Jógové studio ve 3. patře budovy HALL s proutěnými světly a jógovými obrazy" />
   ${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}`;
   return stripStaticMetadata(html)
     .replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(metadata.title)}</title>`)
