@@ -1337,6 +1337,8 @@ function setAdminTabUrl(tab, { replace = false } = {}) {
 
 function scrollAdminToTop() {
   window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
   adminView.scrollTop = 0;
   document.querySelector('.admin-content').scrollTop = 0;
 }
@@ -1379,6 +1381,7 @@ function closeAdmin() {
 
 document.querySelectorAll('[data-open-admin]').forEach((button) => button.addEventListener('click', (event) => {
   event.preventDefault();
+  event.currentTarget.blur();
   openAdmin();
 }));
 
