@@ -492,6 +492,7 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
 }
 
 @media(max-width:600px){
+  .studio-main img{object-fit:cover;object-position:center 42%}
   .teacher-photo-portrait{height:clamp(420px,100vw,600px)}
   .quote-break{padding:58px 24px}
   footer{padding:32px 24px}
