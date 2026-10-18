@@ -78,6 +78,17 @@ let publicSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let activeAdminTab = 'overview';
 let adminLessonInstructorFilter = 'all';
+const ADMIN_TAB_SLUGS = Object.freeze({
+  overview: 'lekce',
+  calendar: 'kalendar',
+  completed: 'probehle-lekce',
+  people: 'ucastnici',
+  content: 'novinky',
+  teachers: 'lektori',
+  accounts: 'administratori',
+  settings: 'nastaveni',
+});
+const ADMIN_SLUG_TABS = Object.fromEntries(Object.entries(ADMIN_TAB_SLUGS).map(([tab, slug]) => [slug, tab]));
 const LESSON_PAGE_SIZE = 6;
 let lessonDisplayLimit = LESSON_PAGE_SIZE;
 let sharedLessonHandled = false;
@@ -1175,10 +1186,22 @@ function setAdminAuthenticatedLayout(isAuthenticated) {
   adminSidebar.hidden = !isAuthenticated;
 }
 
+function adminTabFromHash(hash = location.hash) {
+  const match = hash.match(/^#admin(?:\/([^/?]+))?$/);
+  if (!match) return null;
+  return match[1] ? ADMIN_SLUG_TABS[match[1]] || null : 'overview';
+}
+
+function setAdminTabUrl(tab, { replace = false } = {}) {
+  const hash = `#admin/${ADMIN_TAB_SLUGS[tab] || ADMIN_TAB_SLUGS.overview}`;
+  if (location.hash === hash) return;
+  const method = replace ? 'replaceState' : 'pushState';
+  history[method]({}, '', `${location.pathname}${location.search}${hash}`);
+}
+
 async function openAdmin({ updateUrl = true } = {}) {
-  if (updateUrl && location.hash !== '#admin') {
-    history.pushState({}, '', `${location.pathname}${location.search}#admin`);
-  }
+  const requestedTab = adminTabFromHash() || 'overview';
+  if (updateUrl) setAdminTabUrl(requestedTab);
   publicView.hidden = true;
   accountView.hidden = true;
   document.querySelector('.site-header').hidden = true;
@@ -1188,7 +1211,7 @@ async function openAdmin({ updateUrl = true } = {}) {
   setAdminAuthenticatedLayout(false);
   if (adminSession && await isAdminSessionValid()) {
     await loadAdminData();
-    renderAdmin('overview');
+    renderAdmin(requestedTab);
   } else {
     clearAdminSession();
     renderAdminLogin();
@@ -1212,7 +1235,7 @@ document.querySelector('#close-admin').addEventListener('click', () => {
 });
 
 window.addEventListener('hashchange', async () => {
-  if (location.hash === '#admin') await openAdmin({ updateUrl: false });
+  if (adminTabFromHash()) await openAdmin({ updateUrl: false });
   else if (location.hash === '#ucet') await openAccount();
   else if (!adminView.hidden || !accountView.hidden) showPublicView();
 });
@@ -1414,7 +1437,7 @@ async function signInAdmin(event) {
     if (result.user?.app_metadata?.role !== 'admin' || !result.access_token || !result.refresh_token) throw new Error('Tento účet nemá oprávnění správce.');
     saveAdminSession(result);
     await loadAdminData();
-    renderAdmin('overview');
+    renderAdmin(adminTabFromHash() || 'overview');
   } catch (error) {
     clearAdminSession();
     renderAdminLogin(error.message);
@@ -1650,6 +1673,7 @@ function renderAdmin(tab) {
     return;
   }
   setAdminAuthenticatedLayout(true);
+  setAdminTabUrl(tab, { replace: true });
   const panel = document.querySelector('#admin-panel');
   activeAdminTab = tab;
   document.querySelectorAll('.admin-nav').forEach((button) => button.classList.toggle('active', button.dataset.adminTab === tab));
@@ -2347,6 +2371,7 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
     if (tab === 'content') await loadAdminNews();
     if (tab === 'accounts' && adminCanManageAdmins) await loadAdminAccounts();
     if (tab === 'settings') await Promise.all([loadAdminSettings(), loadAdminInstructors()]);
+    setAdminTabUrl(tab);
     renderAdmin(tab);
     document.querySelector('#admin-menu').classList.remove('is-open');
     document.querySelector('#admin-menu-toggle').setAttribute('aria-expanded', 'false');
@@ -2426,7 +2451,7 @@ async function initializeRoute() {
   }
   const cancellationToken = new URLSearchParams(location.search).get('cancel');
   if (cancellationToken) openCancellation(cancellationToken);
-  else if (location.hash === '#admin') await openAdmin({ updateUrl: false });
+  else if (adminTabFromHash()) await openAdmin({ updateUrl: false });
   else if (location.hash === '#ucet') await openAccount();
 }
 
