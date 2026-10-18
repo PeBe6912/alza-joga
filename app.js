@@ -1650,20 +1650,32 @@ function feedbackPanel() {
     good: summary.good + Number(item.ratings?.good || 0),
     notRight: summary.notRight + Number(item.ratings?.not_right || 0),
   }), { total: 0, great: 0, good: 0, notRight: 0 });
-  const cards = feedback.map((item) => {
+  const ratingLabels = { great: 'Skvěle', good: 'Dobře', not_right: 'Něco mi nesedlo' };
+  const responseCountLabel = (count) => `${count} ${count === 1 ? 'odpověď' : count >= 2 && count <= 4 ? 'odpovědi' : 'odpovědí'}`;
+  const cards = feedback.filter((item) => Number(item.total || 0) > 0).map((item) => {
     const responses = Number(item.total || 0);
-    const responseLabel = responses ? `${responses} ${responses === 1 ? 'odpověď' : responses < 5 ? 'odpovědi' : 'odpovědí'}` : 'Zatím bez odpovědi';
+    const responseLabel = responseCountLabel(responses);
+    const responseCards = (item.responses || []).map((response, index) => {
+      const rating = ratingLabels[response.rating] || response.rating;
+      const topics = (response.topics || []).map((topic) => `<span>${escapeHtml(topic)}</span>`).join('');
+      const comment = String(response.comment || '').trim();
+      return `<div class="feedback-response">
+        <div class="feedback-response-heading"><span class="feedback-rating-badge ${escapeHtml(response.rating || '')}">${escapeHtml(rating || 'Bez hodnocení')}</span><small>Anonymní odpověď ${index + 1}</small></div>
+        ${topics ? `<div class="feedback-response-topics">${topics}</div>` : ''}
+        ${comment ? `<blockquote>${escapeHtml(comment)}</blockquote>` : '<p class="admin-help">Bez slovního komentáře.</p>'}
+      </div>`;
+    }).join('');
     return `<article class="feedback-overview-item">
       <div class="feedback-overview-heading"><div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(formatAdminDate(item.starts_at))} · ${escapeHtml(item.teacher)}</p></div><span class="status-pill${responses ? '' : ' done'}">${escapeHtml(responseLabel)}</span></div>
-      ${responses ? `<div class="feedback-result-counts"><span><b>${item.ratings?.great || 0}</b> Skvěle</span><span><b>${item.ratings?.good || 0}</b> Dobře</span><span><b>${item.ratings?.not_right || 0}</b> Něco mi nesedlo</span></div>
-      ${item.topics?.length ? `<p class="feedback-overview-topics"><b>Nejčastěji označeno:</b> ${item.topics.map((topic) => `${escapeHtml(topic.topic)} (${topic.count})`).join(', ')}</p>` : ''}
-      ${item.comments?.length ? `<div class="feedback-comments"><b>Anonymní komentáře</b>${item.comments.map((comment) => `<blockquote>${escapeHtml(comment)}</blockquote>`).join('')}</div>` : ''}` : '<p class="admin-help">O zpětnou vazbu bylo požádáno, ale zatím nikdo neodpověděl.</p>'}
-      <button class="text-button inline-link" type="button" data-payment-lesson="${item.lesson_id}">Otevřít docházku a platby</button>
+      <div class="feedback-response-list">${responseCards}</div>
     </article>`;
   }).join('');
+  const withoutResponses = feedback.filter((item) => Number(item.total || 0) === 0);
+  const emptyLessons = withoutResponses.length ? `<section class="feedback-empty-lessons"><h3>Bez odpovědi</h3><p class="admin-help">U těchto lekcí byla zpětná vazba vyžádána, ale zatím nikdo neodpověděl.</p><div>${withoutResponses.map((item) => `<p><b>${escapeHtml(item.title)}</b><span>${escapeHtml(formatAdminDate(item.starts_at))} · ${escapeHtml(item.teacher)}</span></p>`).join('')}</div></section>` : '';
   return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Zpětná vazba</h2><p class="admin-help">Anonymní hodnocení z proběhlých lekcí, u kterých byla zpětná vazba vyžádána.</p></div>${adminLessonFilter()}</div>
-    <div class="feedback-overview-totals"><span><b>${totals.total}</b> odpovědí celkem</span><span><b>${totals.great}</b> Skvěle</span><span><b>${totals.good}</b> Dobře</span><span><b>${totals.notRight}</b> Něco mi nesedlo</span></div>
-    <div class="feedback-overview-list">${cards || '<p>Tomuto filtru neodpovídá žádná vyžádaná zpětná vazba.</p>'}</div>
+    <div class="feedback-overview-summary"><strong>${responseCountLabel(totals.total)}</strong><span><b>${totals.great}</b> Skvěle</span><span><b>${totals.good}</b> Dobře</span><span><b>${totals.notRight}</b> Něco mi nesedlo</span></div>
+    <div class="feedback-overview-list">${cards || '<p>Tomuto filtru zatím neodpovídá žádná odeslaná zpětná vazba.</p>'}</div>
+    ${emptyLessons}
   </div>`;
 }
 
