@@ -1333,6 +1333,10 @@ function setAdminTabUrl(tab, { replace = false } = {}) {
   history[method]({}, '', `${location.pathname}${location.search}${hash}`);
 }
 
+function scrollAdminToTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+}
+
 async function openAdmin({ updateUrl = true } = {}) {
   const requestedTab = adminTabFromHash() || 'overview';
   if (updateUrl) setAdminTabUrl(requestedTab);
@@ -1342,6 +1346,7 @@ async function openAdmin({ updateUrl = true } = {}) {
   document.querySelector('.announcement').hidden = true;
   document.querySelector('footer').hidden = true;
   adminView.hidden = false;
+  scrollAdminToTop();
   setAdminAuthenticatedLayout(false);
   if (adminSession && await isAdminSessionValid()) {
     setAdminAuthenticatedLayout(true);
@@ -1358,7 +1363,8 @@ async function openAdmin({ updateUrl = true } = {}) {
     clearAdminSession();
     renderAdminLogin();
   }
-  window.scrollTo(0, 0);
+  scrollAdminToTop();
+  requestAnimationFrame(scrollAdminToTop);
 }
 
 function closeAdmin() {
@@ -1595,6 +1601,8 @@ async function signInAdmin(event) {
     await loadAdminCapabilities();
     await loadAdminTabData(requestedTab);
     renderAdmin(requestedTab);
+    scrollAdminToTop();
+    requestAnimationFrame(scrollAdminToTop);
   } catch (error) {
     clearAdminSession();
     renderAdminLogin(error.message);
@@ -2722,6 +2730,8 @@ document.querySelectorAll('.admin-nav').forEach((button) => button.addEventListe
     await loadAdminTabData(tab);
     setAdminTabUrl(tab);
     renderAdmin(tab);
+    scrollAdminToTop();
+    requestAnimationFrame(scrollAdminToTop);
     document.querySelector('#admin-menu').classList.remove('is-open');
     document.querySelector('#admin-menu-toggle').setAttribute('aria-expanded', 'false');
   } catch (error) {
