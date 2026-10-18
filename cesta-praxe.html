@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2026101632" />
+  <link rel="stylesheet" href="styles.css?v=2026101817" />
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebPage","name":"Cesta jógové praxe | Jóga na HALLU","url":"https://joganahallu.cz/cesta-praxe","description":"Cesta jógové praxe – společné jógové milníky na Józe na HALLU.","inLanguage":"cs-CZ","isPartOf":{"@id":"https://joganahallu.cz/#website"}}
   </script>
@@ -49,16 +49,25 @@
       <symbol id="journey-icon-star" viewBox="0 0 48 48"><path d="m24 5 4.5 14.5L43 24l-14.5 4.5L24 43l-4.5-14.5L5 24l14.5-4.5L24 5Z"/></symbol>
     </defs>
   </svg>
-  <header class="site-header legal-header">
+  <header class="site-header">
     <a class="brand" href="/" aria-label="Jóga na HALLU – domů">
       <img class="brand-logo" src="assets/joga-na-hallu-logo.svg" alt="Jóga na HALLU" />
       <span class="brand-name">Jóga na <strong>HALLU</strong></span>
     </a>
-    <nav aria-label="Navigace Cesty jógové praxe">
-      <a href="#milniky">Milníky</a>
-      <a href="#komunita">Společně na cestě</a>
+    <nav id="main-menu" aria-label="Hlavní navigace">
+      <a href="/#lekce">Lekce</a>
+      <a href="/#lektori">Lektoři</a>
+      <a href="/#studio">Studio</a>
+      <a href="/#novinky">Novinky a jógové tipy</a>
+      <a href="/#informace">Informace</a>
+      <a href="/#soukrome-lekce">Soukromé lekce</a>
+      <a href="/cesta-praxe" aria-current="page">Cesta jógové praxe</a>
+      <a href="/#ucet">Můj účet</a>
     </nav>
-    <a class="button button-small" href="/#ucet">Moje cesta</a>
+    <div class="header-actions">
+      <a class="button button-small" href="/#lekce">Vybrat lekci</a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-menu" aria-label="Otevřít hlavní menu"><span></span><span></span><span></span></button>
+    </div>
   </header>
 
   <main>
@@ -124,6 +133,19 @@
   </footer>
 
   <script>
+    const menuToggle = document.querySelector('.menu-toggle');
+    const mainMenu = document.querySelector('#main-menu');
+    menuToggle.addEventListener('click', () => {
+      const open = mainMenu.classList.toggle('is-open');
+      menuToggle.setAttribute('aria-expanded', String(open));
+      menuToggle.setAttribute('aria-label', open ? 'Zavřít hlavní menu' : 'Otevřít hlavní menu');
+    });
+    mainMenu.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
+      mainMenu.classList.remove('is-open');
+      menuToggle.setAttribute('aria-expanded', 'false');
+      menuToggle.setAttribute('aria-label', 'Otevřít hlavní menu');
+    }));
+
     const SUPABASE_URL = 'https://zltcizbzckyazlxilzwq.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_X1KLjQkjhSe3Sl-McSQNBA_hz9d5HKR';
     const milestones = [
