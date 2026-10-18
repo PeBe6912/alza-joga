@@ -2,6 +2,7 @@ const SUPABASE_URL = 'https://zltcizbzckyazlxilzwq.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_X1KLjQkjhSe3Sl-McSQNBA_hz9d5HKR';
 const PUBLIC_SETTING_DEFAULTS = {
   cancellation_hours: 24,
+  booking_grace_minutes: 15,
   minimum_attendance: 5,
   default_paid_price: 150,
   studio_capacity: 20,
@@ -90,7 +91,6 @@ const ADMIN_TAB_SLUGS = Object.freeze({
 });
 const ADMIN_SLUG_TABS = Object.fromEntries(Object.entries(ADMIN_TAB_SLUGS).map(([tab, slug]) => [slug, tab]));
 const LESSON_PAGE_SIZE = 6;
-const BOOKING_GRACE_MINUTES = 15;
 let lessonDisplayLimit = LESSON_PAGE_SIZE;
 let sharedLessonHandled = false;
 let publicCalendarStart = startOfWeek(new Date());
@@ -488,7 +488,7 @@ document.querySelectorAll('.filter').forEach((button) => button.addEventListener
 async function openBooking(id) {
   const lesson = lessons.find((item) => item.id === id);
   if (!lesson) return;
-  if (new Date(lesson.iso).getTime() + BOOKING_GRACE_MINUTES * 60_000 < Date.now()) {
+  if (new Date(lesson.iso).getTime() + settingNumber('booking_grace_minutes') * 60_000 < Date.now()) {
     showSharedLessonStatus(lesson, 'Rezervace na tuto lekci už byla uzavřena. Vyber si prosím jiný termín.');
     return;
   }
@@ -637,7 +637,7 @@ async function openSharedLessonFromUrl() {
       lesson = lessonFromShareData(shared);
     }
     if (lesson.status === 'cancelled') return showSharedLessonStatus(lesson, 'Tato lekce byla zrušena. Vyber si prosím jiný termín.');
-    if (new Date(lesson.iso).getTime() + BOOKING_GRACE_MINUTES * 60_000 < Date.now()) return showSharedLessonStatus(lesson, 'Rezervace na tuto lekci už byla uzavřena. Vyber si prosím jiný termín.');
+    if (new Date(lesson.iso).getTime() + settingNumber('booking_grace_minutes') * 60_000 < Date.now()) return showSharedLessonStatus(lesson, 'Rezervace na tuto lekci už byla uzavřena. Vyber si prosím jiný termín.');
     if (!lessons.some((item) => item.id === lesson.id)) lessons.push(lesson);
     openBooking(lesson.id);
   } catch (error) {
@@ -647,7 +647,7 @@ async function openSharedLessonFromUrl() {
 }
 
 async function loadLessons() {
-  const bookingCutoff = new Date(Date.now() - BOOKING_GRACE_MINUTES * 60_000);
+  const bookingCutoff = new Date(Date.now() - settingNumber('booking_grace_minutes') * 60_000);
   const query = new URLSearchParams({
     select: 'id,instructor_id,title,starts_at,ends_at,capacity,booked_count,location,language,payment_mode,price_czk,payment_note,minimum_attendance,low_attendance_confirmed_at,instructors(name)',
     status: 'eq.published',
@@ -1698,7 +1698,7 @@ function settingsPanel() {
     <div class="field"><label for="setting-paid-qr-${teacher.id}">QR pro placenou lekci</label><input id="setting-paid-qr-${teacher.id}" name="teacherPaidQr-${teacher.id}" value="${escapeHtml(teacher.paid_qr_url || '')}" placeholder="assets/qr-platba.jpg"></div>
     <div class="field"><label for="setting-donation-qr-${teacher.id}">QR pro dobrovolný příspěvek</label><input id="setting-donation-qr-${teacher.id}" name="teacherDonationQr-${teacher.id}" value="${escapeHtml(teacher.donation_qr_url || '')}" placeholder="assets/qr-dobry-andel.jpg"></div>
   </div>`).join('');
-  return `<form class="admin-card settings-form" id="settings-form"><h2>Nastavení rezervací a plateb</h2><p class="admin-help">Změny se propíšou na veřejný web, do podmínek, nových rezervací, e-mailů a budoucích lekcí.</p><section class="settings-section"><h3>Pravidla rezervací</h3><div class="settings-grid"><div class="field"><label for="setting-capacity">Kapacita studia</label><input id="setting-capacity" name="studioCapacity" type="number" min="1" max="100" value="${Number(adminSettings.studio_capacity)}" required><small>Po uložení se nastaví jako kapacita všech budoucích zveřejněných lekcí.</small></div><div class="field"><label for="setting-price">Výchozí cena placené lekce v Kč</label><input id="setting-price" name="defaultPaidPrice" type="number" min="0" max="10000" value="${Number(adminSettings.default_paid_price)}" required></div><div class="field"><label for="setting-cancellation">Bezplatné zrušení před lekcí v hodinách</label><input id="setting-cancellation" name="cancellationHours" type="number" min="0" max="168" value="${Number(adminSettings.cancellation_hours)}" required></div><div class="field"><label for="setting-minimum">Standardní minimum přihlášených</label><input id="setting-minimum" name="minimumAttendance" type="number" min="1" max="100" value="${Number(adminSettings.minimum_attendance)}" required></div></div></section><section class="settings-section"><h3>Výchozí platba podle lektora</h3><p class="admin-help">Každá nová lekce převezme nastavení zvoleného lektora. U konkrétní lekce lze typ platby i cenu změnit.</p><div class="settings-instructors">${instructorSettings}</div></section><div class="settings-actions"><button class="button" type="submit">Uložit nastavení</button></div></form>`;
+  return `<form class="admin-card settings-form" id="settings-form"><h2>Nastavení rezervací a plateb</h2><p class="admin-help">Změny se propíšou na veřejný web, do podmínek, nových rezervací, e-mailů a budoucích lekcí.</p><section class="settings-section"><h3>Pravidla rezervací</h3><div class="settings-grid"><div class="field"><label for="setting-capacity">Kapacita studia</label><input id="setting-capacity" name="studioCapacity" type="number" min="1" max="100" value="${Number(adminSettings.studio_capacity)}" required><small>Po uložení se nastaví jako kapacita všech budoucích zveřejněných lekcí.</small></div><div class="field"><label for="setting-price">Výchozí cena placené lekce v Kč</label><input id="setting-price" name="defaultPaidPrice" type="number" min="0" max="10000" value="${Number(adminSettings.default_paid_price)}" required></div><div class="field"><label for="setting-cancellation">Bezplatné zrušení před lekcí v hodinách</label><input id="setting-cancellation" name="cancellationHours" type="number" min="0" max="168" value="${Number(adminSettings.cancellation_hours)}" required></div><div class="field"><label for="setting-booking-grace">Přihlášení po začátku v minutách</label><input id="setting-booking-grace" name="bookingGraceMinutes" type="number" min="0" max="60" value="${Number(adminSettings.booking_grace_minutes)}" required><small>Po tuto dobu zůstane lekce dostupná pro rezervaci.</small></div><div class="field"><label for="setting-minimum">Standardní minimum přihlášených</label><input id="setting-minimum" name="minimumAttendance" type="number" min="1" max="100" value="${Number(adminSettings.minimum_attendance)}" required></div></div></section><section class="settings-section"><h3>Výchozí platba podle lektora</h3><p class="admin-help">Každá nová lekce převezme nastavení zvoleného lektora. U konkrétní lekce lze typ platby i cenu změnit.</p><div class="settings-instructors">${instructorSettings}</div></section><div class="settings-actions"><button class="button" type="submit">Uložit nastavení</button></div></form>`;
 }
 
 const STUDIO_BLOCK_CATEGORIES = {
@@ -1996,11 +1996,14 @@ async function saveSettings(event) {
     await manageLesson({
       action: 'update-settings',
       cancellationHours: Number(data.get('cancellationHours')),
+      bookingGraceMinutes: Number(data.get('bookingGraceMinutes')),
       minimumAttendance: Number(data.get('minimumAttendance')),
       defaultPaidPrice: Number(data.get('defaultPaidPrice')),
       studioCapacity: Number(data.get('studioCapacity')),
     });
-    await Promise.all([loadAdminSettings(), loadAdminInstructors(), loadAdminLessons(), refreshPublicSettings(), loadPublicContent()]);
+    await Promise.all([loadAdminSettings(), loadAdminInstructors(), loadAdminLessons(), loadPublicContent()]);
+    await refreshPublicSettings();
+    await loadLessons();
     renderAdmin('settings');
     showToast('Nastavení bylo uloženo a propsáno do budoucích lekcí.');
   } catch (error) {
@@ -2683,8 +2686,7 @@ mainMenu.querySelectorAll('a').forEach((link) => link.addEventListener('click', 
 }));
 renderLessons();
 renderNextClass();
-refreshPublicSettings();
-loadLessons();
+refreshPublicSettings().then(loadLessons);
 loadPublicStudioBlocks();
 loadPublicContent();
 

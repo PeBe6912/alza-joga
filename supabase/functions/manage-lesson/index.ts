@@ -293,16 +293,19 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'update-settings') {
       const cancellationHours = Number(body.cancellationHours);
+      const bookingGraceMinutes = Number(body.bookingGraceMinutes);
       const minimumAttendance = Number(body.minimumAttendance);
       const defaultPaidPrice = Number(body.defaultPaidPrice);
       const studioCapacity = Number(body.studioCapacity);
       if (!Number.isInteger(cancellationHours) || cancellationHours < 0 || cancellationHours > 168) throw new Error('INVALID_CANCELLATION_HOURS');
+      if (!Number.isInteger(bookingGraceMinutes) || bookingGraceMinutes < 0 || bookingGraceMinutes > 60) throw new Error('INVALID_BOOKING_GRACE_MINUTES');
       if (!Number.isInteger(minimumAttendance) || minimumAttendance < 1 || minimumAttendance > 100) throw new Error('INVALID_MINIMUM_ATTENDANCE');
       if (!Number.isInteger(defaultPaidPrice) || defaultPaidPrice < 0 || defaultPaidPrice > 10000) throw new Error('INVALID_DEFAULT_PRICE');
       if (!Number.isInteger(studioCapacity) || studioCapacity < 1 || studioCapacity > 100) throw new Error('INVALID_STUDIO_CAPACITY');
       if (minimumAttendance > studioCapacity) throw new Error('INVALID_MINIMUM_ATTENDANCE');
       const settings = await callRpc<Record<string, number>>('admin_update_booking_settings', {
         p_cancellation_hours: cancellationHours,
+        p_booking_grace_minutes: bookingGraceMinutes,
         p_minimum_attendance: minimumAttendance,
         p_default_paid_price: defaultPaidPrice,
         p_studio_capacity: studioCapacity,
