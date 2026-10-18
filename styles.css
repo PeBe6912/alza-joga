@@ -238,7 +238,7 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
 .payment-sent{color:var(--sage-dark);font-size:11px}
 .payment-recipient.is-sent{opacity:.65}
 .attendance-recipient{display:grid;grid-template-columns:minmax(130px,.65fr) minmax(330px,1.6fr) minmax(180px,1fr);align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid var(--line)}
-.attendance-recipient>input[type="email"]{min-width:0;padding:10px;border:1px solid var(--line);font:inherit}
+.attendance-recipient>input[type="email"]{min-width:0;padding:10px;border:1px solid var(--line);font:inherit;font-size:14px}
 .attendance-recipient.is-sent{opacity:.65}
 .attendance-options{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .attendance-options label{display:flex;align-items:flex-start;gap:7px;padding:9px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}
