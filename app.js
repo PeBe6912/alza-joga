@@ -1639,7 +1639,7 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
           : 'Zpětná vazba: zatím bez odpovědi'
         : 'Zpětná vazba: nevyžádána';
     const attendanceAction = belowMinimum && !lesson.lowAttendanceConfirmedAt
-      ? `<button class="button button-small button-secondary" data-confirm-lesson="${lesson.id}">Lekce se koná</button>`
+      ? `<button class="button button-small button-secondary" data-confirm-lesson="${lesson.id}">Potvrdit konání lekce</button>`
       : `<span class="lesson-action-state">${belowMinimum ? 'Koná se i v menším počtu' : 'Minimum splněno'}</span>`;
     const deleteAction = adminCanDeleteLessons
       ? `<button class="text-button danger" data-delete-lesson="${lesson.id}">Trvale smazat</button>`
@@ -1654,9 +1654,9 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
     const payment = lesson.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : `${lesson.priceCzk ?? 0} Kč`;
     const weekday = new Intl.DateTimeFormat('cs-CZ', { weekday: 'long', timeZone: 'Europe/Prague' }).format(new Date(lesson.iso));
     const weekdayDate = `${weekday.charAt(0).toLocaleUpperCase('cs-CZ')}${weekday.slice(1)} ${lesson.date}`;
-    return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(weekdayDate)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">Angličtina</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span>${feedbackLabel ? `<button class="feedback-lesson-state" type="button" data-payment-lesson="${lesson.id}">${escapeHtml(feedbackLabel)}</button>` : ''}</td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
+    return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(weekdayDate)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">Angličtina</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span>${feedbackLabel ? `<button class="feedback-lesson-state" type="button" data-payment-lesson="${lesson.id}">${escapeHtml(feedbackLabel)}</button>` : ''}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
   }).join('');
-  return `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Obsazeno</th><th>Stav</th><th>Akce</th></tr></thead><tbody>${rows || `<tr><td colspan="6">${escapeHtml(emptyMessage)}</td></tr>`}</tbody></table></div>`;
+  return `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Stav</th><th>Obsazeno</th><th>Akce</th></tr></thead><tbody>${rows || `<tr><td colspan="6">${escapeHtml(emptyMessage)}</td></tr>`}</tbody></table></div>`;
 }
 
 function adminLessonFilter() {

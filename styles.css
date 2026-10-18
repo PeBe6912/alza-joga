@@ -392,7 +392,7 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
 .lesson-actions{min-width:220px;vertical-align:top}
 .lesson-actions-stack{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:start}
 .lesson-actions-stack .button-secondary{grid-column:1/-1}
-.lesson-actions-stack .button{min-width:0;width:100%;padding:11px 12px;white-space:normal}
+.lesson-actions-stack .button{min-width:0;width:100%;min-height:40px;padding:11px 12px;line-height:1.2;white-space:normal}
 .lesson-actions-stack .admin-lesson-share{justify-self:center;padding:2px 0;color:var(--sage-dark);font-size:12px;text-decoration:underline;text-underline-offset:3px}
 .lesson-actions-stack>div{display:flex;gap:8px}
 .settings-form{display:grid;gap:28px}
@@ -478,7 +478,7 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
 .admin-table tbody tr{border-bottom:1px solid var(--line)}
 .admin-table tbody td{border-bottom:0}
 .lesson-actions-stack{display:grid;grid-template-columns:1fr;gap:8px;align-items:start}
-.lesson-actions-stack .button{min-width:0;width:100%;padding:11px 12px;white-space:normal}
+.lesson-actions-stack .button{min-width:0;width:100%;min-height:40px;padding:11px 12px;line-height:1.2;white-space:normal}
 .lesson-action-primary{min-height:40px;display:flex}
 .lesson-action-primary>*{width:100%}
 .lesson-action-buttons{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
