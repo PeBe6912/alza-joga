@@ -444,7 +444,8 @@ async function refreshPublicSettings() {
 
 function renderLessons(filter = 'all') {
   const filtered = lessons.filter((lesson) => filter === 'all' || lesson.type === filter);
-  const visible = filtered.slice(0, lessonDisplayLimit);
+  const expanded = lessonDisplayLimit > LESSON_PAGE_SIZE;
+  const visible = filtered.slice(0, expanded ? filtered.length : LESSON_PAGE_SIZE);
   const lessonRows = visible.map((lesson) => {
     const places = spotsLeft(lesson);
     const typeLabel = lesson.type === 'charity' ? 'Dobrovolný příspěvek' : 'Klasická lekce';
@@ -457,16 +458,17 @@ function renderLessons(filter = 'all') {
     </article>`;
   }).join('');
   const remaining = filtered.length - visible.length;
-  const moreButton = remaining > 0
-    ? `<div class="class-list-more"><button class="button button-small button-secondary" data-show-more>Zobrazit další lekce (${remaining})</button></div>`
+  const moreButton = filtered.length > LESSON_PAGE_SIZE
+    ? `<div class="class-list-more"><button class="button button-small button-secondary" data-toggle-lessons>${expanded ? 'Zobrazit méně' : `Zobrazit další lekce (${remaining})`}</button></div>`
     : '';
   classList.innerHTML = lessonRows || '<p class="class-list-empty">V této kategorii teď nejsou žádné vypsané lekce.</p>';
   classList.insertAdjacentHTML('beforeend', moreButton);
   document.querySelectorAll('[data-book]').forEach((button) => button.addEventListener('click', () => openBooking(button.dataset.book)));
   bindLessonShareButtons(classList);
-  document.querySelector('[data-show-more]')?.addEventListener('click', () => {
-    lessonDisplayLimit += LESSON_PAGE_SIZE;
+  document.querySelector('[data-toggle-lessons]')?.addEventListener('click', () => {
+    lessonDisplayLimit = expanded ? LESSON_PAGE_SIZE : filtered.length;
     renderLessons(filter);
+    if (expanded) document.querySelector('#lekce')?.scrollIntoView({ block: 'start' });
   });
 }
 
