@@ -2170,8 +2170,8 @@ async function openPaymentEmails(lessonId) {
       return `<article class="attendance-recipient${sent ? ' is-sent' : ''}" data-attendance-recipient="${participant.reservation_id}">
         <div class="payment-person"><b>${escapeHtml(participant.name)}</b>${sentLabel}</div>
         <div class="attendance-options" role="radiogroup" aria-label="Docházka – ${escapeHtml(participant.name)}">
-          <label><input type="radio" name="attendance-${participant.reservation_id}" value="attended" ${outcome === 'attended' ? 'checked' : ''} ${sent ? 'disabled' : ''}><span><b>Přišel</b><small>Účast + platba</small></span></label>
-          <label><input type="radio" name="attendance-${participant.reservation_id}" value="no_show" ${outcome === 'no_show' ? 'checked' : ''} ${sent ? 'disabled' : ''}><span><b>Nepřišel</b><small>Bez účasti, platba ano</small></span></label>
+          <label><input type="radio" name="attendance-${participant.reservation_id}" value="attended" ${outcome === 'attended' ? 'checked' : ''} ${sent ? 'disabled' : ''}><span><b>Účast potvrzena</b><small>Účast + platba</small></span></label>
+          <label><input type="radio" name="attendance-${participant.reservation_id}" value="no_show" ${outcome === 'no_show' ? 'checked' : ''} ${sent ? 'disabled' : ''}><span><b>Bez účasti</b><small>Platba ano</small></span></label>
           <label><input type="radio" name="attendance-${participant.reservation_id}" value="waived" ${outcome === 'waived' ? 'checked' : ''} ${sent ? 'disabled' : ''}><span><b>Bez platby</b><small>Výjimečné prominutí</small></span></label>
         </div>
         <input type="email" data-payment-email="${participant.reservation_id}" value="${escapeHtml(participant.payment_email_recipient || participant.email)}" ${sent || outcome === 'waived' ? 'disabled' : ''} aria-label="E-mail – ${escapeHtml(participant.name)}" required>
@@ -2195,8 +2195,8 @@ async function openPaymentEmails(lessonId) {
       <div class="payment-preview">${qrPath ? `<img src="${escapeHtml(qrPath)}" alt="${escapeHtml(paymentText)}">` : '<div class="payment-qr-missing">QR kód chybí</div>'}<div><b>${escapeHtml(paymentText)}</b><p>${escapeHtml(preview.payment_note || '')}</p>${qrPath ? '' : '<p class="attendance-note">Nejdřív doplň QR kód v profilu lektora.</p>'}</div></div>
       <div class="payment-list-heading"><b>Potvrď skutečnou účast</b><span>${unsentCount} neodeslaných plateb</span></div>
       <div class="payment-recipient-list">${participantRows || '<p>Na této lekci nejsou žádní aktivní účastníci.</p>'}</div>
-      <p class="form-hint">Všichni jsou předvyplnění jako „Přišel“. Změň pouze výjimky. Volba „Bez platby“ neodešle e-mail a účast nezapočítá.</p>
-      <label class="feedback-request-choice"><input type="checkbox" name="feedbackRequested" ${feedback.requested ? 'checked' : ''}><span><b>Požádat přítomné účastníky o krátký feedback</b><small>Odkaz na anonymní hodnocení dostanou pouze lidé označení jako „Přišel“.</small></span></label>
+      <p class="form-hint">Všechny rezervace jsou předvyplněné jako „Účast potvrzena“. Změň pouze výjimky. Volba „Bez platby“ neodešle e-mail a účast nezapočítá.</p>
+      <label class="feedback-request-choice"><input type="checkbox" name="feedbackRequested" ${feedback.requested ? 'checked' : ''}><span><b>Požádat o krátkou zpětnou vazbu</b><small>Odkaz na anonymní hodnocení dostanou pouze lidé s potvrzenou účastí.</small></span></label>
       ${feedback.total ? `<section class="feedback-summary"><p class="eyebrow">Zpětná vazba · ${feedback.total} ${feedback.total === 1 ? 'odpověď' : feedback.total < 5 ? 'odpovědi' : 'odpovědí'}</p>${ratingSummary}</section>` : ''}
       ${preview.instructor_email ? '' : '<p class="attendance-note">Nejdřív doplň e-mail lektora v jeho profilu.</p>'}
       <button class="button" type="submit" ${preview.participants.length ? '' : 'disabled'}>Potvrdit docházku a odeslat</button>
