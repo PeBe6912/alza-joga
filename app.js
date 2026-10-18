@@ -1656,7 +1656,7 @@ function accountsPanel() {
 
 function bookingsPanel() {
   const people = Array.from(adminReservations.reduce((map, reservation) => {
-    const key = reservation.attendee_email.toLowerCase();
+    const key = reservation.attendee_email ? reservation.attendee_email.toLowerCase() : `walk-in:${reservation.id}`;
     const current = map.get(key) || { name: reservation.attendee_name, email: reservation.attendee_email, reservations: [] };
     current.reservations.push(reservation);
     map.set(key, current);
@@ -1664,7 +1664,7 @@ function bookingsPanel() {
   }, new Map()).values()).sort((a, b) => a.name.localeCompare(b.name, 'cs'));
   const rows = people.map((person) => {
     const latest = [...person.reservations].sort((a, b) => new Date(b.lessons.starts_at) - new Date(a.lessons.starts_at))[0];
-    return `<tr><td data-label="Jméno"><b>${escapeHtml(person.name)}</b></td><td data-label="E-mail">${escapeHtml(person.email)}</td><td data-label="Počet rezervací">${person.reservations.length}</td><td data-label="Poslední lekce">${escapeHtml(latest.lessons.title)}<br><small>${escapeHtml(formatAdminDate(latest.lessons.starts_at))}</small></td></tr>`;
+    return `<tr><td data-label="Jméno"><b>${escapeHtml(person.name)}</b></td><td data-label="E-mail">${person.email ? escapeHtml(person.email) : 'Bez e-mailu'}</td><td data-label="Počet rezervací">${person.reservations.length}</td><td data-label="Poslední lekce">${escapeHtml(latest.lessons.title)}<br><small>${escapeHtml(formatAdminDate(latest.lessons.starts_at))}</small></td></tr>`;
   }).join('');
   return `<div class="admin-card"><h2>Účastníci</h2><p class="admin-help">Přehled lidí s aktivní nebo evidovanou účastí za posledních 12 měsíců.</p><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Rezervace</th><th>Poslední lekce</th></tr></thead><tbody>${rows || '<tr><td colspan="4">Zatím nejsou evidováni žádní účastníci.</td></tr>'}</tbody></table></div></div>`;
 }
@@ -1674,7 +1674,7 @@ function lessonParticipantsPanel(lessonId, returnTab) {
   if (!lesson) return '<div class="admin-card"><p>Lekci se nepodařilo najít.</p></div>';
   const participants = adminReservations.filter((reservation) => reservation.lessons.id === lessonId);
   const canCancel = lesson.status !== 'cancelled' && new Date(lesson.iso) > new Date();
-  const rows = participants.map((reservation) => `<tr><td data-label="Jméno"><b>${escapeHtml(reservation.attendee_name)}</b></td><td data-label="E-mail">${escapeHtml(reservation.attendee_email)}</td><td data-label="Stav"><span class="status-pill">${reservation.status === 'attended' ? 'Účast potvrzena' : reservation.status === 'no_show' ? reservation.payment_waived_at ? 'Nedorazil/a · bez platby' : 'Nedorazil/a' : 'Přihlášen/a'}</span></td><td data-label="Platební e-mail">${reservation.payment_email_sent_at ? 'Odeslán' : reservation.payment_waived_at ? 'Prominut' : 'Neodeslán'}</td><td class="participant-actions" data-label="Akce">${canCancel && reservation.status === 'confirmed' ? `<button class="button button-small button-secondary" data-cancel-reservation="${reservation.id}" data-lesson-id="${lesson.id}" data-return-tab="${returnTab}">Zrušit rezervaci</button>` : '—'}</td></tr>`).join('');
+  const rows = participants.map((reservation) => `<tr><td data-label="Jméno"><b>${escapeHtml(reservation.attendee_name)}</b></td><td data-label="E-mail">${reservation.attendee_email ? escapeHtml(reservation.attendee_email) : 'Bez e-mailu'}</td><td data-label="Stav"><span class="status-pill">${reservation.status === 'attended' ? 'Účast potvrzena' : reservation.status === 'no_show' ? reservation.payment_waived_at ? 'Nedorazil/a · bez platby' : 'Nedorazil/a' : 'Přihlášen/a'}</span></td><td data-label="Platební e-mail">${reservation.payment_email_sent_at ? 'Odeslán' : reservation.payment_waived_at ? 'Prominut' : reservation.attendee_email ? 'Neodeslán' : 'Bez e-mailu'}</td><td class="participant-actions" data-label="Akce">${canCancel && reservation.status === 'confirmed' ? `<button class="button button-small button-secondary" data-cancel-reservation="${reservation.id}" data-lesson-id="${lesson.id}" data-return-tab="${returnTab}">Zrušit rezervaci</button>` : '—'}</td></tr>`).join('');
   return `<div class="admin-card"><button class="text-button admin-detail-back" data-return-tab="${returnTab}">← Zpět</button><h2>${escapeHtml(lesson.title)}</h2><p class="admin-help">${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)} · ${participants.length}/${lesson.capacity} přihlášených</p><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Stav</th><th>Platební e-mail</th><th>Akce</th></tr></thead><tbody>${rows || '<tr><td colspan="5">Na tuto lekci zatím není nikdo přihlášený.</td></tr>'}</tbody></table></div></div>`;
 }
 
@@ -2167,6 +2167,7 @@ async function openPaymentEmails(lessonId) {
       const sent = Boolean(participant.payment_email_sent_at);
       const outcome = participant.payment_waived_at ? 'waived' : participant.status === 'no_show' ? 'no_show' : 'attended';
       const sentLabel = sent ? `<span class="payment-sent">Odesláno ${new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(participant.payment_email_sent_at))}</span>` : '';
+      const recipientEmail = participant.payment_email_recipient || participant.email || '';
       return `<article class="attendance-recipient${sent ? ' is-sent' : ''}" data-attendance-recipient="${participant.reservation_id}">
         <div class="payment-person"><b>${escapeHtml(participant.name)}</b>${sentLabel}</div>
         <div class="attendance-options" role="radiogroup" aria-label="Docházka – ${escapeHtml(participant.name)}">
@@ -2174,10 +2175,10 @@ async function openPaymentEmails(lessonId) {
           <label><input type="radio" name="attendance-${participant.reservation_id}" value="no_show" ${outcome === 'no_show' ? 'checked' : ''} ${sent ? 'disabled' : ''}><span><b>Bez účasti</b><small>Platba ano</small></span></label>
           <label><input type="radio" name="attendance-${participant.reservation_id}" value="waived" ${outcome === 'waived' ? 'checked' : ''} ${sent ? 'disabled' : ''}><span><b>Bez platby</b><small>Výjimečné prominutí</small></span></label>
         </div>
-        <input type="email" data-payment-email="${participant.reservation_id}" value="${escapeHtml(participant.payment_email_recipient || participant.email)}" ${sent || outcome === 'waived' ? 'disabled' : ''} aria-label="E-mail – ${escapeHtml(participant.name)}" required>
+        ${recipientEmail ? `<input type="email" data-payment-email="${participant.reservation_id}" value="${escapeHtml(recipientEmail)}" ${sent || outcome === 'waived' ? 'disabled' : ''} aria-label="E-mail – ${escapeHtml(participant.name)}" required>` : `<input type="hidden" data-payment-email="${participant.reservation_id}" value=""><span class="attendance-email-missing"><b>Bez e-mailu</b><small>Účast se uloží, platbu nelze odeslat.</small></span>`}
       </article>`;
     }).join('');
-    const unsentCount = preview.participants.filter((participant) => !participant.payment_email_sent_at).length;
+    const unsentCount = preview.participants.filter((participant) => !participant.payment_email_sent_at && Boolean(participant.payment_email_recipient || participant.email)).length;
     const feedback = preview.feedback || { requested: false, total: 0, ratings: {}, topics: [], comments: [] };
     const ratingSummary = feedback.total ? `<div class="feedback-results">
       <div class="feedback-result-counts">
@@ -2195,6 +2196,7 @@ async function openPaymentEmails(lessonId) {
       <div class="payment-preview">${qrPath ? `<img src="${escapeHtml(qrPath)}" alt="${escapeHtml(paymentText)}">` : '<div class="payment-qr-missing">QR kód chybí</div>'}<div><b>${escapeHtml(paymentText)}</b><p>${escapeHtml(preview.payment_note || '')}</p>${qrPath ? '' : '<p class="attendance-note">Nejdřív doplň QR kód v profilu lektora.</p>'}</div></div>
       <div class="payment-list-heading"><b>Potvrď skutečnou účast</b><span>${unsentCount} neodeslaných plateb</span></div>
       <p class="form-hint">Všechny rezervace jsou předvyplněné jako „Účast potvrzena“. Změň pouze výjimky. Volba „Bez platby“ neodešle e-mail a účast nezapočítá.</p>
+      <div class="payment-walk-in-action"><button class="button button-small button-secondary" type="button" data-add-walk-in>+ Přidat účast bez rezervace</button></div>
       <div class="payment-recipient-list">${participantRows || '<p>Na této lekci nejsou žádní aktivní účastníci.</p>'}</div>
       <label class="feedback-request-choice"><input type="checkbox" name="feedbackRequested" ${feedback.requested ? 'checked' : ''}><span><b>Požádat o krátkou zpětnou vazbu</b><small>Odkaz na anonymní hodnocení dostanou pouze lidé s potvrzenou účastí.</small></span></label>
       ${feedback.total ? `<section class="feedback-summary"><p class="eyebrow">Zpětná vazba · ${feedback.total} ${feedback.total === 1 ? 'odpověď' : feedback.total < 5 ? 'odpovědi' : 'odpovědí'}</p>${ratingSummary}</section>` : ''}
@@ -2206,11 +2208,56 @@ async function openPaymentEmails(lessonId) {
       const email = document.querySelector(`[data-payment-email="${reservationId}"]`);
       email.disabled = radio.value === 'waived';
     }));
+    document.querySelector('[data-add-walk-in]').addEventListener('click', () => openWalkInForm(lessonId));
     document.querySelector('#payment-email-form').addEventListener('submit', (event) => sendPaymentEmails(event, lessonId));
   } catch (error) {
     closeDialog();
     showToast(error.message);
   }
+}
+
+function openWalkInForm(lessonId) {
+  document.querySelector('#booking-content').innerHTML = `<form class="booking-panel walk-in-form" id="walk-in-form">
+    <p class="eyebrow">Docházka bez rezervace</p>
+    <h2>Přidat účastníka</h2>
+    <p class="form-hint">Pro člověka, který přišel na lekci bez předchozí registrace. Pokud zadáš e-mail, účast se později propojí s jeho účtem.</p>
+    <div class="field"><label for="walk-in-name">Jméno a příjmení</label><input id="walk-in-name" name="attendeeName" type="text" minlength="2" maxlength="120" autocomplete="name" required></div>
+    <div class="field"><label for="walk-in-email">E-mail</label><input id="walk-in-email" name="attendeeEmail" type="email" maxlength="320" autocomplete="email" required><small>Slouží k platebnímu e-mailu a přiřazení k budoucímu účtu.</small></div>
+    <label class="checkbox walk-in-email-unknown"><input type="checkbox" name="emailUnknown"><span>E-mail neznám</span></label>
+    <div class="field"><label for="walk-in-relation">Vztah k Alze</label><select id="walk-in-relation" name="attendeeRelation"><option value="employee">Zaměstnanec Alzy</option><option value="guest">Host</option></select></div>
+    <div class="walk-in-form-actions"><button class="button button-secondary" type="button" data-walk-in-back>Zpět</button><button class="button" type="submit">Přidat účast</button></div>
+  </form>`;
+  const form = document.querySelector('#walk-in-form');
+  const emailInput = form.elements.attendeeEmail;
+  form.elements.emailUnknown.addEventListener('change', () => {
+    emailInput.disabled = form.elements.emailUnknown.checked;
+    emailInput.required = !form.elements.emailUnknown.checked;
+  });
+  form.querySelector('[data-walk-in-back]').addEventListener('click', () => openPaymentEmails(lessonId));
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = form.querySelector('[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Přidávám…';
+    try {
+      const result = await manageLesson({
+        action: 'add-walk-in',
+        lessonId,
+        attendeeName: form.elements.attendeeName.value.trim(),
+        attendeeEmail: form.elements.emailUnknown.checked ? '' : emailInput.value.trim(),
+        attendeeRelation: form.elements.attendeeRelation.value,
+      });
+      await Promise.all([loadAdminLessons(), loadAdminReservations()]);
+      await openPaymentEmails(lessonId);
+      showToast(result.over_capacity
+        ? `Účast byla přidána. Evidováno je ${result.participant_count} lidí při kapacitě ${result.capacity}.`
+        : 'Účast bez rezervace byla přidána.');
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = 'Přidat účast';
+      showToast(error.message);
+    }
+  });
 }
 
 function formatAdminDate(value) {

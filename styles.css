@@ -230,6 +230,7 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
 .payment-preview p{margin:6px 0 0;color:var(--muted);font-size:13px}
 .payment-list-heading{display:flex;justify-content:space-between;gap:16px;margin:22px 0 10px;font-size:13px}
 .payment-list-heading span{color:var(--muted)}
+.payment-walk-in-action{display:flex;justify-content:flex-end;margin:0 0 12px}
 .payment-recipient-list{display:grid;max-height:310px;overflow-y:auto;overflow-x:hidden;border-top:1px solid var(--line)}
 .payment-recipient{display:grid;grid-template-columns:24px minmax(120px,.8fr) minmax(180px,1.2fr);align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line)}
 .payment-recipient>input[type="checkbox"]{width:18px;height:18px}
@@ -239,6 +240,8 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
 .payment-recipient.is-sent{opacity:.65}
 .attendance-recipient{display:grid;grid-template-columns:minmax(130px,.65fr) minmax(330px,1.6fr) minmax(180px,1fr);align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid var(--line)}
 .attendance-recipient>input[type="email"]{min-width:0;padding:10px;border:1px solid var(--line);font:inherit;font-size:14px}
+.attendance-email-missing{display:grid;gap:3px;padding:9px 10px;background:var(--paper);font-size:12px}
+.attendance-email-missing small{color:var(--muted);line-height:1.35}
 .attendance-recipient.is-sent{opacity:.65}
 .attendance-options{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .attendance-options label{display:flex;align-items:flex-start;gap:7px;padding:9px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}
@@ -272,6 +275,11 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
 .feedback-topics{grid-template-columns:repeat(2,1fr)}
 .feedback-saved-note{padding:12px 14px;background:#eef3ee;color:var(--sage-dark)!important;font-size:13px}
 .feedback-thanks{text-align:center}
+.walk-in-form{display:grid;gap:16px}
+.walk-in-form>p,.walk-in-form h2{margin-bottom:0}
+.walk-in-email-unknown{margin-top:-6px}
+.walk-in-form-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.walk-in-form-actions .button{margin-top:6px}
 
 @media(max-width:800px){
   .attendance-recipient{grid-template-columns:1fr}
@@ -286,6 +294,8 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
   .attendance-recipient{grid-template-columns:1fr}
   .attendance-options{grid-template-columns:1fr}
   .feedback-result-counts,.feedback-rating,.feedback-topics{grid-template-columns:1fr}
+  .payment-walk-in-action .button{width:100%}
+  .walk-in-form-actions{grid-template-columns:1fr}
 }
 
 /* Connected content administration and a quieter public header. */

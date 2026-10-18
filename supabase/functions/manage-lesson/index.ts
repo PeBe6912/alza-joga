@@ -5,6 +5,7 @@ import {
   formatLessonDate,
   isAllowedOrigin,
   sendBrevoEmail,
+  sha256,
   supabaseConfig,
 } from '../_shared/http.ts';
 
@@ -13,7 +14,7 @@ type Participant = { name: string; email: string };
 type PaymentParticipant = {
   reservation_id: string;
   name: string;
-  email: string;
+  email: string | null;
   status?: string;
   payment_waived_at?: string | null;
   payment_email_sent_at?: string | null;
@@ -337,6 +338,25 @@ Deno.serve(async (req: Request) => {
       return json(req, { ok: true, action, ...preview, feedback });
     }
 
+    if (action === 'add-walk-in') {
+      const lessonId = String(body.lessonId ?? '');
+      const attendeeName = String(body.attendeeName ?? '').trim();
+      const attendeeEmail = String(body.attendeeEmail ?? '').trim().toLowerCase();
+      const attendeeRelation = String(body.attendeeRelation ?? 'employee');
+      if (!/^[0-9a-f-]{36}$/i.test(lessonId)) throw new Error('INVALID_LESSON');
+      if (attendeeName.length < 2 || attendeeName.length > 120) throw new Error('INVALID_ATTENDEE_NAME');
+      if (attendeeEmail && (attendeeEmail.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(attendeeEmail))) throw new Error('INVALID_EMAIL');
+      if (!['employee', 'guest'].includes(attendeeRelation)) throw new Error('INVALID_ATTENDEE_RELATION');
+      const walkIn = await callRpc<Record<string, unknown>>('admin_add_walk_in', {
+        p_lesson_id: lessonId,
+        p_attendee_name: attendeeName,
+        p_attendee_email: attendeeEmail || null,
+        p_attendee_relation: attendeeRelation,
+        p_cancellation_token_hash: await sha256(crypto.randomUUID()),
+      });
+      return json(req, { ok: true, action, ...walkIn });
+    }
+
     if (action === 'payment-send') {
       const lessonId = String(body.lessonId ?? '');
       const feedbackRequested = body.feedbackRequested === true;
@@ -351,7 +371,7 @@ Deno.serve(async (req: Request) => {
         const outcome = String(entry?.outcome ?? '');
         const email = String(entry?.email ?? '').trim().toLowerCase();
         if (!/^[0-9a-f-]{36}$/i.test(reservationId) || !['attended', 'no_show', 'waived'].includes(outcome)) throw new Error('INVALID_ATTENDANCE');
-        if (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('INVALID_EMAIL');
+        if (email && (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) throw new Error('INVALID_EMAIL');
         recipientById.set(reservationId, email);
         outcomeById.set(reservationId, outcome);
         return { reservation_id: reservationId, outcome };
@@ -361,7 +381,9 @@ Deno.serve(async (req: Request) => {
         p_lesson_id: lessonId,
       });
       const hasUnsentPayment = preview.participants.some((participant) => (
-        !participant.payment_email_sent_at && outcomeById.get(participant.reservation_id) !== 'waived'
+        !participant.payment_email_sent_at
+        && outcomeById.get(participant.reservation_id) !== 'waived'
+        && Boolean(recipientById.get(participant.reservation_id) || participant.email)
       ));
       if (hasUnsentPayment && !preview.instructor_email) throw new Error('INSTRUCTOR_EMAIL_MISSING');
       if (hasUnsentPayment && !preview.payment_qr_url) throw new Error('PAYMENT_QR_MISSING');
@@ -375,10 +397,14 @@ Deno.serve(async (req: Request) => {
       const teacherFirstName = batch.teacher.trim().split(/\s+/)[0] || 'Tým';
       const senderName = `${teacherFirstName} · Jóga na HALLU`;
       const donation = batch.payment_mode === 'donation';
-      const participantsToEmail = batch.participants.filter((participant) => !participant.payment_waived_at && !participant.payment_email_sent_at);
+      const participantsToEmail = batch.participants.filter((participant) => (
+        !participant.payment_waived_at
+        && !participant.payment_email_sent_at
+        && Boolean(recipientById.get(participant.reservation_id) || participant.email)
+      ));
       const qrUrl = batch.payment_qr_url ? publicAssetUrl(publicSiteUrl, batch.payment_qr_url) : '';
       const results = await Promise.all(participantsToEmail.map(async (participant) => {
-        const recipientEmail = recipientById.get(participant.reservation_id) || participant.email;
+        const recipientEmail = recipientById.get(participant.reservation_id) || participant.email || '';
         const absent = participant.status === 'no_show';
         const paymentCopy = donation
           ? DONATION_PAYMENT_COPY
@@ -426,7 +452,7 @@ Deno.serve(async (req: Request) => {
       const skipped = batch.participants.length - results.length;
       const summaryRows = participantsToEmail.map((participant) => {
         const result = results.find((item) => item.reservationId === participant.reservation_id);
-        const recipientEmail = recipientById.get(participant.reservation_id) || participant.email;
+        const recipientEmail = recipientById.get(participant.reservation_id) || participant.email || '';
         return `<tr><td style="padding:7px 10px;border-bottom:1px solid #ddd">${escapeHtml(participant.name)}</td><td style="padding:7px 10px;border-bottom:1px solid #ddd">${escapeHtml(recipientEmail)}</td><td style="padding:7px 10px;border-bottom:1px solid #ddd">${result?.sent ? 'Odesláno' : 'Neodesláno'}</td></tr>`;
       }).join('');
       const summaryResult = participantsToEmail.length ? await sendBrevoEmail({
@@ -577,12 +603,14 @@ Deno.serve(async (req: Request) => {
     return json(req, { ok: true, action: change.action, notified, failed });
   } catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('STUDIO_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') || code.includes('PAYMENT_ALREADY_SENT') ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') || code === 'OWNER_SELF_DELETE' ? 400 : code.includes('RESERVATION_NOT_FOUND') || code === 'ADMIN_NOT_FOUND' || code === 'LESSON_NOT_FOUND' ? 404 : 500;
+    const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('STUDIO_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') || code.includes('PAYMENT_ALREADY_SENT') || code === 'WALK_IN_EXISTS' ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') || code === 'OWNER_SELF_DELETE' ? 400 : code.includes('RESERVATION_NOT_FOUND') || code === 'ADMIN_NOT_FOUND' || code === 'LESSON_NOT_FOUND' ? 404 : 500;
     console.error('manage-lesson failed', code);
     const message = code === 'FORBIDDEN'
       ? 'Tento účet nemá oprávnění správce.'
       : code === 'INVALID_CAPACITY_OVER_STUDIO_LIMIT'
         ? 'Kapacita lekce nemůže překročit kapacitu studia nastavenou ve správě.'
+      : requestedAction === 'add-walk-in'
+        ? code === 'WALK_IN_EXISTS' ? 'Tento člověk už je u lekce evidovaný.' : code.includes('LESSON_NOT_ENDED') ? 'Účast bez rezervace lze přidat až po skončení lekce.' : 'Účast bez rezervace se nepodařilo přidat.'
       : status === 409
         ? code.includes('CANCELLATION_NOT_ALLOWED')
           ? 'Rezervaci už nelze zrušit nebo už byla zrušená.'
