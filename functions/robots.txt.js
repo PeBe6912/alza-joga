@@ -7,7 +7,7 @@ Disallow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://joga-na-hallu.pages.dev/sitemap.xml
+Sitemap: https://joganahallu.cz/sitemap.xml
 `;
 
 export function onRequest(context) {

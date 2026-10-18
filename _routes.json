@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/lekce/*", "/sitemap.xml", "/robots.txt"],
+  "include": ["/*"],
   "exclude": []
 }
