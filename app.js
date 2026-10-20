@@ -76,6 +76,7 @@ let adminStudioBlocks = [];
 let adminCanManageAdmins = false;
 let adminCanDeleteLessons = false;
 let adminAccounts = [];
+let adminGreeting = 'Dobrý den';
 let publicSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let activeAdminTab = 'overview';
@@ -1352,6 +1353,7 @@ async function openAdmin({ updateUrl = true } = {}) {
   document.querySelector('.announcement').hidden = true;
   document.querySelector('footer').hidden = true;
   adminView.hidden = false;
+  document.querySelector('#admin-title').textContent = 'Správa studia';
   scrollAdminToTop();
   setAdminAuthenticatedLayout(false);
   if (adminSession && await isAdminSessionValid()) {
@@ -1406,6 +1408,7 @@ function clearAdminSession() {
   adminStudioBlocks = [];
   adminCanManageAdmins = false;
   adminAccounts = [];
+  adminGreeting = 'Dobrý den';
   adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
   sessionStorage.removeItem('jogaAdminSession');
 }
@@ -1546,6 +1549,8 @@ async function loadAdminCapabilities() {
   const capabilities = await manageLesson({ action: 'capabilities' });
   adminCanManageAdmins = capabilities.canManageAdmins === true;
   adminCanDeleteLessons = capabilities.canDeleteLessons === true;
+  adminGreeting = String(capabilities.greeting || 'Dobrý den');
+  document.querySelector('#admin-title').textContent = adminGreeting;
 }
 
 async function loadAdminAccounts() {
@@ -1726,6 +1731,7 @@ function accountsPanel() {
     ? `<form class="admin-card account-form" id="create-admin-form">
       <h2>Přidat administrátora</h2>
       <p class="admin-help">Nový účet bude ihned aktivní a bude se moci přihlásit do správy.</p>
+      <div class="field"><label for="new-admin-name">Jméno a příjmení</label><input id="new-admin-name" name="displayName" maxlength="120" autocomplete="name" required></div>
       <div class="field"><label for="new-admin-email">E-mail</label><input id="new-admin-email" name="email" type="email" autocomplete="email" required></div>
       <div class="field"><label for="new-admin-password">Počáteční heslo</label><input id="new-admin-password" name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password" required><small>Nejméně 12 znaků.</small></div>
       <div class="field"><label for="new-admin-password-confirm">Heslo znovu</label><input id="new-admin-password-confirm" name="passwordConfirm" type="password" minlength="12" maxlength="72" autocomplete="new-password" required></div>
@@ -1966,7 +1972,7 @@ async function createAdminAccount(event) {
   button.disabled = true;
   button.textContent = 'Vytvářím…';
   try {
-    await manageLesson({ action: 'create-admin', email: String(data.get('email')).trim(), password });
+    await manageLesson({ action: 'create-admin', displayName: String(data.get('displayName')).trim(), email: String(data.get('email')).trim(), password });
     event.target.reset();
     await loadAdminAccounts();
     renderAdmin('accounts');

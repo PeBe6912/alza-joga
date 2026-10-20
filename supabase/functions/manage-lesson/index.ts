@@ -109,7 +109,12 @@ function json(req: Request, body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: headers(req) });
 }
 
-type AdminUser = { id: string; email?: string; app_metadata?: { role?: string } };
+type AdminUser = {
+  id: string;
+  email?: string;
+  app_metadata?: { role?: string };
+  user_metadata?: { full_name?: string; name?: string };
+};
 
 async function requireAdmin(req: Request): Promise<AdminUser> {
   const authorization = req.headers.get('authorization');
@@ -148,6 +153,31 @@ async function getInstructorPayment(instructorId: string): Promise<{ payment_mod
   return rows[0];
 }
 
+async function adminDisplayName(adminUser: AdminUser): Promise<string> {
+  const metadataName = String(adminUser.user_metadata?.full_name ?? adminUser.user_metadata?.name ?? '').trim();
+  if (metadataName) return metadataName;
+
+  const email = String(adminUser.email ?? '').trim().toLowerCase();
+  if (!email) return '';
+  const contacts = await callRpc<Array<{ instructor_id: string; email: string }>>('admin_instructor_contacts', {});
+  const contact = contacts.find((item) => item.email.trim().toLowerCase() === email);
+  if (contact) {
+    const { url, secretKey } = supabaseConfig();
+    const query = new URLSearchParams({ select: 'name', id: `eq.${contact.instructor_id}`, limit: '1' });
+    const response = await fetch(`${url}/rest/v1/instructors?${query}`, { headers: { apikey: secretKey } });
+    const rows = await response.json().catch(() => []);
+    if (response.ok && rows[0]?.name) return String(rows[0].name);
+  }
+
+  const firstEmailPart = email.split('@')[0].split(/[._-]/).find((part) => /^[a-záčďéěíňóřšťúůýž]{2,}$/i.test(part));
+  return firstEmailPart ? `${firstEmailPart.charAt(0).toLocaleUpperCase('cs-CZ')}${firstEmailPart.slice(1)}` : '';
+}
+
+function formalAdminGreeting(displayName: string): string {
+  const informalGreeting = czechSalutation(displayName);
+  return informalGreeting.startsWith('Ahoj ') ? `Dobrý den, ${informalGreeting.slice(5)}` : 'Dobrý den';
+}
+
 function publicAssetUrl(siteUrl: string, path: string): string {
   return /^https?:\/\//i.test(path) ? path : `${siteUrl}/${path.replace(/^\/+/, '')}`;
 }
@@ -166,12 +196,15 @@ Deno.serve(async (req: Request) => {
     requestedAction = action;
     const canManageAdmins = adminUser.id === OWNER_ADMIN_USER_ID;
     if (action === 'capabilities') {
-      return json(req, { ok: true, action, canManageAdmins, canDeleteLessons: canManageAdmins });
+      const displayName = await adminDisplayName(adminUser);
+      return json(req, { ok: true, action, canManageAdmins, canDeleteLessons: canManageAdmins, greeting: formalAdminGreeting(displayName) });
     }
     if (action === 'create-admin') {
       if (!canManageAdmins) throw new Error('OWNER_ONLY');
       const email = String(body.email ?? '').trim().toLowerCase();
+      const displayName = String(body.displayName ?? '').trim();
       const password = String(body.password ?? '');
+      if (displayName.length < 2 || displayName.length > 120) throw new Error('INVALID_NAME');
       if (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('INVALID_EMAIL');
       if (password.length < 12 || password.length > 72) throw new Error('INVALID_PASSWORD');
       const created = await callAuthAdmin('users', 'POST', {
@@ -179,6 +212,7 @@ Deno.serve(async (req: Request) => {
         password,
         email_confirm: true,
         app_metadata: { role: 'admin' },
+        user_metadata: { full_name: displayName },
       });
       return json(req, { ok: true, action, userId: created.id ?? null });
     }
