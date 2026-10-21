@@ -77,6 +77,7 @@ let adminCanManageAdmins = false;
 let adminCanDeleteLessons = false;
 let adminAccounts = [];
 let adminGreeting = 'Dobrý den';
+let adminShowCancelledLessons = false;
 let publicSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
 let activeAdminTab = 'overview';
@@ -1409,6 +1410,7 @@ function clearAdminSession() {
   adminCanManageAdmins = false;
   adminAccounts = [];
   adminGreeting = 'Dobrý den';
+  adminShowCancelledLessons = false;
   adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
   sessionStorage.removeItem('jogaAdminSession');
 }
@@ -1722,6 +1724,16 @@ function overviewPanel() {
   return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Naplánované lekce</h2><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p></div>${adminLessonTools()}</div>${lessonTable(filteredAdminLessons(upcomingLessons), 'Tomuto filtru neodpovídá žádná naplánovaná lekce.')}</div>`;
 }
 
+function completedLessonsPanel() {
+  const completedLessons = filteredAdminLessons(adminLessons.filter((lesson) => new Date(lesson.endsAt) <= new Date()).reverse());
+  const cancelledCount = completedLessons.filter((lesson) => lesson.status === 'cancelled').length;
+  const visibleLessons = adminShowCancelledLessons ? completedLessons : completedLessons.filter((lesson) => lesson.status !== 'cancelled');
+  const cancelledToggle = cancelledCount
+    ? `<button class="button button-small button-secondary" type="button" data-toggle-cancelled-lessons aria-pressed="${adminShowCancelledLessons}">${adminShowCancelledLessons ? 'Skrýt zrušené' : `Zobrazit zrušené (${cancelledCount})`}</button>`
+    : '';
+  return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Proběhlé lekce a platby</h2><p class="admin-help">U každé lekce jednou potvrď docházku. Platební nebo příspěvkové e-maily se odešlou automaticky.</p></div><div class="admin-lesson-tools">${adminLessonFilter()}${cancelledToggle}</div></div>${lessonTable(visibleLessons, 'Tomuto filtru neodpovídá žádná proběhlá lekce.')}</div>`;
+}
+
 function teachersPanel() {
   return `<div class="admin-card"><h2>Profily lektorů</h2>${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(teacher.name)}"><div><h3>${escapeHtml(teacher.name)}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.email || 'E-mail není nastavený')}</p><p>${escapeHtml(teacher.bio)}</p>${teacher.practice_quote ? `<blockquote>„${escapeHtml(teacher.practice_quote)}“</blockquote>` : ''}</div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
 }
@@ -1916,7 +1928,7 @@ function renderAdmin(tab) {
   document.querySelector('#admin-title').textContent = titles[tab];
   if (tab === 'overview') panel.innerHTML = overviewPanel();
   if (tab === 'calendar') panel.innerHTML = calendarPanel();
-  if (tab === 'completed') panel.innerHTML = `<div class="admin-card"><div class="admin-list-heading"><div><h2>Proběhlé lekce a platby</h2><p class="admin-help">U každé lekce jednou potvrď docházku. Platební nebo příspěvkové e-maily se odešlou automaticky.</p></div>${adminLessonFilter()}</div>${lessonTable(filteredAdminLessons(adminLessons.filter((lesson) => new Date(lesson.endsAt) <= new Date()).reverse()), 'Tomuto filtru neodpovídá žádná proběhlá lekce.')}</div>`;
+  if (tab === 'completed') panel.innerHTML = completedLessonsPanel();
   if (tab === 'feedback') panel.innerHTML = feedbackPanel();
   if (tab === 'teachers') panel.innerHTML = teachersPanel();
   if (tab === 'people') panel.innerHTML = bookingsPanel();
@@ -1935,6 +1947,10 @@ function renderAdmin(tab) {
   document.querySelector('[data-admin-lesson-instructor]')?.addEventListener('change', (event) => {
     adminLessonInstructorFilter = event.target.value;
     renderAdmin(tab);
+  });
+  document.querySelector('[data-toggle-cancelled-lessons]')?.addEventListener('click', () => {
+    adminShowCancelledLessons = !adminShowCancelledLessons;
+    renderAdmin('completed');
   });
   document.querySelectorAll('[data-edit-lesson]').forEach((button) => button.addEventListener('click', () => openLessonEditor(button.dataset.editLesson)));
   document.querySelector('[data-add-studio-block]')?.addEventListener('click', () => openStudioBlockEditor());
