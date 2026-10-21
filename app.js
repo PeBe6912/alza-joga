@@ -63,13 +63,25 @@ let userRefreshPromise = null;
 let accountData = null;
 let accountRecoveryMode = false;
 let activeAccountTab = 'lessons';
-let adminSession = JSON.parse(sessionStorage.getItem('jogaAdminSession') || 'null');
+const storedAdminSession = localStorage.getItem('jogaAdminSession') || sessionStorage.getItem('jogaAdminSession');
+let adminSession = null;
+try {
+  adminSession = JSON.parse(storedAdminSession || 'null');
+} catch {
+  localStorage.removeItem('jogaAdminSession');
+  sessionStorage.removeItem('jogaAdminSession');
+}
+if (adminSession) {
+  localStorage.setItem('jogaAdminSession', JSON.stringify(adminSession));
+  sessionStorage.removeItem('jogaAdminSession');
+}
 let adminRefreshPromise = null;
 let adminLessons = [];
 let adminInstructors = [];
 let adminNews = [];
 let adminReservations = [];
 let adminFeedback = [];
+let publicCalendarLessons = [];
 let publicStudioBlocks = [];
 let publicStudioBlocksError = '';
 let adminStudioBlocks = [];
@@ -680,25 +692,47 @@ async function loadLessons() {
 async function loadPublicStudioBlocks() {
   const rangeEnd = addDays(publicCalendarStart, 7);
   try {
-    const query = new URLSearchParams({
+    const occupancyQuery = new URLSearchParams({
       select: 'starts_at,ends_at',
       starts_at: `lt.${rangeEnd.toISOString()}`,
       ends_at: `gt.${publicCalendarStart.toISOString()}`,
       order: 'starts_at.asc',
     });
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/studio_occupancy?${query}`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY } });
-    if (!response.ok) throw new Error('Dostupnost studia se nepodařilo načíst.');
-    publicStudioBlocks = (await response.json()).map((block, index) => ({
+    const lessonQuery = new URLSearchParams({
+      select: 'id,title,starts_at,ends_at,instructors(name)',
+      status: 'eq.published',
+      starts_at: `lt.${rangeEnd.toISOString()}`,
+      ends_at: `gt.${publicCalendarStart.toISOString()}`,
+      order: 'starts_at.asc',
+    });
+    const [occupancyResponse, lessonResponse] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/studio_occupancy?${occupancyQuery}`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY } }),
+      fetch(`${SUPABASE_URL}/rest/v1/lessons?${lessonQuery}`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY } }),
+    ]);
+    if (!occupancyResponse.ok || !lessonResponse.ok) throw new Error('Dostupnost studia se nepodařilo načíst.');
+    publicStudioBlocks = (await occupancyResponse.json()).map((block, index) => ({
       id: `public-${index}`,
       kind: 'private',
       title: 'Studio obsazeno',
       startsAt: block.starts_at,
       endsAt: block.ends_at,
     }));
+    publicCalendarLessons = (await lessonResponse.json()).map((lesson) => {
+      const teacher = lesson.instructors?.name || '';
+      return {
+        id: lesson.id,
+        kind: 'public',
+        title: [lesson.title, teacher].filter(Boolean).join(' · '),
+        teacher,
+        startsAt: lesson.starts_at,
+        endsAt: lesson.ends_at,
+      };
+    });
     publicStudioBlocksError = '';
     renderPublicCalendar();
   } catch (error) {
     console.error(error);
+    publicCalendarLessons = [];
     publicStudioBlocks = [];
     publicStudioBlocksError = 'Dostupnost neveřejných rezervací se nepodařilo načíst.';
     renderPublicCalendar(publicStudioBlocksError);
@@ -706,12 +740,7 @@ async function loadPublicStudioBlocks() {
 }
 
 function publicCalendarEvents() {
-  const from = publicCalendarStart;
-  const to = addDays(from, 7);
-  const publicLessons = lessons
-    .filter((lesson) => new Date(lesson.iso) < to && new Date(lesson.endsAt) > from)
-    .map((lesson) => ({ id: lesson.id, kind: 'public', title: `${lesson.title} · ${lesson.teacher}`, teacher: lesson.teacher, startsAt: lesson.iso, endsAt: lesson.endsAt }));
-  return [...publicLessons, ...publicStudioBlocks];
+  return [...publicCalendarLessons, ...publicStudioBlocks];
 }
 
 function renderPublicCalendar(errorMessage = '') {
@@ -1357,7 +1386,8 @@ async function openAdmin({ updateUrl = true } = {}) {
   document.querySelector('#admin-title').textContent = 'Správa studia';
   scrollAdminToTop();
   setAdminAuthenticatedLayout(false);
-  if (adminSession && await isAdminSessionValid()) {
+  const adminSessionValidity = adminSession ? await isAdminSessionValid() : false;
+  if (adminSessionValidity === true) {
     setAdminAuthenticatedLayout(true);
     document.querySelector('#admin-panel').innerHTML = '<div class="admin-card"><p>Načítám administraci…</p></div>';
     try {
@@ -1368,9 +1398,12 @@ async function openAdmin({ updateUrl = true } = {}) {
       document.querySelector('#admin-panel').innerHTML = '<div class="admin-card"><h2>Administraci se nepodařilo načíst</h2><p>Zkus prosím záložku otevřít znovu.</p></div>';
       showToast(error.message);
     }
-  } else {
+  } else if (adminSessionValidity === false) {
     clearAdminSession();
     renderAdminLogin();
+  } else {
+    setAdminAuthenticatedLayout(true);
+    document.querySelector('#admin-panel').innerHTML = '<div class="admin-card"><h2>Administraci se nepodařilo připojit</h2><p>Přihlášení zůstalo uložené. Zkontroluj připojení a obnov stránku.</p></div>';
   }
   scrollAdminToTop();
   requestAnimationFrame(scrollAdminToTop);
@@ -1412,6 +1445,7 @@ function clearAdminSession() {
   adminGreeting = 'Dobrý den';
   adminShowCancelledLessons = false;
   adminSettings = { ...PUBLIC_SETTING_DEFAULTS };
+  localStorage.removeItem('jogaAdminSession');
   sessionStorage.removeItem('jogaAdminSession');
 }
 
@@ -1419,9 +1453,10 @@ function saveAdminSession(result) {
   adminSession = {
     access_token: result.access_token,
     refresh_token: result.refresh_token,
-    expires_at: result.expires_at,
+    expires_at: result.expires_at || Math.floor(Date.now() / 1000) + Number(result.expires_in || 3600),
   };
-  sessionStorage.setItem('jogaAdminSession', JSON.stringify(adminSession));
+  localStorage.setItem('jogaAdminSession', JSON.stringify(adminSession));
+  sessionStorage.removeItem('jogaAdminSession');
 }
 
 async function refreshAdminSession() {
@@ -1435,15 +1470,19 @@ async function refreshAdminSession() {
         body: JSON.stringify({ refresh_token: adminSession.refresh_token }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok || result.user?.app_metadata?.role !== 'admin' || !result.access_token || !result.refresh_token) {
+      if (!response.ok) {
+        if (![400, 401, 403].includes(response.status)) return null;
+        clearAdminSession();
+        return false;
+      }
+      if (result.user?.app_metadata?.role !== 'admin' || !result.access_token || !result.refresh_token) {
         clearAdminSession();
         return false;
       }
       saveAdminSession(result);
       return true;
     } catch {
-      clearAdminSession();
-      return false;
+      return null;
     }
   })();
   try {
@@ -1455,7 +1494,10 @@ async function refreshAdminSession() {
 
 async function adminFetch(url, options = {}) {
   const expiresSoon = Number(adminSession?.expires_at || 0) * 1000 <= Date.now() + 60_000;
-  if (expiresSoon) await refreshAdminSession();
+  if (expiresSoon) {
+    const refreshResult = await refreshAdminSession();
+    if (refreshResult === null) throw new Error('Přihlášení se nyní nepodařilo ověřit. Zkontroluj připojení a zkus to znovu.');
+  }
   const send = () => fetch(url, {
     ...options,
     headers: {
@@ -1465,7 +1507,11 @@ async function adminFetch(url, options = {}) {
     },
   });
   let response = await send();
-  if ([401, 403].includes(response.status) && await refreshAdminSession()) response = await send();
+  if ([401, 403].includes(response.status)) {
+    const refreshResult = await refreshAdminSession();
+    if (refreshResult === true) response = await send();
+    else if (refreshResult === null) throw new Error('Přihlášení se nyní nepodařilo ověřit. Zkontroluj připojení a zkus to znovu.');
+  }
   return response;
 }
 
@@ -1473,11 +1519,12 @@ async function isAdminSessionValid() {
   if (!adminSession?.access_token || !adminSession?.refresh_token) return false;
   try {
     const response = await adminFetch(`${SUPABASE_URL}/auth/v1/user`);
-    if (!response.ok) return false;
+    if ([401, 403].includes(response.status)) return false;
+    if (!response.ok) return null;
     const user = await response.json();
     return user.app_metadata?.role === 'admin';
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -1619,8 +1666,14 @@ async function signInAdmin(event) {
     scrollAdminToTop();
     requestAnimationFrame(scrollAdminToTop);
   } catch (error) {
-    clearAdminSession();
-    renderAdminLogin(error.message);
+    if (adminSession) {
+      setAdminAuthenticatedLayout(true);
+      document.querySelector('#admin-panel').innerHTML = '<div class="admin-card"><h2>Administraci se nepodařilo načíst</h2><p>Přihlášení zůstalo uložené. Zkontroluj připojení a obnov stránku.</p></div>';
+      showToast(error.message);
+    } else {
+      clearAdminSession();
+      renderAdminLogin(error.message);
+    }
   }
 }
 
