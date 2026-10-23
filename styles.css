@@ -138,7 +138,9 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
 /* Preserve complete source framing while keeping the studio and lecturer cards compact. */
 .studio-grid{grid-template-columns:60% 40%;grid-template-rows:minmax(520px,auto) 180px}
 .studio-main{grid-row:1/3;min-height:0;background:var(--cream)}
-.studio-main img{object-fit:cover;object-position:center 42%}
+.studio-main img{object-fit:cover;object-position:15% 42%}
+.hero-shade{background:linear-gradient(90deg,rgba(25,28,24,.66),rgba(25,28,24,.08) 75%),linear-gradient(0deg,rgba(25,28,24,.38),transparent 70%)}
+@media(max-width:900px){.hero-shade{background:linear-gradient(180deg,rgba(25,28,24,.24),rgba(25,28,24,.58) 35%,rgba(25,28,24,.58) 75%,rgba(25,28,24,.38))}}
 .studio-copy{padding:42px 5vw 30px}
 .studio-copy h2{font-size:56px}
 .studio-copy .feature-list{margin:20px 0}
@@ -567,14 +569,14 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
 }
 
 @media(min-width:601px) and (max-width:900px){
-  .studio-main img{object-fit:cover;object-position:center 42%}
+  .studio-main img{object-fit:cover;object-position:15% 42%}
   .teacher-photo-portrait img{object-position:center 55%}
   footer>div.footer-inner{align-items:flex-start;flex-direction:column;gap:22px}
   .footer-links{justify-content:flex-start;row-gap:10px}
 }
 
 @media(max-width:600px){
-  .studio-main img{object-fit:cover;object-position:center 42%}
+  .studio-main img{object-fit:cover;object-position:15% 42%}
   .teacher-photo-portrait{height:clamp(420px,100vw,600px)}
   .quote-break{padding:58px 24px}
   footer{padding:32px 24px}
