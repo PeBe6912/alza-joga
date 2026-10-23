@@ -215,7 +215,10 @@ function calendarEventCard(event, { admin = false } = {}) {
     ? `<div class="calendar-event-actions"><button class="text-button" data-edit-studio-block="${event.id}">Upravit</button><button class="text-button danger" data-delete-studio-block="${event.id}">Smazat</button></div>`
     : '';
   const instructorClass = event.kind === 'public' ? instructorCalendarClass(event.teacher) : '';
-  return `<article class="calendar-event calendar-event-${event.kind}${instructorClass}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
+  const teacher = event.kind === 'public' && event.teacher
+    ? `<span class="calendar-event-teacher">${escapeHtml(event.teacher)}</span>`
+    : '';
+  return `<article class="calendar-event calendar-event-${event.kind}${instructorClass}"><strong>${escapeHtml(event.title)}</strong>${teacher}<span>${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
 }
 
 function calendarDays(start, events, { admin = false } = {}) {
@@ -722,7 +725,7 @@ async function loadPublicStudioBlocks() {
       return {
         id: lesson.id,
         kind: 'public',
-        title: [lesson.title, teacher].filter(Boolean).join(' · '),
+        title: lesson.title,
         teacher,
         startsAt: lesson.starts_at,
         endsAt: lesson.ends_at,
@@ -1871,7 +1874,7 @@ const STUDIO_BLOCK_CATEGORIES = {
 function adminCalendarEvents(from, to) {
   const lessonEvents = adminLessons
     .filter((lesson) => lesson.status === 'published' && new Date(lesson.iso) < to && new Date(lesson.endsAt) > from)
-    .map((lesson) => ({ id: lesson.id, kind: 'public', title: `${lesson.title} · ${lesson.teacher}`, teacher: lesson.teacher, startsAt: lesson.iso, endsAt: lesson.endsAt }));
+    .map((lesson) => ({ id: lesson.id, kind: 'public', title: lesson.title, teacher: lesson.teacher, startsAt: lesson.iso, endsAt: lesson.endsAt }));
   const privateEvents = adminStudioBlocks
     .filter((block) => new Date(block.starts_at) < to && new Date(block.ends_at) > from)
     .map((block) => ({

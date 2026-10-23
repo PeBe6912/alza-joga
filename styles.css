@@ -506,6 +506,7 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
 .calendar-day>div{display:grid;gap:8px;padding:10px}
 .calendar-event{display:grid;gap:4px;padding:11px;border-left:4px solid var(--sage-dark);background:#e4eee8;font-size:12px;line-height:1.35}
 .calendar-event span,.calendar-event small{color:var(--muted)}
+.calendar-event .calendar-event-teacher{color:var(--ink);font-weight:500}
 .calendar-event-public.calendar-instructor-petr{border-left-color:var(--sage-dark);background:#e4eee8}
 .calendar-event-public.calendar-instructor-daniela{border-left-color:var(--clay);background:#f3e5dc}
 .calendar-event-private{border-left-color:#8b918e;background:#eceeed;color:#454b48}
