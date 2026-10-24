@@ -134,7 +134,7 @@ export async function sendBrevoEmail(message: {
 
   const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
   const signatureName = String(message.signatureName ?? '').trim();
-  const signature = signatureName ? `${escapeHtml(signatureName)} · Jóga na HALLU` : 'Jóga na HALLU';
+  const signature = signatureName ? `<span style="display:block">${escapeHtml(signatureName)}</span>` : '';
   const senderName = String(message.senderName ?? '').trim() || 'Jóga na HALLU';
   const brandedContent = `<!doctype html>
     <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -151,7 +151,7 @@ export async function sendBrevoEmail(message: {
             </td></tr>
             <tr><td style="padding:34px 32px;background:#fff;border-left:1px solid rgba(31,40,36,.12);border-right:1px solid rgba(31,40,36,.12);font-size:16px;line-height:1.65">
               ${message.htmlContent}
-              <p style="margin:30px 0 0;color:#1f2824">${signature}<br><a href="${escapeHtml(siteUrl)}" style="color:#3e5648;font-weight:700">Web Jóga na HALLU</a></p>
+              <p data-email-signature style="margin:30px 0 0;color:#1f2824">${signature}<a href="${escapeHtml(siteUrl)}" style="color:#3e5648;font-weight:700">Jóga na HALLU</a></p>
             </td></tr>
             <tr><td style="padding:18px 28px;background:#ebe3d6;border-top:3px solid #b87854;color:#66706b;font-size:12px;line-height:1.5">
               Jóga na HALLU · 3. patro · Pro zaměstnance Alzy a jejich hosty

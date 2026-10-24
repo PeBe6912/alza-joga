@@ -501,7 +501,6 @@ Deno.serve(async (req: Request) => {
         toEmail: batch.instructor_email || '',
         toName: batch.teacher,
         subject: `Souhrn platebních e-mailů: ${batch.title}`,
-        signatureName: teacherFirstName,
         senderName,
         htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:640px;margin:auto">
           <p>${escapeHtml(czechSalutation(teacherFirstName))},</p>
