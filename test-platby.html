@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>Test platby z mobilu | Jóga na HALLU</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f5f1e9;color:#1f2824;font:16px/1.6 system-ui,sans-serif}header,main{max-width:700px;margin:auto;padding:24px}header a{display:inline-flex;align-items:center;gap:16px;color:inherit;text-decoration:none}header img{width:54px;height:64px}main{padding-top:0}.card{padding:32px;background:#fff;border:1px solid #ddd9d0;border-radius:20px}h1{font-family:Georgia,serif;font-size:clamp(28px,6vw,40px);line-height:1.15;margin:16px 0}p{margin:16px 0}.badge{font-size:12px;letter-spacing:.1em;font-weight:700;color:#9c5a36}.warning{padding:16px;background:#fff4df;border-left:4px solid #b87854}.qr{display:block;width:280px;max-width:100%;height:auto;margin:24px auto}.actions{display:grid;gap:12px}button,.button{display:block;width:100%;padding:14px 18px;border:1px solid #3e5648;border-radius:28px;background:#3e5648;color:white;text-align:center;text-decoration:none;font:600 16px/1.4 system-ui,sans-serif;cursor:pointer}.secondary{background:white;color:#3e5648}button:disabled{opacity:.6;cursor:wait}[hidden]{display:none!important}:focus-visible{outline:3px solid #b87854;outline-offset:4px}.muted{color:#66706b;font-size:14px}ol{padding-left:24px}#status{min-height:26px}footer{margin:24px 0;font-size:14px;color:#66706b}@media(max-width:480px){header,main{padding:18px}.card{padding:22px}}
+  </style>
+  <script src="/test-platby.js?v=2026102401" defer></script>
+</head>
+<body>
+  <header><a href="/"><img src="/assets/joga-na-hallu-logo.svg" alt="">Jóga na HALLU</a></header>
+  <main>
+    <section class="card" aria-labelledby="payment-title">
+      <span class="badge">TEST PLATBY Z MOBILU</span>
+      <h1 id="payment-title">Načítání testu…</h1>
+      <p id="description"></p>
+      <p class="warning"><strong>Pozor: QR obsahuje skutečné platební údaje.</strong> Pro test stačí otevřít bankovní aplikaci a zkontrolovat předvyplněnou platbu. Pokud nechceš opravdu poslat peníze, platbu v bance nepotvrzuj.</p>
+      <img id="qr" class="qr" alt="" hidden>
+      <div class="actions">
+        <button id="share" type="button" disabled hidden>Sdílet QR do bankovní aplikace</button>
+        <a id="download" class="button secondary" hidden>Stáhnout QR kód</a>
+        <a id="open" class="button secondary" target="_blank" rel="noopener noreferrer" hidden>Otevřít QR obrázek</a>
+      </div>
+      <p id="status" role="status" aria-live="polite">Připravuji QR kód…</p>
+      <ol>
+        <li>Na telefonu klepni na sdílení QR a vyber svou banku, pokud ji telefon nabídne.</li>
+        <li>V bance ověř příjemce a částku. Platbu pro tento test nemusíš potvrzovat.</li>
+        <li>Pokud banka v nabídce není, ulož QR a načti ho z obrázku ve své bankovní aplikaci.</li>
+      </ol>
+      <p class="muted">Pokud odkaz otevírá aplikace e-mailu ve vlastním prohlížeči a sdílení nefunguje, zkus jej otevřít v Safari nebo Chromu. Na počítači můžeš QR načíst telefonem. Když se obrázek místo stažení otevře, ulož jej přes nabídku prohlížeče nebo podržením prstu.</p>
+      <noscript><p>Pro test sdílení zapni JavaScript. QR najdeš také v testovacím e-mailu.</p></noscript>
+    </section>
+    <footer>Jde pouze o technickou zkoušku. Nevytváří rezervaci, nezaznamenává úhradu a neověřuje, zda peníze dorazily.</footer>
+  </main>
+</body>
+</html>
