@@ -181,7 +181,7 @@ Deno.serve(async (req: Request) => {
           toEmail: email,
           toName: fullName,
           subject: verificationType === 'signup' ? 'Potvrď svůj účet | Jóga na HALLU' : 'Dokonči přihlášení | Jóga na HALLU',
-          htmlContent: `<p>${escapeHtml(czechSalutation(fullName))},</p><p>${verificationType === 'signup' ? 'děkujeme za vytvoření účtu. Potvrď e-mailovou adresu a potom už budeš rezervovat lekce bez opakovaného vyplňování údajů.' : 'účet s tímto e-mailem už existuje. Pomocí odkazu níže dokončíš přihlášení.'}</p>${emailButton(actionLink, verificationType === 'signup' ? 'Potvrdit účet' : 'Přihlásit se')}<p>Pokud jsi o tento odkaz nežádal/a, zprávu můžeš ignorovat.</p>`,
+          htmlContent: `<p>${escapeHtml(czechSalutation(fullName))},</p><p>${verificationType === 'signup' ? 'pro dokončení registrace na webu Jóga na HALLU potvrď svoji e-mailovou adresu. Potom můžeš rezervovat lekce bez opakovaného vyplňování údajů.' : 'účet s touto e-mailovou adresou už existuje. Pomocí tlačítka dokončíš přihlášení.'}</p>${emailButton(actionLink, verificationType === 'signup' ? 'Potvrdit účet' : 'Přihlásit se')}<p>${verificationType === 'signup' ? 'Pokud jsi o vytvoření účtu nežádal/a, tuto zprávu můžeš ignorovat.' : 'Pokud jsi o přihlášení nežádal/a, tuto zprávu můžeš ignorovat.'}</p>`,
         });
         if (!emailResult.sent) throw new Error(emailResult.error || 'EMAIL_SEND_FAILED');
         return json(req, { ok: true, message: verificationType === 'signup' ? 'Poslali jsme ti e-mail pro potvrzení účtu.' : 'Účet už existuje. Poslali jsme ti nový přihlašovací odkaz.' }, verificationType === 'signup' ? 201 : 200);
@@ -196,7 +196,7 @@ Deno.serve(async (req: Request) => {
             toEmail: email,
             toName: email,
             subject: 'Obnova hesla | Jóga na HALLU',
-            htmlContent: `<p>Dobrý den,</p><p>požádal/a jsi o nové heslo k účtu Jóga na HALLU.</p>${emailButton(actionLink, 'Nastavit nové heslo')}<p>Pokud jsi o změnu nežádal/a, tuto zprávu můžeš ignorovat.</p>`,
+            htmlContent: `<p>Ahoj,</p><p>pomocí tlačítka si můžeš nastavit nové heslo k účtu Jóga na HALLU.</p>${emailButton(actionLink, 'Nastavit nové heslo')}<p>Pokud jsi o obnovu hesla nežádal/a, tuto zprávu můžeš ignorovat.</p>`,
           });
         }
       } catch (error) {
@@ -241,7 +241,8 @@ Deno.serve(async (req: Request) => {
           toName: cancellation.attendee_name,
           subject: `Rezervace zrušena: ${cancellation.title}`,
           signatureName: teacherFirstName,
-          htmlContent: `<p>${escapeHtml(czechSalutation(cancellation.attendee_name))},</p><p>rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong> (${escapeHtml(formatLessonDate(cancellation.starts_at))}) byla zrušena.</p><p>Budeme rádi, když si vybereš jiný termín.</p>`,
+          senderName: teacherFirstName ? `${teacherFirstName} · Jóga na HALLU` : 'Jóga na HALLU',
+          htmlContent: `<p>${escapeHtml(czechSalutation(cancellation.attendee_name))},</p><p>tvoje rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong> (${escapeHtml(formatLessonDate(cancellation.starts_at))}) je zrušená.</p><p>Budu se těšit, pokud se potkáme na některé z dalších lekcí.</p>`,
         });
       }
       return json(req, { ok: true, alreadyCancelled: cancellation.already_cancelled });
@@ -255,7 +256,7 @@ Deno.serve(async (req: Request) => {
         toEmail: user.email,
         toName: String(metadata.full_name ?? user.email),
         subject: 'Heslo bylo změněno | Jóga na HALLU',
-        htmlContent: '<p>Dobrý den,</p><p>heslo k tvému účtu Jóga na HALLU bylo právě změněno.</p><p>Pokud jsi změnu neprovedl/a, obrať se prosím co nejdříve na správce webu.</p>',
+        htmlContent: '<p>Ahoj,</p><p>heslo k tvému účtu Jóga na HALLU bylo změněno.</p><p>Pokud jsi změnu neprovedl/a, obrať se prosím co nejdříve na správce webu.</p>',
       });
       return json(req, { ok: true });
     }
@@ -278,10 +279,10 @@ Deno.serve(async (req: Request) => {
       const emailResult = await sendBrevoEmail({
         toEmail: user.email,
         toName: fullName,
-        subject: 'Účet byl smazán | Jóga na HALLU',
+        subject: isAdmin ? 'Účastnický profil byl smazán | Jóga na HALLU' : 'Účet byl smazán | Jóga na HALLU',
         htmlContent: isAdmin
-          ? `<p>${escapeHtml(czechSalutation(fullName))},</p><p>tvůj účastnický profil na webu Jóga na HALLU byl smazán a dřívější rezervace už nejsou s profilem propojené.</p><p>Administrátorský přístup zůstal zachovaný.</p>`
-          : `<p>${escapeHtml(czechSalutation(fullName))},</p><p>tvůj uživatelský účet na webu Jóga na HALLU byl smazán. Dřívější rezervace už nejsou s účtem propojené.</p>`,
+          ? `<p>${escapeHtml(czechSalutation(fullName))},</p><p>tvůj účastnický profil na webu Jóga na HALLU byl smazán. Dřívější rezervace už nejsou s profilem propojené.</p><p>Přístup do administrace zůstává zachovaný.</p>`
+          : `<p>${escapeHtml(czechSalutation(fullName))},</p><p>tvůj účet na webu Jóga na HALLU byl smazán.</p><p>Dřívější rezervace už nejsou s účtem propojené.</p>`,
       });
       if (!emailResult.sent) console.warn('Account deletion email failed', emailResult.error);
 

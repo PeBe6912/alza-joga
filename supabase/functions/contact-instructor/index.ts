@@ -68,7 +68,7 @@ Deno.serve(async (req: Request) => {
         <p><strong>Jméno:</strong> ${escapeHtml(name)}<br>
         <strong>E-mail:</strong> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>${phone ? `<br><strong>Telefon:</strong> ${escapeHtml(phone)}` : ''}</p>
         <p><strong>Zpráva:</strong><br>${escapeHtml(message).replaceAll('\n', '<br>')}</p>
-        <p>Odpověz prosím zájemci přímo na uvedený e-mail.</p>
+        <p>Odpověz prosím přímo na uvedený e-mail.</p>
       </div>`,
     });
     if (!emailResult.sent) throw new Error('EMAIL_NOT_SENT');

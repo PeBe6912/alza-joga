@@ -91,7 +91,7 @@ const allowedOrigins = new Set([
 ]);
 
 const DONATION_BOOKING_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. QR kód k příspěvku bude odeslán po skončení lekce a platba směřuje přímo na účet organizace Dobrý anděl.';
-const DONATION_PAYMENT_COPY = 'Posíláme ti QR kód pro dobrovolný příspěvek. Doporučená částka je 150 Kč, konečná výše příspěvku je ale jen na tobě. Platba směřuje přímo na účet organizace Dobrý anděl.';
+const DONATION_PAYMENT_COPY = 'Posílám ti QR kód pro dobrovolný příspěvek Dobrému andělovi. Doporučená částka je 150 Kč, její výše je ale na tobě. Peníze jdou přímo na účet organizace.';
 
 const OWNER_ADMIN_USER_ID = '3f8ca22d-aa9a-4cad-bb14-8e4fbfae1c97';
 
@@ -306,9 +306,9 @@ Deno.serve(async (req: Request) => {
       });
       const teacherFirstName = cancellation.teacher.trim().split(/\s+/)[0] || 'Tým';
       const cancellationCopy = cancellation.late_cancellation
-        ? `<p>evidujeme pozdní zrušení tvé rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong>.</p>
-          <p>Platební údaje ti pošleme e-mailem po skončení lekce.</p>`
-        : `<p>lektor zrušil tvoji rezervaci na lekci <strong>${escapeHtml(cancellation.title)}</strong>.</p>`;
+        ? `<p>potvrzuji pozdní zrušení tvé rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong>.</p>
+          <p>QR kód pro platbu nebo dobrovolný příspěvek ti pošlu e-mailem po skončení lekce.</p>`
+        : `<p>potvrzuji zrušení tvé rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong>.</p>`;
       const emailResult = await sendBrevoEmail({
         toEmail: cancellation.attendee_email,
         toName: cancellation.attendee_name,
@@ -320,6 +320,7 @@ Deno.serve(async (req: Request) => {
           ${cancellationCopy}
           <p>Termín: <strong>${escapeHtml(formatLessonDate(cancellation.starts_at))}</strong><br>${escapeHtml(cancellation.location)}</p>
           ${cancellation.late_cancellation ? '' : '<p>Pokud máš zájem, vyber si prosím jiný termín na webu.</p>'}
+          <p>${cancellation.late_cancellation ? 'Děkuji za pochopení.' : 'Budu se těšit na příští společnou praxi.'}</p>
         </div>`,
       });
       return json(req, { ok: true, action, emailSent: emailResult.sent, lateCancellation: cancellation.late_cancellation });
@@ -445,19 +446,26 @@ Deno.serve(async (req: Request) => {
         && Boolean(recipientById.get(participant.reservation_id) || participant.email)
       ));
       const qrUrl = batch.payment_qr_url ? publicAssetUrl(publicSiteUrl, batch.payment_qr_url) : '';
+      const paymentUrl = `${publicSiteUrl}/platba?lekce=${encodeURIComponent(batch.lesson_id)}`;
+      const pragueDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit' });
+      const practiceCopy = pragueDay.format(new Date(batch.starts_at)) === pragueDay.format(new Date())
+        ? 'děkuji za dnešní společnou jógovou praxi.'
+        : 'děkuji za společnou jógovou praxi.';
       const results = await Promise.all(participantsToEmail.map(async (participant) => {
         const recipientEmail = recipientById.get(participant.reservation_id) || participant.email || '';
         const absent = participant.status === 'no_show';
         const paymentCopy = donation
           ? DONATION_PAYMENT_COPY
-          : `Posíláme ti QR kód pro platbu za lekci. Částka k úhradě je ${batch.price_czk ?? 0} Kč.`;
+          : `Posílám ti QR kód pro platbu za lekci. Částka k úhradě je ${batch.price_czk ?? 0} Kč.`;
         const attendanceCopy = absent
-          ? `<p>na lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}) jsi měl/a rezervované místo, ale nakonec ses nezúčastnil/a nebo byla rezervace zrušena méně než ${batch.cancellation_hours} hodin před začátkem lekce.</p>
-            <p>Rezervaci je možné bez úhrady zrušit nejpozději ${batch.cancellation_hours} hodin před začátkem lekce. Při pozdějším zrušení nebo neúčasti se lekce hradí.</p>`
-          : `<p>děkujeme za účast na lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}).</p>`;
+          ? donation
+            ? '<p>na lekci jsi měl/a rezervované místo, ale tentokrát jsme se na podložce nepotkali.</p><p>Pokud chceš i tak přispět Dobrému andělovi, příspěvek je dobrovolný.</p>'
+            : `<p>na lekci jsi měl/a rezervované místo. Rezervace byla zrušena po lhůtě pro bezplatné storno, nebo zůstala nevyužitá.</p>
+              <p>Bezplatné zrušení je možné nejpozději ${batch.cancellation_hours} hodin před začátkem. Při pozdějším zrušení nebo neúčasti se lekce hradí.</p>`
+          : `<p>${practiceCopy}</p>`;
         const feedbackCopy = !absent && feedbackRequested && participant.feedback_token
           ? `<div style="margin:28px 0;padding:20px;background:#f5f1e9;border-left:4px solid #b87854">
-              <p style="margin:0 0 14px"><strong>Jaká pro tebe lekce byla?</strong><br>Krátká anonymní zpětná vazba nám pomůže další lekce vyladit.</p>
+              <p style="margin:0 0 14px"><strong>Jaká pro tebe lekce byla?</strong><br>Krátká anonymní zpětná vazba mi pomůže další lekce vyladit.</p>
               <p style="margin:0"><a href="${escapeHtml(`${publicSiteUrl}/?feedback=${participant.feedback_token}`)}" style="display:inline-block;padding:12px 18px;border-radius:24px;background:#3e5648;color:#fff;text-decoration:none;font-weight:700">Ohodnotit lekci</a></p>
             </div>`
           : '';
@@ -472,11 +480,15 @@ Deno.serve(async (req: Request) => {
           htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:560px;margin:auto">
             <p>${escapeHtml(czechSalutation(participant.name))},</p>
             ${attendanceCopy}
+            <p style="padding:18px 20px;background:#f5f1e9;border-left:3px solid #b87854"><strong>${escapeHtml(batch.title)}</strong><br>${escapeHtml(formatLessonDate(batch.starts_at))}<br>Lektor: ${escapeHtml(batch.teacher)}</p>
             <p>${escapeHtml(paymentCopy)}</p>
+            <p style="margin:26px 0 12px"><a href="${escapeHtml(paymentUrl)}" style="display:block;padding:15px 22px;border-radius:28px;background:#3e5648;color:#fff;text-align:center;text-decoration:none;font-weight:700">${donation ? 'Přispět Dobrému andělovi' : 'Zaplatit lekci'}</a></p>
+            <p style="font-size:14px;color:#66706b">Na mobilu můžeš QR sdílet do podporované bankovní aplikace nebo si ho uložit.</p>
             <p style="text-align:center;margin:28px 0"><a href="${qrUrl}"><img src="${qrUrl}" width="280" alt="${donation ? 'QR kód pro dobrovolný příspěvek' : `QR kód pro platbu ${batch.price_czk ?? 0} Kč – ${escapeHtml(batch.teacher)}`}" style="max-width:100%;height:auto;border:0"></a></p>
             <p style="font-size:13px;color:#66706b">Pokud se obrázek v e-mailu nezobrazí, <a href="${qrUrl}">otevři QR kód v prohlížeči</a>.</p>
+            <p style="font-size:14px;color:#66706b">Platíš z počítače? QR kód načti telefonem.<br>Pokud jsi už ${donation ? 'přispěl/a' : 'zaplatil/a'}, nemusíš nic dalšího dělat.</p>
             ${feedbackCopy}
-            <p>${absent ? 'Děkujeme za pochopení.' : 'Děkujeme.'}</p>
+            <p>${absent ? donation ? 'Budu se těšit na některé z dalších lekcí.' : 'Děkuji za pochopení.' : 'Děkuji a těším se příště.'}</p>
           </div>`,
         });
         await callRpc<void>('record_payment_email_result', {
@@ -504,7 +516,7 @@ Deno.serve(async (req: Request) => {
         senderName,
         htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:640px;margin:auto">
           <p>${escapeHtml(czechSalutation(teacherFirstName))},</p>
-          <p>platební údaje po lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}) byly rozeslány.</p>
+          <p>rozesílání platebních e-mailů k lekci <strong>${escapeHtml(batch.title)}</strong> (${escapeHtml(formatLessonDate(batch.starts_at))}) bylo dokončeno.</p>
           <p><strong>Odesláno:</strong> ${sent}<br><strong>Neúspěšné:</strong> ${failed}<br><strong>Přeskočeno:</strong> ${skipped}</p>
           <table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">Účastník</th><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">E-mail</th><th style="padding:7px 10px;text-align:left;border-bottom:2px solid #3e5648">Stav</th></tr></thead><tbody>${summaryRows}</tbody></table>
         </div>`,
@@ -625,17 +637,21 @@ Deno.serve(async (req: Request) => {
         ? `<p>Původní termín: <s>${escapeHtml(formatLessonDate(change.old_starts_at))}</s><br>
           Nový termín: <strong>${escapeHtml(formatLessonDate(change.new_starts_at))}</strong></p>`
         : `<p>Termín: <strong>${escapeHtml(formatLessonDate(change.old_starts_at))}</strong></p>`;
+      const changeCopy = updated || rescheduled
+        ? `posílám ti ${updated ? 'aktualizované údaje k lekci' : 'nový termín lekce'} <strong>${escapeHtml(change.title)}</strong>, na kterou máš rezervaci.`
+        : `lekce <strong>${escapeHtml(change.title)}</strong> se bohužel nekoná.`;
       return sendBrevoEmail({
         toEmail: participant.email,
         toName: participant.name,
         subject: `${updated ? 'Změna lekce' : rescheduled ? 'Změna času lekce' : 'Lekce zrušena'}: ${change.title}`,
         signatureName: teacherFirstName,
+        senderName: `${teacherFirstName} · Jóga na HALLU`,
         htmlContent: `<p>${escapeHtml(czechSalutation(participant.name))},</p>
-          <p>${updated ? 'údaje lekce byly změněny' : rescheduled ? 'čas lekce byl změněn' : 'lekce byla zrušena'}: <strong>${escapeHtml(change.title)}</strong>.</p>
+          <p>${changeCopy}</p>
           ${details}
-          ${updated ? '<p>QR kód k platbě nebo dobrovolnému příspěvku ti pošleme e-mailem až po skončení lekce.</p>' : ''}
+          ${updated ? '<p>QR kód pro platbu nebo dobrovolný příspěvek ti pošlu e-mailem po skončení lekce.</p>' : ''}
           <p>${escapeHtml(change.location)}</p>
-          <p>${updated || rescheduled ? 'Těšíme se na podložce.' : 'Omlouváme se za komplikace.'}</p>`,
+          <p>${updated || rescheduled ? 'Těším se na společnou praxi.' : 'Omlouvám se za komplikace a budu se těšit na některé z dalších lekcí.'}</p>`,
       });
     }));
 

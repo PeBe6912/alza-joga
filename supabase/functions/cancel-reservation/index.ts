@@ -46,9 +46,10 @@ Deno.serve(async (req: Request) => {
         toName: cancellation.attendee_name,
         subject: `Rezervace zrušena: ${cancellation.title}`,
         signatureName: teacherFirstName,
+        senderName: teacherFirstName ? `${teacherFirstName} · Jóga na HALLU` : 'Jóga na HALLU',
         htmlContent: `<p>${escapeHtml(czechSalutation(cancellation.attendee_name))},</p>
-          <p>rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong> (${escapeHtml(formatLessonDate(cancellation.starts_at))}) byla zrušena.</p>
-          <p>Budeme rádi, když si vybereš jiný termín.</p>`,
+          <p>tvoje rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong> (${escapeHtml(formatLessonDate(cancellation.starts_at))}) je zrušená.</p>
+          <p>Budu se těšit, pokud se potkáme na některé z dalších lekcí.</p>`,
       });
     }
 

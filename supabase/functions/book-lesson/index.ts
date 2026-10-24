@@ -74,22 +74,23 @@ Deno.serve(async (req: Request) => {
     const cancellationHours = Math.max(0, Math.round((new Date(reservation.starts_at).getTime() - new Date(reservation.cancel_before).getTime()) / 3_600_000));
     const languageLabel = reservation.language === 'en' ? 'Angličtina' : 'Čeština';
     const qrTimingCopy = reservation.payment_mode === 'donation'
-      ? 'QR kód pro dobrovolný příspěvek ti pošleme e-mailem po skončení lekce.'
-      : `QR kód k platbě ${reservation.price_czk ?? 0} Kč ti pošleme e-mailem po skončení lekce.`;
+      ? 'QR kód pro dobrovolný příspěvek ti pošlu e-mailem po skončení lekce.'
+      : `QR kód pro platbu ${reservation.price_czk ?? 0} Kč ti pošlu e-mailem po skončení lekce.`;
     const emailResult = await sendBrevoEmail({
       toEmail: reservation.attendee_email,
       toName: reservation.attendee_name,
       subject: `Potvrzení rezervace: ${reservation.title}`,
       signatureName: teacherFirstName,
+      senderName: `${teacherFirstName} · Jóga na HALLU`,
       htmlContent: `<p>${escapeHtml(czechSalutation(reservation.attendee_name))},</p>
-        <p>máš rezervované místo na lekci <strong>${escapeHtml(reservation.title)}</strong>.</p>
+        <p>potvrzuji tvoji rezervaci na lekci <strong>${escapeHtml(reservation.title)}</strong>.</p>
         <p><strong>${escapeHtml(formatLessonDate(reservation.starts_at))}</strong><br>
         ${escapeHtml(reservation.location)}<br>Lektor: ${escapeHtml(reservation.teacher)}<br>
         Jazyk: <strong>${escapeHtml(languageLabel)}</strong></p>
         <p><strong>Platba:</strong> ${escapeHtml(reservation.payment_note)}</p>
         ${reservation.payment_note.toLocaleLowerCase('cs-CZ').includes('po skončení lekce') ? '' : `<p>${escapeHtml(qrTimingCopy)}</p>`}
-        <p>Rezervaci můžeš zrušit nejpozději ${cancellationHours} hodin před začátkem: <a href="${escapeHtml(cancelUrl)}">zrušit rezervaci</a>.</p>
-        <p>Těšíme se na podložce.</p>`,
+        <p>Rezervaci můžeš bezplatně zrušit nejpozději ${cancellationHours} hodin před začátkem: <a href="${escapeHtml(cancelUrl)}">Zrušit rezervaci</a>.</p>
+        <p>Těším se na společnou praxi.</p>`,
     });
 
     try {
