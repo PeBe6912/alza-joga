@@ -9,7 +9,6 @@
   <style>
     *{box-sizing:border-box}body{margin:0;background:#f5f1e9;color:#1f2824;font:16px/1.6 system-ui,sans-serif}header,main{max-width:700px;margin:auto;padding:24px}header a{display:inline-flex;align-items:center;gap:16px;color:inherit;text-decoration:none}header img{width:54px;height:64px}main{padding-top:0}.card{padding:32px;background:#fff;border:1px solid #ddd9d0;border-radius:20px}h1{font-family:Georgia,serif;font-size:clamp(28px,6vw,40px);line-height:1.15;margin:16px 0}p{margin:16px 0}.badge{font-size:12px;letter-spacing:.1em;font-weight:700;color:#9c5a36}.warning{padding:16px;background:#fff4df;border-left:4px solid #b87854}.qr{display:block;width:280px;max-width:100%;height:auto;margin:24px auto}.actions{display:grid;gap:12px}button,.button{display:block;width:100%;padding:14px 18px;border:1px solid #3e5648;border-radius:28px;background:#3e5648;color:white;text-align:center;text-decoration:none;font:600 16px/1.4 system-ui,sans-serif;cursor:pointer}.secondary{background:white;color:#3e5648}button:disabled{opacity:.6;cursor:wait}[hidden]{display:none!important}:focus-visible{outline:3px solid #b87854;outline-offset:4px}.muted{color:#66706b;font-size:14px}ol{padding-left:24px}#status{min-height:26px}footer{margin:24px 0;font-size:14px;color:#66706b}@media(max-width:480px){header,main{padding:18px}.card{padding:22px}}
   </style>
-  <script src="/test-platby.js?v=2026102401" defer></script>
 </head>
 <body>
   <header><a href="/"><img src="/assets/joga-na-hallu-logo.svg" alt="">Jóga na HALLU</a></header>
@@ -36,5 +35,86 @@
     </section>
     <footer>Jde pouze o technickou zkoušku. Nevytváří rezervaci, nezaznamenává úhradu a neověřuje, zda peníze dorazily.</footer>
   </main>
+  <script>
+  'use strict';
+  (() => {
+    // Fixed existing assets only: no recipient, amount or image URL supplied by the visitor.
+    const variants = {
+      daniela: {
+        title: 'Platba lekce Daniele',
+        description: 'Test úhrady lekce ve výši 150 Kč. Používáme stejný QR kód jako v současných platebních e-mailech pro Danielu Šťastnou.',
+        qr: '/assets/qr-daniela-150.jpg',
+        filename: 'joga-na-hallu-daniela-150.jpg',
+      },
+      andel: {
+        title: 'Příspěvek Dobrému andělovi',
+        description: 'Dobrovolný příspěvek jde přímo organizaci Dobrý anděl. Používáme současný QR kód z webu. Částku si zkontroluj a případně uprav v bance.',
+        qr: '/assets/qr-dobry-andel.jpg',
+        filename: 'joga-na-hallu-dobry-andel.jpg',
+      },
+    };
+    const key = new URLSearchParams(window.location.search).get('prijemce');
+    const variant = Object.hasOwn(variants, key) ? variants[key] : null;
+    const status = document.querySelector('#status');
+    if (!variant) {
+      document.querySelector('#payment-title').textContent = 'Neplatný testovací odkaz';
+      status.textContent = 'Otevři prosím celý odkaz z testovacího e-mailu.';
+      return;
+    }
+    document.querySelector('#payment-title').textContent = variant.title;
+    document.querySelector('#description').textContent = variant.description;
+    document.title = `${variant.title} – test | Jóga na HALLU`;
+    const qr = document.querySelector('#qr');
+    qr.alt = `QR kód: ${variant.title}`;
+    qr.src = variant.qr;
+    qr.hidden = false;
+    for (const id of ['download', 'open']) {
+      const link = document.querySelector(`#${id}`);
+      link.href = variant.qr;
+      link.hidden = false;
+    }
+    document.querySelector('#download').download = variant.filename;
+    const share = document.querySelector('#share');
+    let qrFile = null;
+    share.addEventListener('click', async () => {
+      if (!qrFile || share.disabled) return;
+      share.disabled = true;
+      try {
+        // Load before clicking so navigator.share retains transient user activation.
+        await navigator.share({ files: [qrFile] });
+        status.textContent = 'Sdílení bylo předáno telefonu. Není to potvrzení o zaplacení.';
+      } catch (error) {
+        status.textContent = error.name === 'AbortError'
+          ? 'Sdílení bylo zavřeno. Můžeš ho zkusit znovu.'
+          : 'Sdílení se nepodařilo. Zkus Safari nebo Chrome, případně QR ulož a načti v bance.';
+      } finally {
+        share.disabled = false;
+      }
+    });
+    async function prepareSharing() {
+      if (!navigator.share || !navigator.canShare || typeof File === 'undefined') {
+        status.textContent = 'Tento prohlížeč nepodporuje sdílení obrázku. QR můžeš uložit a načíst v bance.';
+        return;
+      }
+      try {
+        const response = await fetch(variant.qr);
+        if (!response.ok) throw new Error('QR_LOAD_FAILED');
+        const blob = await response.blob();
+        if (!blob.type.startsWith('image/')) throw new Error('QR_NOT_IMAGE');
+        qrFile = new File([blob], variant.filename, { type: blob.type });
+        if (!navigator.canShare({ files: [qrFile] })) {
+          status.textContent = 'Tento prohlížeč neumí sdílet QR jako soubor. Ulož ho a načti v bance.';
+          return;
+        }
+        share.hidden = false;
+        share.disabled = false;
+        status.textContent = 'QR je připravený. Sdílení nabídne aplikace v telefonu; banka nemusí být mezi nimi.';
+      } catch {
+        status.textContent = 'QR se nepodařilo připravit pro sdílení. Zkus otevřít nebo stáhnout QR obrázek.';
+      }
+    }
+    prepareSharing();
+  })();
+  </script>
 </body>
 </html>
