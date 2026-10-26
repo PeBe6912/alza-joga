@@ -490,7 +490,14 @@ dialog:has(.payment-panel){width:min(980px,calc(100% - 30px))}
 .cancelled-reservations{margin-top:32px;padding-top:24px;border-top:1px solid var(--line)}
 .email-history-panel{width:min(100%,960px)}
 .email-history-frame{display:block;width:100%;height:65vh;border:1px solid var(--line);background:#fff}
-@media(max-width:600px){.participant-detail-table td[data-label="Platební e-mail"]{grid-column:1/-1}}
+@media(max-width:600px){
+  .participant-detail-table tr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  .participant-detail-table td[data-label="Jméno"]{grid-column:1;grid-row:1}
+  .participant-detail-table td[data-label="E-mail"]{grid-column:1;grid-row:2}
+  .participant-detail-table td[data-label="Stav"]{grid-column:1;grid-row:3}
+  .participant-detail-table td[data-label="Rezervace a změny"]{grid-column:2;grid-row:1}
+  .participant-detail-table td[data-label="Platební e-mail"]{grid-column:2;grid-row:2/4}
+}
 .admin-table tbody tr{border-bottom:1px solid var(--line)}
 .admin-table tbody td{border-bottom:0}
 .lesson-actions-stack{display:grid;grid-template-columns:1fr;gap:8px;align-items:start}
