@@ -39,10 +39,28 @@ async function loadPublicSettings() {
   }
 }
 
+function donationSummaryText(summary) {
+  if (!summary || typeof summary.amount_czk !== 'number' || !Number.isFinite(summary.amount_czk)
+    || summary.amount_czk < 0 || summary.amount_czk > 999999999.99
+    || Math.abs(summary.amount_czk * 100 - Math.round(summary.amount_czk * 100)) > 0.00001
+    || typeof summary.as_of !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(summary.as_of)) return '';
+  const date = new Date(`${summary.as_of}T12:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== summary.as_of
+    || summary.as_of < '2000-01-01') return '';
+  const months = ['lednu', 'únoru', 'březnu', 'dubnu', 'květnu', 'červnu', 'červenci', 'srpnu', 'září', 'říjnu', 'listopadu', 'prosinci'];
+  const amount = new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 2 }).format(summary.amount_czk);
+  return `K ${date.getUTCDate()}. ${months[date.getUTCMonth()]} ${date.getUTCFullYear()} jsme společně přispěli Dobrému andělovi částkou ${amount} Kč.`;
+}
+
 function applyPublicSettings(settings) {
   document.querySelectorAll('[data-setting]').forEach((element) => {
     const value = settings[element.dataset.setting];
     if (value !== undefined && value !== null) element.textContent = String(value);
+  });
+  document.querySelectorAll('[data-donation-summary]').forEach((element) => {
+    const text = donationSummaryText(settings.donation_summary);
+    element.textContent = text;
+    element.hidden = !text;
   });
 }
 
@@ -805,9 +823,9 @@ function renderPublicNews() {
   const allowedTones = new Set(['sage', 'clay', 'sand', 'ink']);
   grid.innerHTML = newsItems.map((item) => {
     const charityStory = item.title.trim().toLocaleLowerCase('cs-CZ') === 'cvičením pomáháme';
-    if (item.image_url) return `<article class="news-card featured" role="button" tabindex="0" data-news-detail="${escapeHtml(item.id)}" aria-label="Přečíst celý článek: ${escapeHtml(item.title)}"><img src="${escapeHtml(item.image_url)}" alt=""><div><span>Ze studia</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p><strong class="news-card-action">Číst dál →</strong></div></article>`;
+    if (item.image_url) return `<article class="news-card featured" role="button" tabindex="0" data-news-detail="${escapeHtml(item.id)}" aria-label="Přečíst celý článek: ${escapeHtml(item.title)}"><img src="${escapeHtml(item.image_url)}" alt=""><div><span>Ze studia</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p>${charityStory ? '<p data-donation-summary hidden></p>' : ''}<strong class="news-card-action">Číst dál →</strong></div></article>`;
     const tone = `tone-${allowedTones.has(item.background_tone) ? item.background_tone : 'sage'}`;
-    return `<article class="news-card text-card ${tone}${charityStory ? ' charity-card' : ''}" role="button" tabindex="0" data-news-detail="${escapeHtml(item.id)}" aria-label="Přečíst celý článek: ${escapeHtml(item.title)}">${charityStory ? '<img class="charity-logo" src="assets/dobry-andel-logo.svg" alt="Dobrý Anděl">' : ''}<span>${charityStory ? 'Dobrá věc' : 'Novinka'}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p><strong class="news-card-action">Číst dál →</strong></article>`;
+    return `<article class="news-card text-card ${tone}${charityStory ? ' charity-card' : ''}" role="button" tabindex="0" data-news-detail="${escapeHtml(item.id)}" aria-label="Přečíst celý článek: ${escapeHtml(item.title)}">${charityStory ? '<img class="charity-logo" src="assets/dobry-andel-logo.svg" alt="Dobrý Anděl">' : ''}<span>${charityStory ? 'Dobrá věc' : 'Novinka'}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p>${charityStory ? '<p data-donation-summary hidden></p>' : ''}<strong class="news-card-action">Číst dál →</strong></article>`;
   }).join('');
   grid.querySelectorAll('[data-news-detail]').forEach((card) => {
     const openDetail = () => openNewsDetail(card.dataset.newsDetail);
@@ -819,6 +837,7 @@ function renderPublicNews() {
       }
     });
   });
+  applyPublicSettings(publicSettings);
 }
 
 function openNewsDetail(id) {
@@ -1866,6 +1885,21 @@ function newsPanel() {
   return `<div class="admin-card"><div class="admin-card-heading"><h2>Novinky a jógové tipy</h2><button class="button button-small" data-add-news>+ Přidat novinku nebo tip</button></div>${items || '<p>Zatím nejsou vytvořené žádné novinky ani tipy.</p>'}</div>`;
 }
 
+function donationSummarySettingsPanel() {
+  const summary = adminSettings.donation_summary || {};
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  return `<form class="admin-card settings-form" id="donation-summary-form" style="margin-bottom:24px">
+    <h2>Příspěvky Dobrému andělovi</h2>
+    <p class="admin-help">Ručně zadej celkovou vybranou částku a datum, ke kterému platí. Souhrn se zobrazí na homepage a v nově odesílaných příspěvkových e-mailech. Nejde o automatické párování s bankou.</p>
+    <div class="settings-grid">
+      <div class="field"><label for="donation-total">Celkem vybráno v Kč</label><input id="donation-total" name="amountCzk" type="number" min="0" max="999999999.99" step="0.01" value="${escapeHtml(String(summary.amount_czk ?? ''))}" required></div>
+      <div class="field"><label for="donation-as-of">Stav k datu</label><input id="donation-as-of" name="asOf" type="date" min="2000-01-01" max="${today}" value="${escapeHtml(String(summary.as_of ?? ''))}" required></div>
+    </div>
+    <p class="admin-help" data-donation-summary-preview>${escapeHtml(donationSummaryText(summary) || 'Souhrn zatím není zveřejněný. Zobrazí se po uložení částky a data.')}</p>
+    <div class="settings-actions"><button class="button" type="submit">Uložit souhrn příspěvků</button></div>
+  </form>`;
+}
+
 function settingsPanel() {
   const instructorSettings = adminInstructors.map((teacher) => `<div class="settings-instructor">
     <h4>${escapeHtml(teacher.name)}</h4>
@@ -1874,7 +1908,7 @@ function settingsPanel() {
     <div class="field"><label for="setting-paid-qr-${teacher.id}">QR pro placenou lekci</label><input id="setting-paid-qr-${teacher.id}" name="teacherPaidQr-${teacher.id}" value="${escapeHtml(teacher.paid_qr_url || '')}" placeholder="assets/qr-platba.jpg"></div>
     <div class="field"><label for="setting-donation-qr-${teacher.id}">QR pro dobrovolný příspěvek</label><input id="setting-donation-qr-${teacher.id}" name="teacherDonationQr-${teacher.id}" value="${escapeHtml(teacher.donation_qr_url || '')}" placeholder="assets/qr-dobry-andel.jpg"></div>
   </div>`).join('');
-  return `<form class="admin-card settings-form" id="settings-form"><h2>Nastavení rezervací a plateb</h2><p class="admin-help">Změny se propíšou na veřejný web, do podmínek, nových rezervací, e-mailů a budoucích lekcí.</p><section class="settings-section"><h3>Pravidla rezervací</h3><div class="settings-grid"><div class="field"><label for="setting-capacity">Kapacita studia</label><input id="setting-capacity" name="studioCapacity" type="number" min="1" max="100" value="${Number(adminSettings.studio_capacity)}" required><small>Po uložení se nastaví jako kapacita všech budoucích zveřejněných lekcí.</small></div><div class="field"><label for="setting-cancellation">Bezplatné zrušení před lekcí v hodinách</label><input id="setting-cancellation" name="cancellationHours" type="number" min="0" max="168" value="${Number(adminSettings.cancellation_hours)}" required></div><div class="field"><label for="setting-booking-grace">Přihlášení po začátku v minutách</label><input id="setting-booking-grace" name="bookingGraceMinutes" type="number" min="0" max="60" value="${Number(adminSettings.booking_grace_minutes)}" required><small>Po tuto dobu zůstane lekce dostupná pro rezervaci.</small></div><div class="field"><label for="setting-minimum">Standardní minimum přihlášených</label><input id="setting-minimum" name="minimumAttendance" type="number" min="1" max="100" value="${Number(adminSettings.minimum_attendance)}" required></div></div></section><section class="settings-section"><h3>Výchozí platba podle lektora</h3><p class="admin-help">Každá nová lekce převezme nastavení zvoleného lektora. U konkrétní lekce lze typ platby i cenu změnit.</p><div class="settings-instructors">${instructorSettings}</div></section><div class="settings-actions"><button class="button" type="submit">Uložit nastavení</button></div></form>`;
+  return `${donationSummarySettingsPanel()}<form class="admin-card settings-form" id="settings-form"><h2>Nastavení rezervací a plateb</h2><p class="admin-help">Změny se propíšou na veřejný web, do podmínek, nových rezervací, e-mailů a budoucích lekcí.</p><section class="settings-section"><h3>Pravidla rezervací</h3><div class="settings-grid"><div class="field"><label for="setting-capacity">Kapacita studia</label><input id="setting-capacity" name="studioCapacity" type="number" min="1" max="100" value="${Number(adminSettings.studio_capacity)}" required><small>Po uložení se nastaví jako kapacita všech budoucích zveřejněných lekcí.</small></div><div class="field"><label for="setting-cancellation">Bezplatné zrušení před lekcí v hodinách</label><input id="setting-cancellation" name="cancellationHours" type="number" min="0" max="168" value="${Number(adminSettings.cancellation_hours)}" required></div><div class="field"><label for="setting-booking-grace">Přihlášení po začátku v minutách</label><input id="setting-booking-grace" name="bookingGraceMinutes" type="number" min="0" max="60" value="${Number(adminSettings.booking_grace_minutes)}" required><small>Po tuto dobu zůstane lekce dostupná pro rezervaci.</small></div><div class="field"><label for="setting-minimum">Standardní minimum přihlášených</label><input id="setting-minimum" name="minimumAttendance" type="number" min="1" max="100" value="${Number(adminSettings.minimum_attendance)}" required></div></div></section><section class="settings-section"><h3>Výchozí platba podle lektora</h3><p class="admin-help">Každá nová lekce převezme nastavení zvoleného lektora. U konkrétní lekce lze typ platby i cenu změnit.</p><div class="settings-instructors">${instructorSettings}</div></section><div class="settings-actions"><button class="button" type="submit">Uložit nastavení</button></div></form>`;
 }
 
 const STUDIO_BLOCK_CATEGORIES = {
@@ -2044,6 +2078,7 @@ function renderAdmin(tab) {
     bindParticipantDetailNavigation();
   }));
   document.querySelector('#settings-form')?.addEventListener('submit', saveSettings);
+  document.querySelector('#donation-summary-form')?.addEventListener('submit', saveDonationSummary);
   document.querySelector('#create-admin-form')?.addEventListener('submit', createAdminAccount);
   document.querySelector('#change-password-form')?.addEventListener('submit', changeAdminPassword);
   document.querySelectorAll('[data-delete-admin]').forEach((button) => button.addEventListener('click', () => deleteAdminAccount(button.dataset.deleteAdmin, button.dataset.adminEmail)));
@@ -2197,6 +2232,29 @@ async function adminRest(path, method = 'GET', body) {
     throw new Error('Databáze změnu nepotvrdila. Obnov stránku a přihlas se znovu.');
   }
   return result;
+}
+
+async function saveDonationSummary(event) {
+  event.preventDefault();
+  const form = event.target;
+  const button = form.querySelector('[type="submit"]');
+  if (button.disabled) return;
+  const data = new FormData(form);
+  button.disabled = true;
+  button.textContent = 'Ukládám…';
+  try {
+    const result = await manageLesson({ action: 'update-donation-summary', amountCzk: Number(data.get('amountCzk')), asOf: String(data.get('asOf')) });
+    adminSettings.donation_summary = result.summary;
+    publicSettings.donation_summary = result.summary;
+    applyPublicSettings(publicSettings);
+    form.querySelector('[data-donation-summary-preview]').textContent = donationSummaryText(result.summary);
+    showToast('Souhrn příspěvků byl uložen. Použije se na webu a v nových příspěvkových e-mailech.');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Uložit souhrn příspěvků';
+  }
 }
 
 async function saveSettings(event) {

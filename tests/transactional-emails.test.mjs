@@ -35,6 +35,7 @@ test('all transactional email scenarios use approved copy without live services'
     if (url.pathname === '/auth/v1/token') return Response.json({ user: user(), access_token: 'verification-token' });
     if (url.pathname.startsWith('/auth/v1/admin/users/') || url.pathname === '/auth/v1/logout') { writes.push(url.pathname); return Response.json({}); }
     if (url.pathname === '/rest/v1/instructors') return Response.json([{ id, name: teacher(), payment_mode: scenario.donation ? 'donation' : 'paid', price_czk: 150, payment_note: 'Individuální podmínka lektora' }]);
+    if (url.pathname === '/rest/v1/site_settings') return scenario.summaryFailure ? Response.json({}, { status: 503 }) : Response.json(scenario.noSummary ? [] : [{ value: { amount_czk: 11075, as_of: '2026-10-26' } }]);
     if (url.pathname.startsWith('/rest/v1/rpc/')) {
       const rpc = url.pathname.split('/').at(-1);
       writes.push(rpc);
@@ -46,6 +47,7 @@ test('all transactional email scenarios use approved copy without live services'
         case 'cancel_reservation': case 'account_cancel_reservation': case 'admin_cancel_reservation': return Response.json(lesson());
         case 'admin_payment_email_preview': case 'admin_record_attendance': return Response.json(batch());
         case 'admin_update_lesson': return Response.json(change('update'));
+        case 'admin_update_donation_summary': return Response.json({ amount_czk: body.p_amount_czk, as_of: body.p_as_of });
         case 'admin_change_lesson': return Response.json(change(body.p_action));
         case 'record_reservation_email_result': case 'record_payment_email_result': case 'account_prepare_profile': case 'account_delete_participant_profile': return Response.json(null);
         default: throw new Error(`Unmocked RPC: ${rpc}`);
@@ -89,6 +91,8 @@ test('all transactional email scenarios use approved copy without live services'
       const html = r.emails[0].htmlContent;
       assert.match(html, /\/platba\?lekce=/);
       assert.match(html, donation ? /Přispět Dobrému andělovi/ : /Zaplatit lekci/);
+      assert.equal(html.includes('K 26. říjnu 2026 jsme společně přispěli Dobrému andělovi'), donation);
+      if (donation) assert.match(html.replaceAll('\u00a0', ' '), /11 075 Kč\. Děkuji, že pomáháš\./);
       assert.equal(html.includes('Ohodnotit lekci'), !absent);
       assert.equal(html.includes('dnešní společnou'), !absent && !delayed);
       if (donation) assert.doesNotMatch(html, /lekce se hradí|se lekce hradí|povinn/);
@@ -98,6 +102,37 @@ test('all transactional email scenarios use approved copy without live services'
     }
     const waived = await run('manage-lesson', { action: 'payment-send', lessonId: id, attendance: [{ reservationId, outcome: 'waived', email: 'student@example.invalid' }] }, { waived: true });
     assert.equal(waived.emails.length, 0);
+    const unset = await run('manage-lesson', { action: 'payment-send', lessonId: id, attendance: [{ reservationId, outcome: 'attended', email: 'student@example.invalid' }] }, { donation: true, noSummary: true });
+    assert.equal(unset.emails.length, 2);
+    assert.doesNotMatch(unset.emails[0].htmlContent, /jsme společně přispěli/);
+    const saved = await run('manage-lesson', { action: 'update-donation-summary', amountCzk: 11075, asOf: '2026-10-26' });
+    assert.deepEqual(saved.result.summary, { amount_czk: 11075, as_of: '2026-10-26' });
+    assert.deepEqual(saved.writes, ['admin_update_donation_summary']);
+    assert.equal(saved.emails.length, 0);
+    scenario = { donation: true, summaryFailure: true }; emails = []; writes = [];
+    const unavailable = await handlers['manage-lesson'](new Request('https://supabase.example.invalid', { method: 'POST', headers: { Authorization: 'Bearer mock-token' }, body: JSON.stringify({ action: 'payment-send', lessonId: id, attendance: [{ reservationId, outcome: 'attended', email: 'student@example.invalid' }] }) }));
+    assert.ok(unavailable.status >= 400);
+    assert.deepEqual(emails, []);
+    assert.deepEqual(writes, ['admin_payment_email_preview']);
+    for (const payload of [
+      { amountCzk: -1, asOf: '2026-10-26' }, { amountCzk: 1.234, asOf: '2026-10-26' },
+      { amountCzk: '11075', asOf: '2026-10-26' }, { amountCzk: null, asOf: '2026-10-26' },
+      { amountCzk: 1000000000, asOf: '2026-10-26' }, { amountCzk: 1, asOf: '2026-02-30' },
+      { amountCzk: 1, asOf: '2099-01-01' }, { amountCzk: 1, asOf: '' },
+    ]) {
+      emails = []; writes = []; scenario = {};
+      const invalid = await handlers['manage-lesson'](new Request('https://supabase.example.invalid', { method: 'POST', headers: { Authorization: 'Bearer mock-token' }, body: JSON.stringify({ action: 'update-donation-summary', ...payload }) }));
+      assert.equal(invalid.status, 400, JSON.stringify(payload));
+      assert.deepEqual(writes, []);
+      assert.deepEqual(emails, []);
+    }
+    for (const admin of [false, true]) {
+      emails = []; writes = []; scenario = { admin };
+      const blocked = await handlers['manage-lesson'](new Request('https://supabase.example.invalid', { method: 'POST', headers: admin ? {} : { Authorization: 'Bearer mock-token' }, body: JSON.stringify({ action: 'update-donation-summary', amountCzk: 1, asOf: '2026-10-26' }) }));
+      assert.equal(blocked.status, admin ? 401 : 403);
+      assert.deepEqual(writes, []);
+      assert.deepEqual(emails, []);
+    }
     for (const action of ['update', 'reschedule', 'cancel']) {
       const r = await run('manage-lesson', { action, lessonId: id, instructorId: id, title: 'Ranní flow', startsAt: '2026-10-27T08:00:00Z', endsAt: '2026-10-27T09:00:00Z', capacity: 20, language: 'cs', paymentMode: 'paid', priceCzk: 150, minimumAttendance: 5 });
       assert.equal(r.emails.length, 1);

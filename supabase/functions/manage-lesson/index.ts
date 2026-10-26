@@ -94,6 +94,19 @@ const allowedOrigins = new Set([
 const DONATION_BOOKING_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. QR kód k příspěvku bude odeslán po skončení lekce a platba směřuje přímo na účet organizace Dobrý anděl.';
 const DONATION_PAYMENT_COPY = 'Posílám ti QR kód pro dobrovolný příspěvek Dobrému andělovi. Doporučená částka je 150 Kč, její výše je ale na tobě. Peníze jdou přímo na účet organizace.';
 
+function donationSummaryText(summary: { amount_czk?: unknown; as_of?: unknown } | null | undefined) {
+  if (!summary || typeof summary.amount_czk !== 'number' || !Number.isFinite(summary.amount_czk)
+    || summary.amount_czk < 0 || summary.amount_czk > 999999999.99
+    || Math.abs(summary.amount_czk * 100 - Math.round(summary.amount_czk * 100)) > 0.00001
+    || typeof summary.as_of !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(summary.as_of)) return '';
+  const date = new Date(`${summary.as_of}T12:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== summary.as_of
+    || summary.as_of < '2000-01-01') return '';
+  const months = ['lednu', 'únoru', 'březnu', 'dubnu', 'květnu', 'červnu', 'červenci', 'srpnu', 'září', 'říjnu', 'listopadu', 'prosinci'];
+  const amount = new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 2 }).format(summary.amount_czk);
+  return `K ${date.getUTCDate()}. ${months[date.getUTCMonth()]} ${date.getUTCFullYear()} jsme společně přispěli Dobrému andělovi částkou ${amount} Kč.`;
+}
+
 const OWNER_ADMIN_USER_ID = '3f8ca22d-aa9a-4cad-bb14-8e4fbfae1c97';
 
 function headers(req: Request): Record<string, string> {
@@ -338,6 +351,17 @@ Deno.serve(async (req: Request) => {
       return json(req, { ok: true, action, emailSent: emailResult.sent, lateCancellation: cancellation.late_cancellation });
     }
 
+    if (action === 'update-donation-summary') {
+      const amount = body.amountCzk;
+      const asOf = body.asOf;
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0 || amount > 999999999.99
+        || Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001) throw new Error('INVALID_DONATION_AMOUNT');
+      if (!donationSummaryText({ amount_czk: amount, as_of: asOf }) || asOf > today) throw new Error('INVALID_DONATION_DATE');
+      const summary = await callRpc('admin_update_donation_summary', { p_amount_czk: amount, p_as_of: asOf });
+      return json(req, { ok: true, action, summary });
+    }
+
     if (action === 'update-settings') {
       const cancellationHours = Number(body.cancellationHours);
       const bookingGraceMinutes = Number(body.bookingGraceMinutes);
@@ -443,6 +467,18 @@ Deno.serve(async (req: Request) => {
       if (hasUnsentPayment && !preview.instructor_email) throw new Error('INSTRUCTOR_EMAIL_MISSING');
       if (hasUnsentPayment && !preview.payment_qr_url) throw new Error('PAYMENT_QR_MISSING');
 
+      let donationSummary = '';
+      if (hasUnsentPayment && preview.payment_mode === 'donation') {
+        const { url, secretKey } = supabaseConfig();
+        const response = await fetch(`${url}/rest/v1/site_settings?select=value&key=eq.donation_summary`, {
+          headers: { apikey: secretKey },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!response.ok) throw new Error('DONATION_SUMMARY_UNAVAILABLE');
+        const rows = await response.json();
+        donationSummary = donationSummaryText(rows[0]?.value);
+      }
+
       const batch = await callRpc<PaymentEmailBatch>('admin_record_attendance', {
         p_lesson_id: lessonId,
         p_attendance: attendance,
@@ -494,6 +530,7 @@ Deno.serve(async (req: Request) => {
             ${attendanceCopy}
             <p style="padding:18px 20px;background:#f5f1e9;border-left:3px solid #b87854"><strong>${escapeHtml(batch.title)}</strong><br>${escapeHtml(formatLessonDate(batch.starts_at))}<br>Lektor: ${escapeHtml(batch.teacher)}</p>
             <p>${escapeHtml(paymentCopy)}</p>
+            ${donation && donationSummary ? `<p><strong>${escapeHtml(donationSummary)} Děkuji, že pomáháš.</strong></p>` : ''}
             <p style="margin:26px 0 12px"><a href="${escapeHtml(paymentUrl)}" style="display:block;padding:15px 22px;border-radius:28px;background:#3e5648;color:#fff;text-align:center;text-decoration:none;font-weight:700">${donation ? 'Přispět Dobrému andělovi' : 'Zaplatit lekci'}</a></p>
             <p style="font-size:14px;color:#66706b">Na mobilu můžeš QR sdílet do podporované bankovní aplikace nebo si ho uložit.</p>
             <p style="text-align:center;margin:28px 0"><a href="${qrUrl}"><img src="${qrUrl}" width="280" alt="${donation ? 'QR kód pro dobrovolný příspěvek' : `QR kód pro platbu ${batch.price_czk ?? 0} Kč – ${escapeHtml(batch.teacher)}`}" style="max-width:100%;height:auto;border:0"></a></p>
@@ -685,6 +722,9 @@ Deno.serve(async (req: Request) => {
       EMAIL_RESEND_FAILED: [502, 'Poskytovatel opětovné odeslání odmítl. E-mail nebyl znovu odeslán.'],
     };
     if (emailErrors[code]) return json(req, { error: code, message: emailErrors[code][1] }, emailErrors[code][0]);
+    if (code === 'INVALID_DONATION_AMOUNT') return json(req, { error: code, message: 'Zadej nezápornou částku v Kč, nejvýše na dvě desetinná místa.' }, 400);
+    if (code === 'INVALID_DONATION_DATE') return json(req, { error: code, message: 'Zadej platné datum, které není v budoucnosti.' }, 400);
+    if (requestedAction === 'update-donation-summary' && !['FORBIDDEN', 'UNAUTHORIZED'].includes(code)) return json(req, { error: code, message: 'Souhrn příspěvků se nepodařilo uložit.' }, 500);
     const message = code === 'FORBIDDEN'
       ? 'Tento účet nemá oprávnění správce.'
       : code === 'INVALID_CAPACITY_OVER_STUDIO_LIMIT'
