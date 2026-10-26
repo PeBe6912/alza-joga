@@ -1841,7 +1841,8 @@ function bookingsPanel() {
 function lessonParticipantsPanel(lessonId, returnTab) {
   const lesson = adminLessons.find((item) => item.id === lessonId);
   if (!lesson) return '<div class="admin-card"><p>Lekci se nepodařilo najít.</p></div>';
-  const participants = adminReservations.filter((reservation) => reservation.lessons.id === lessonId);
+  const participants = adminReservations.filter((reservation) => reservation.lessons.id === lessonId)
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   const canCancel = lesson.status !== 'cancelled' && new Date(lesson.iso) > new Date();
   const completed = new Date(lesson.endsAt) <= new Date();
   const cancelled = participants.filter((r) => r.status === 'cancelled' || (r.status === 'no_show' && r.late_cancelled_at));
