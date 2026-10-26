@@ -822,7 +822,8 @@ function renderPublicNews() {
   }
   const allowedTones = new Set(['sage', 'clay', 'sand', 'ink']);
   grid.innerHTML = newsItems.map((item) => {
-    const charityStory = item.title.trim().toLocaleLowerCase('cs-CZ') === 'cvičením pomáháme';
+    const charityStory = item.id === 'e7c10ab2-3bba-419b-8c73-6139de7ed7ee'
+      || ['cvičením pomáháme', 'jógou pomáháme'].includes(item.title.trim().toLocaleLowerCase('cs-CZ'));
     if (item.image_url) return `<article class="news-card featured" role="button" tabindex="0" data-news-detail="${escapeHtml(item.id)}" aria-label="Přečíst celý článek: ${escapeHtml(item.title)}"><img src="${escapeHtml(item.image_url)}" alt=""><div><span>Ze studia</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p>${charityStory ? '<p data-donation-summary hidden></p>' : ''}<strong class="news-card-action">Číst dál →</strong></div></article>`;
     const tone = `tone-${allowedTones.has(item.background_tone) ? item.background_tone : 'sage'}`;
     return `<article class="news-card text-card ${tone}${charityStory ? ' charity-card' : ''}" role="button" tabindex="0" data-news-detail="${escapeHtml(item.id)}" aria-label="Přečíst celý článek: ${escapeHtml(item.title)}">${charityStory ? '<img class="charity-logo" src="assets/dobry-andel-logo.svg" alt="Dobrý Anděl">' : ''}<span>${charityStory ? 'Dobrá věc' : 'Novinka'}</span><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p>${charityStory ? '<p data-donation-summary hidden></p>' : ''}<strong class="news-card-action">Číst dál →</strong></article>`;

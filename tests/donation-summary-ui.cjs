@@ -31,9 +31,16 @@ for (const bad of [null, {}, { amount_czk: null, as_of: null }, { amount_czk: '1
       assert.equal(await page.locator('[data-donation-summary]').isVisible(), true);
       assert.match(await page.locator('[data-donation-summary]').innerText(), /K 26. říjnu 2026/);
       assert.equal(await page.locator('[data-news-detail="other"] [data-donation-summary]').count(), 0);
+      assert.equal(await page.locator('.charity-logo').count(), 1);
       assert.deepEqual(await page.evaluate(() => calls), [{ action: 'update-donation-summary', amountCzk: 11075, asOf: '2026-10-26' }]);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       await page.evaluate(() => renderPublicNews());
+      assert.equal(await page.locator('[data-donation-summary]').isVisible(), true);
+      await page.evaluate(() => { newsItems[0].title='Jógou pomáháme';renderPublicNews(); });
+      assert.equal(await page.locator('.charity-logo').count(), 1);
+      assert.equal(await page.locator('[data-donation-summary]').isVisible(), true);
+      await page.evaluate(() => { newsItems[0].id='e7c10ab2-3bba-419b-8c73-6139de7ed7ee';newsItems[0].title='Nový název benefičního článku';renderPublicNews(); });
+      assert.equal(await page.locator('.charity-logo').count(), 1);
       assert.equal(await page.locator('[data-donation-summary]').isVisible(), true);
       await page.screenshot({ path: `outputs/dobry-andel-souhrn-${width}.png`, fullPage: true });
       await page.evaluate(() => { publicSettings={};applyPublicSettings(publicSettings); });
