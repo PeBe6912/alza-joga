@@ -8,6 +8,7 @@ import {
   sha256,
   supabaseConfig,
 } from '../_shared/http.ts';
+import { sentPaymentEmail, resendPaymentEmail } from '../_shared/payment-email-history.ts';
 
 type Participant = { name: string; email: string };
 
@@ -195,6 +196,17 @@ Deno.serve(async (req: Request) => {
     const publicSiteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
     requestedAction = action;
     const canManageAdmins = adminUser.id === OWNER_ADMIN_USER_ID;
+    if (action === 'payment-email-content' || action === 'payment-email-resend') {
+      if (action === 'payment-email-resend' && body.confirmed !== true) throw new Error('EMAIL_RESEND_CONFIRM_REQUIRED');
+      const original = await sentPaymentEmail(String(body.reservationId ?? ''));
+      if (action === 'payment-email-content') {
+        const response = json(req, { ok: true, subject: original.subject, html: original.html, recipient: original.recipient, sentAt: original.reservation.payment_email_sent_at, lastResentAt: original.reservation.payment_email_last_resent_at });
+        response.headers.set('Cache-Control', 'no-store');
+        return response;
+      }
+      const result = await resendPaymentEmail(original);
+      return json(req, { ok: true, recipient: original.recipient, ...result });
+    }
     if (action === 'capabilities') {
       const displayName = await adminDisplayName(adminUser);
       return json(req, { ok: true, action, canManageAdmins, canDeleteLessons: canManageAdmins, greeting: formalAdminGreeting(displayName) });
@@ -662,6 +674,17 @@ Deno.serve(async (req: Request) => {
     const code = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
     const status = code === 'UNAUTHORIZED' ? 401 : code === 'FORBIDDEN' || code === 'OWNER_ONLY' ? 403 : code.includes('LESSON_CONFLICT') || code.includes('STUDIO_CONFLICT') || code.includes('LESSON_NOT_ENDED') || code.includes('LESSON_CAPACITY_TOO_SMALL') || code.includes('CANCELLATION_NOT_ALLOWED') || code.includes('PAYMENT_ALREADY_SENT') || code === 'WALK_IN_EXISTS' ? 409 : code.includes('INVALID_') || code.includes('NO_ELIGIBLE_') || code.includes('PAYMENT_QR_MISSING') || code.includes('INSTRUCTOR_EMAIL_MISSING') || code.includes('LESSON_UNCHANGED') || code === 'OWNER_SELF_DELETE' ? 400 : code.includes('RESERVATION_NOT_FOUND') || code === 'ADMIN_NOT_FOUND' || code === 'LESSON_NOT_FOUND' ? 404 : 500;
     console.error('manage-lesson failed', code);
+    const emailErrors: Record<string, [number, string]> = {
+      EMAIL_CONTENT_UNAVAILABLE: [404, 'Původní obsah e-mailu už není u poskytovatele dostupný. Nejde o náhled dnešní šablony.'],
+      EMAIL_HISTORY_UNAVAILABLE: [502, 'Archiv odeslaných e-mailů se nepodařilo načíst. Zkus to později.'],
+      EMAIL_NOT_SENT: [409, 'K této rezervaci není evidovaný odeslaný platební e-mail.'],
+      EMAIL_RESEND_NOT_ALLOWED: [409, 'Tento e-mail nelze znovu odeslat: zkontroluj stav lekce a případné prominutí platby.'],
+      EMAIL_RESEND_THROTTLED: [429, 'Opětovné odeslání už bylo spuštěno. Před dalším pokusem počkej alespoň dvě minuty.'],
+      EMAIL_RESEND_CONFIRM_REQUIRED: [400, 'Opětovné odeslání je potřeba nejprve potvrdit.'],
+      EMAIL_RESEND_UNCERTAIN: [502, 'Poskytovatel nepotvrdil výsledek. E-mail mohl být odeslán; před dalším pokusem ověř doručení.'],
+      EMAIL_RESEND_FAILED: [502, 'Poskytovatel opětovné odeslání odmítl. E-mail nebyl znovu odeslán.'],
+    };
+    if (emailErrors[code]) return json(req, { error: code, message: emailErrors[code][1] }, emailErrors[code][0]);
     const message = code === 'FORBIDDEN'
       ? 'Tento účet nemá oprávnění správce.'
       : code === 'INVALID_CAPACITY_OVER_STUDIO_LIMIT'

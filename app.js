@@ -1565,8 +1565,8 @@ async function loadAdminNews() {
 async function loadAdminReservations() {
   const historyStart = new Date();
   historyStart.setMonth(historyStart.getMonth() - 12);
-  const select = 'id,attendee_name,attendee_email,status,payment_waived_at,payment_email_sent_at,created_at,lessons!inner(id,title,starts_at,ends_at,status,instructors(name))';
-  const query = new URLSearchParams({ select, status: 'in.(confirmed,attended,no_show)', 'lessons.starts_at': `gte.${historyStart.toISOString()}` });
+  const select = 'id,attendee_name,attendee_email,status,cancelled_at,late_cancelled_at,payment_waived_at,payment_email_sent_at,payment_email_last_resent_at,payment_email_recipient,created_at,lessons!inner(id,title,starts_at,ends_at,status,instructors(name))';
+  const query = new URLSearchParams({ select, status: 'in.(confirmed,attended,no_show,cancelled)', 'lessons.starts_at': `gte.${historyStart.toISOString()}` });
   const response = await adminFetch(`${SUPABASE_URL}/rest/v1/reservations?${query}`);
   if (!response.ok) throw new Error('Účastníky se nepodařilo načíst.');
   adminReservations = (await response.json()).sort((a, b) => new Date(a.lessons.starts_at) - new Date(b.lessons.starts_at));
@@ -1824,6 +1824,7 @@ function accountsPanel() {
 
 function bookingsPanel() {
   const people = Array.from(adminReservations.reduce((map, reservation) => {
+    if (reservation.status === 'cancelled') return map;
     const key = reservation.attendee_email ? reservation.attendee_email.toLowerCase() : `walk-in:${reservation.id}`;
     const current = map.get(key) || { name: reservation.attendee_name, email: reservation.attendee_email, reservations: [] };
     current.reservations.push(reservation);
@@ -1842,8 +1843,20 @@ function lessonParticipantsPanel(lessonId, returnTab) {
   if (!lesson) return '<div class="admin-card"><p>Lekci se nepodařilo najít.</p></div>';
   const participants = adminReservations.filter((reservation) => reservation.lessons.id === lessonId);
   const canCancel = lesson.status !== 'cancelled' && new Date(lesson.iso) > new Date();
-  const rows = participants.map((reservation) => `<tr><td data-label="Jméno"><b>${escapeHtml(reservation.attendee_name)}</b></td><td data-label="E-mail">${reservation.attendee_email ? escapeHtml(reservation.attendee_email) : 'Bez e-mailu'}</td><td data-label="Stav"><span class="status-pill">${reservation.status === 'attended' ? 'Účast potvrzena' : reservation.status === 'no_show' ? reservation.payment_waived_at ? 'Nedorazil/a · bez platby' : 'Nedorazil/a' : 'Přihlášen/a'}</span></td><td data-label="Platební e-mail">${reservation.payment_email_sent_at ? 'Odeslán' : reservation.payment_waived_at ? 'Prominut' : reservation.attendee_email ? 'Neodeslán' : 'Bez e-mailu'}</td><td class="participant-actions" data-label="Akce">${canCancel && reservation.status === 'confirmed' ? `<button class="button button-small button-secondary" data-cancel-reservation="${reservation.id}" data-lesson-id="${lesson.id}" data-return-tab="${returnTab}">Zrušit rezervaci</button>` : '—'}</td></tr>`).join('');
-  return `<div class="admin-card"><button class="text-button admin-detail-back" data-return-tab="${returnTab}">← Zpět</button><h2>${escapeHtml(lesson.title)}</h2><p class="admin-help">${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)} · ${participants.length}/${lesson.capacity} přihlášených</p><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Stav</th><th>Platební e-mail</th><th>Akce</th></tr></thead><tbody>${rows || '<tr><td colspan="5">Na tuto lekci zatím není nikdo přihlášený.</td></tr>'}</tbody></table></div></div>`;
+  const completed = new Date(lesson.endsAt) <= new Date();
+  const cancelled = participants.filter((r) => r.status === 'cancelled' || (r.status === 'no_show' && r.late_cancelled_at));
+  const active = participants.filter((r) => !cancelled.includes(r));
+  const timestamp = (value) => value && Number.isFinite(new Date(value).getTime()) ? new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Prague' }).format(new Date(value)) : 'Čas není evidovaný';
+  const paymentCell = (r) => {
+    if (!r.payment_email_sent_at) return r.payment_waived_at ? 'Platba prominuta' : !r.attendee_email ? 'Bez e-mailu' : r.status === 'cancelled' ? 'Bez platebního e-mailu' : 'Čeká na potvrzení docházky nebo odeslání';
+    const canResend = lesson.status !== 'cancelled' && ['attended', 'no_show'].includes(r.status) && !r.payment_waived_at;
+    return `<div>Odesláno: ${escapeHtml(timestamp(r.payment_email_sent_at))}</div>${r.payment_email_last_resent_at ? `<div>Znovu odesláno: ${escapeHtml(timestamp(r.payment_email_last_resent_at))}</div>` : ''}${r.payment_email_recipient && r.payment_email_recipient !== r.attendee_email ? `<small>Komu: ${escapeHtml(r.payment_email_recipient)}</small>` : ''}<div class="participant-email-actions"><button class="button button-small button-secondary" data-view-payment-email="${r.id}">Zobrazit e-mail</button>${canResend ? `<button class="button button-small button-secondary" data-resend-payment-email="${r.id}" data-lesson-id="${lesson.id}" data-return-tab="${returnTab}">Odeslat znovu</button>` : ''}</div>`;
+  };
+  const table = (items) => `<div class="admin-table-wrap"><table class="admin-table participant-detail-table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Stav</th><th>Rezervace a změny</th>${completed ? '<th>Platební e-mail</th>' : ''}</tr></thead><tbody>${items.map((r) => {
+    const status = r.status === 'cancelled' ? 'Zrušeno' : r.late_cancelled_at && r.status === 'no_show' ? 'Pozdní storno' : r.status === 'attended' ? 'Účast potvrzena' : r.status === 'no_show' ? r.payment_waived_at ? 'Nedorazil/a · bez platby' : 'Nedorazil/a' : 'Přihlášen/a';
+    return `<tr><td data-label="Jméno"><b>${escapeHtml(r.attendee_name)}</b></td><td data-label="E-mail">${escapeHtml(r.attendee_email || 'Bez e-mailu')}</td><td data-label="Stav"><span class="status-pill${r.status === 'cancelled' ? ' done' : ''}">${status}</span>${canCancel && r.status === 'confirmed' ? `<div class="participant-email-actions"><button class="button button-small button-secondary" data-cancel-reservation="${r.id}" data-lesson-id="${lesson.id}" data-return-tab="${returnTab}">Zrušit rezervaci</button></div>` : ''}</td><td data-label="Rezervace a změny"><div>Rezervováno: ${escapeHtml(timestamp(r.created_at))}</div>${r.cancelled_at || r.late_cancelled_at || r.status === 'cancelled' ? `<div>Zrušeno: ${escapeHtml(timestamp(r.cancelled_at || r.late_cancelled_at))}</div>` : ''}</td>${completed ? `<td data-label="Platební e-mail">${paymentCell(r)}</td>` : ''}</tr>`;
+  }).join('') || `<tr><td colspan="${completed ? 5 : 4}">Na tuto lekci zatím není nikdo přihlášený.</td></tr>`}</tbody></table></div>`;
+  return `<div class="admin-card"><button class="text-button admin-detail-back" data-return-tab="${returnTab}">← Zpět</button><h2>${escapeHtml(lesson.title)}</h2><p class="admin-help">${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)} · Obsazeno ${lesson.booked ?? active.length}/${lesson.capacity}</p><h3>Účastníci (${active.length})</h3>${table(active)}${cancelled.length ? `<section class="cancelled-reservations"><h3>Zrušené rezervace (${cancelled.length})</h3><p class="admin-help">Pozdní storno zůstává součástí docházky a plateb podle pravidel lekce.</p>${table(cancelled)}</section>` : ''}<p class="admin-help">Časy jsou uvedené v časovém pásmu Praha. U starších pozdních storen nemusí být čas zrušení evidovaný. Odeslání e-mailu neznamená potvrzení doručení ani zaplacení.</p></div>`;
 }
 
 function newsPanel() {
@@ -2095,6 +2108,53 @@ function bindParticipantDetailNavigation() {
     button.dataset.lessonId,
     button.dataset.returnTab,
   )));
+  document.querySelectorAll('[data-view-payment-email]').forEach((button) => button.addEventListener('click', () => viewPaymentEmail(button.dataset.viewPaymentEmail)));
+  document.querySelectorAll('[data-resend-payment-email]').forEach((button) => button.addEventListener('click', () => resendParticipantPaymentEmail(button)));
+}
+
+async function viewPaymentEmail(reservationId) {
+  document.querySelector('#booking-content').innerHTML = '<div class="booking-panel email-history-panel"><p>Načítám původní odeslaný e-mail…</p></div>';
+  const requestPanel = document.querySelector('.email-history-panel');
+  dialog.showModal();
+  try {
+    const email = await manageLesson({ action: 'payment-email-content', reservationId });
+    if (!dialog.open || !requestPanel.isConnected) return;
+    document.querySelector('#booking-content').innerHTML = `<div class="booking-panel email-history-panel"><p class="eyebrow">Původní odeslaná zpráva</p><h2>${escapeHtml(email.subject)}</h2><p>Komu: <strong>${escapeHtml(email.recipient)}</strong></p><p class="admin-help">Obsah pochází z archivu poskytovatele, nikoli z dnešní šablony. Náhled blokuje skripty, odkazy a sledovací obrázky.</p><iframe class="email-history-frame" title="Původní obsah e-mailu" sandbox="" referrerpolicy="no-referrer"></iframe></div>`;
+    const parsed = new DOMParser().parseFromString(email.html, 'text/html');
+    parsed.querySelectorAll('script,iframe,object,embed,base,link,meta[http-equiv],form').forEach((node) => node.remove());
+    parsed.querySelectorAll('a').forEach((node) => { node.removeAttribute('href'); node.removeAttribute('target'); });
+    const policy = parsed.createElement('meta');
+    policy.httpEquiv = 'Content-Security-Policy';
+    policy.content = "default-src 'none'; img-src https://joganahallu.cz data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'";
+    parsed.head.prepend(policy);
+    document.querySelector('.email-history-frame').srcdoc = '<!doctype html>' + parsed.documentElement.outerHTML;
+  } catch (error) {
+    if (dialog.open && requestPanel.isConnected) document.querySelector('#booking-content').innerHTML = `<div class="booking-panel"><h2>E-mail není dostupný</h2><p>${escapeHtml(error.message)}</p></div>`;
+  }
+}
+
+async function resendParticipantPaymentEmail(button) {
+  if (button.disabled) return;
+  const reservation = adminReservations.find((r) => r.id === button.dataset.resendPaymentEmail);
+  if (!reservation) return;
+  const recipient = reservation.payment_email_recipient || reservation.attendee_email;
+  if (!confirm(`Odeslat původní platební e-mail znovu účastníkovi ${reservation.attendee_name} na ${recipient}? Ostatním účastníkům se nic neodešle.`)) return;
+  button.disabled = true;
+  button.textContent = 'Odesílám…';
+  try {
+    const result = await manageLesson({ action: 'payment-email-resend', reservationId: reservation.id, confirmed: true });
+    button.textContent = 'Předáno k odeslání';
+    showToast(result.recorded ? 'Původní e-mail byl znovu předán k odeslání.' : 'E-mail byl předán k odeslání, ale čas se nepodařilo uložit. Neodesílej ho hned znovu.');
+    try {
+      await loadAdminReservations();
+      document.querySelector('#admin-panel').innerHTML = lessonParticipantsPanel(button.dataset.lessonId, button.dataset.returnTab);
+      bindParticipantDetailNavigation();
+    } catch { showToast('E-mail byl předán k odeslání, ale seznam se nepodařilo obnovit. Neodesílej ho znovu; obnov stránku.'); }
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
+    button.textContent = 'Odeslat znovu';
+  }
 }
 
 async function cancelAdminReservation(reservationId, lessonId, returnTab) {
