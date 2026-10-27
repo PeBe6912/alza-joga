@@ -198,6 +198,8 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
   .hero>img{position:relative;inset:auto;height:auto;object-fit:contain;filter:none}
   .hero .hero-shade{display:none}
   .hero-copy{max-width:none;padding:32px 24px 38px}
+  .hero-mobile-line{display:block}
+  .hero-mobile-line+br{display:none}
 }
 
 .whatsapp-card{max-width:520px;margin-top:38px;padding:22px;display:grid;grid-template-columns:minmax(0,1fr) 126px;align-items:center;gap:24px;background:#fff;border:1px solid var(--line)}

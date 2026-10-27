@@ -37,6 +37,14 @@ function initializeHeroClaim() {
   }
   const [main, secondary] = HERO_CLAIMS[index];
   heading.textContent = main;
+  if (main === 'Nemusíš čekat, až bude klid.' || main === 'Všechno je, jak má být.') {
+    const [firstLine, secondLine] = main.split(', ');
+    const continuation = document.createElement('span');
+    continuation.className = 'hero-mobile-line';
+    continuation.textContent = secondLine;
+    heading.textContent = `${firstLine}, `;
+    heading.append(continuation);
+  }
   if (secondary) {
     const emphasis = document.createElement('i');
     emphasis.textContent = secondary;

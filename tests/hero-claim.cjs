@@ -7,6 +7,7 @@ const claimsSource = source.match(/const HERO_CLAIMS = \[[\s\S]*?\n\];/)[0];
 const initializeSource = source.match(/function initializeHeroClaim\(\) \{[\s\S]*?\n\}/)[0];
 const claims = new Function(`${claimsSource}; return HERO_CLAIMS;`)();
 assert.equal(claims.length, 13);
+const normalize = text => text.replace(/\s+/g, ' ').trim();
 const hero = html.match(/<section class="hero"[\s\S]*?<\/section>/)[0].replace('<div class="next-class" id="next-class-card"></div>', '<div class="next-class" id="next-class-card"><div class="date">NEJBLIŽŠÍ LEKCE</div><h3>Strong slow flow</h3><p>7:45–8:45 · Petr Bena</p><div class="spots">Přihlášeno 7 / 16</div></div>');
 (async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -21,24 +22,28 @@ const hero = html.match(/<section class="hero"[\s\S]*?<\/section>/)[0].replace('
       await page.addScriptTag({ content: `${claimsSource}\n${initializeSource}\nlocalStorage.setItem('jogaHeroClaimNextV1', '0');` });
       for (let index = 0; index < claims.length; index++) {
       await page.evaluate(() => initializeHeroClaim());
-      assert.equal(await page.locator('h1').innerText(), claims[index].join('\n'));
+      assert.equal(normalize(await page.locator('h1').innerText()), claims[index].join(' '));
+      if (index === 7 || index === 10) {
+        assert.equal(await page.locator('.hero-mobile-line').evaluate(element => getComputedStyle(element).display), width <= 600 ? 'block' : 'inline');
+        if (width <= 600) assert.ok((await page.locator('h1').innerText()).includes(claims[index][0].replace(', ', ',\n')));
+      }
       assert.equal(await page.locator('h1 i').count(), claims[index].length - 1);
       const title = await page.locator('h1').boundingBox();
       const section = await page.locator('.hero').boundingBox();
       assert.ok(title.y >= section.y && title.y + title.height <= section.y + section.height, `Claim ${index + 1} clipped at ${width}px`);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-      if (index === 0 || index === 11) await page.screenshot({ path: `outputs/claim-${index + 1}-${width}.png`, fullPage: true });
+      if ([0, 7, 10, 11].includes(index)) await page.screenshot({ path: `outputs/claim-${index + 1}-${width}.png`, fullPage: true });
       }
       assert.equal(await page.evaluate(() => localStorage.getItem('jogaHeroClaimNextV1')), '0');
       for (const invalid of ['', '-1', '13', 'NaN', '1.5']) {
         await page.evaluate(value => { localStorage.setItem('jogaHeroClaimNextV1', value); initializeHeroClaim(); }, invalid);
-        assert.ok(claims.map(claim => claim.join('\n')).includes(await page.locator('h1').innerText()));
+        assert.ok(claims.map(claim => claim.join(' ')).includes(normalize(await page.locator('h1').innerText())));
       }
       await page.evaluate(() => {
         Storage.prototype.getItem = () => { throw new Error('Storage blocked'); };
         initializeHeroClaim();
       });
-      assert.ok(claims.map(claim => claim.join('\n')).includes(await page.locator('h1').innerText()));
+      assert.ok(claims.map(claim => claim.join(' ')).includes(normalize(await page.locator('h1').innerText())));
       console.log(`PASS all 13 claims at ${width}px, cycle, invalid/blocked storage`);
       await page.close();
     }
