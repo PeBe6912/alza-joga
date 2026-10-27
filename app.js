@@ -70,6 +70,41 @@ function initializeHeroClaim() {
     heading.append(variant);
   }
 }
+const YOGA_REFLECTIONS = [
+  ['Laskavost má místo i na podložce.', 'II.30 · ahimsá — neubližování'],
+  ['Pevnost a lehkost se nevylučují.', 'II.46 · ásana — stabilita a pohodlí v pozici'],
+  ['Dech není jen doprovod pohybu.', 'II.49 · pránájáma — práce s dechem'],
+  ['Jedna chvíle. Jeden bod pozornosti.', 'III.1 · dháraná — soustředění'],
+  ['Poznávání sebe není totéž co hodnocení sebe.', 'II.32 · svádhjája — studium a sebepoznávání'],
+  ['Svět venku. Pozornost uvnitř.', 'II.54 · pratjáhára — obrácení pozornosti dovnitř'],
+  ['Praxe má svůj rytmus. A svůj čas.', 'I.14 · abhjása — dlouhodobá, soustavná praxe'],
+  ['Méně sevření. Více prostoru.', 'II.30 · aparigraha — neulpívání na vlastnění'],
+  ['Spokojenost nemusí znamenat, že je všechno dokonalé.', 'II.42 · santóša — spokojenost'],
+  ['Úsilí a uvolnění. Obojí má v praxi místo.', 'II.47 · uvolnění úsilí v pozici'],
+  ['Pozornost nemusí nic přidávat. Někdy jen odkrývá.', 'III.1–2 · dháraná a dhjána — soustředění a meditace'],
+  ['Pravdivost má místo i ve vztahu k vlastním možnostem.', 'II.30 · satja — pravdivost'],
+  ['Nádech. Výdech. Prostor mezi nimi.', 'II.49 · pránájáma — práce s dechem'],
+  ['Praxe není jen to, co je vidět.', 'II.54 · pratjáhára — obrácení pozornosti dovnitř'],
+  ['Pravidelnost a neulpívání. Dvě stránky jedné praxe.', 'I.12 · abhjása a vairágja — soustavná praxe a nepřipoutanost'],
+  ['Pozice má tvar. Její prožitek je osobní.', 'II.46 · ásana — stabilita a pohodlí v pozici'],
+];
+
+function initializeYogaReflection() {
+  const text = document.querySelector('[data-yoga-reflection]');
+  const source = document.querySelector('[data-yoga-reflection-source]');
+  if (!text || !source) return;
+  let index = Math.floor(Math.random() * YOGA_REFLECTIONS.length);
+  try {
+    const saved = localStorage.getItem('jogaReflectionNextV1');
+    if (saved !== null && /^\d+$/.test(saved) && Number(saved) < YOGA_REFLECTIONS.length) index = Number(saved);
+    localStorage.setItem('jogaReflectionNextV1', String((index + 1) % YOGA_REFLECTIONS.length));
+  } catch {
+    // Storage is optional; the reflection stays unchanged for this page load.
+  }
+  text.textContent = YOGA_REFLECTIONS[index][0];
+  source.textContent = `Volně inspirováno Jógasútrami ${YOGA_REFLECTIONS[index][1]}`;
+}
+
 const JOURNEY_MILESTONES = [
   { count: 1, name: 'První nádech', note: 'Začátek cesty' },
   { count: 5, name: 'Pozdrav slunci', note: 'První pravidelnější praxe' },
@@ -3038,6 +3073,7 @@ mainMenu.querySelectorAll('a').forEach((link) => link.addEventListener('click', 
 renderLessons();
 renderNextClass();
 initializeHeroClaim();
+initializeYogaReflection();
 refreshPublicSettings().then(loadLessons);
 loadPublicStudioBlocks();
 loadPublicContent();
