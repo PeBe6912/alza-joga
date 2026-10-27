@@ -184,6 +184,9 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
   padding-right:max(4vw,calc((100vw - 1440px)/2));
 }
 .hero{min-height:0;aspect-ratio:16/9}
+@media(min-width:1440px){
+  .hero-copy{padding-left:72px;padding-right:72px}
+}
 .image-frame:hover img{transform:none}
 
 @media(max-width:900px){

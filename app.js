@@ -8,6 +8,41 @@ const PUBLIC_SETTING_DEFAULTS = {
   studio_capacity: 20,
 };
 const DONATION_PAYMENT_COPY = 'Doporučený příspěvek je 150 Kč, jeho výše je ale jen na tobě. Platba prostřednictvím QR kódu směřuje přímo na účet organizace Dobrý anděl.';
+const HERO_CLAIMS = [
+  ['Jóga není o tom, jak jsi flexibilní.', 'Ale o tom, jak blízko máš k sobě.'],
+  ['Celý den něco řešíš.', 'Tady můžeš chvíli jen být.'],
+  ['Dech v těle.', 'Prostor v mysli.'],
+  ['Ne všechno potřebuje výsledek.', 'Stačí Tvůj dobrý pocit.'],
+  ['Tady a teď.'],
+  ['Podložka není další úkol.', 'Je to chvíle, kterou si dopřeješ.'],
+  ['Jóga není o tom, kam až dosáhneš.', 'Ale o tom, co po cestě potkáš.'],
+  ['Nemusíš čekat, až bude klid.', 'Můžeš si pro něj přijít.'],
+  ['Tělo v pohybu.', 'Mysl v přítomnosti.'],
+  ['Nemusíš nikomu nic dokazovat.', 'Tenhle čas je jen Tvůj.'],
+  ['Všechno je, jak má být.'],
+  ['Na podložce nemusíš být lepší než včera.', 'Stačí být tady dnes.'],
+  ['Nemusíš vědět, co bude dál.', 'Stačí s důvěrou udělat další nádech.'],
+];
+
+function initializeHeroClaim() {
+  const heading = document.querySelector('[data-hero-claim]');
+  if (!heading) return;
+  let index = Math.floor(Math.random() * HERO_CLAIMS.length);
+  try {
+    const saved = localStorage.getItem('jogaHeroClaimNextV1');
+    if (saved !== null && /^\d+$/.test(saved) && Number(saved) < HERO_CLAIMS.length) index = Number(saved);
+    localStorage.setItem('jogaHeroClaimNextV1', String((index + 1) % HERO_CLAIMS.length));
+  } catch {
+    // Without browser storage, keep a random claim for this page load.
+  }
+  const [main, secondary] = HERO_CLAIMS[index];
+  heading.textContent = main;
+  if (secondary) {
+    const emphasis = document.createElement('i');
+    emphasis.textContent = secondary;
+    heading.append(document.createElement('br'), emphasis);
+  }
+}
 const JOURNEY_MILESTONES = [
   { count: 1, name: 'První nádech', note: 'Začátek cesty' },
   { count: 5, name: 'Pozdrav slunci', note: 'První pravidelnější praxe' },
@@ -2975,6 +3010,7 @@ mainMenu.querySelectorAll('a').forEach((link) => link.addEventListener('click', 
 }));
 renderLessons();
 renderNextClass();
+initializeHeroClaim();
 refreshPublicSettings().then(loadLessons);
 loadPublicStudioBlocks();
 loadPublicContent();
