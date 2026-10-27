@@ -66,6 +66,7 @@ test('all transactional email scenarios use approved copy without live services'
       const result = await response.json();
       assert.ok(response.status < 300, JSON.stringify(result));
       for (const mail of emails) {
+        assert.doesNotMatch(mail.htmlContent, /Dobrý den/);
         assert.doesNotMatch(mail.htmlContent, /děkujeme|posíláme|pošleme|těšíme se|budeme rádi|omlouváme|nám pomůže|Web Jóga na HALLU/i);
         assert.equal((mail.htmlContent.match(/data-email-signature/g) || []).length, 1);
         assert.doesNotMatch(mail.htmlContent, /Ranní flow <test>/);

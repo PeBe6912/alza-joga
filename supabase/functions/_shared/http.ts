@@ -103,13 +103,40 @@ const CZECH_VOCATIVES: Record<string, string> = {
   tomas: 'Tomáši', 'tomáš': 'Tomáši', vaclav: 'Václave', 'václav': 'Václave', veronika: 'Veroniko',
   vojta: 'Vojto', vojtech: 'Vojtěchu', 'vojtěch': 'Vojtěchu', zdenek: 'Zdeňku', 'zdeněk': 'Zdeňku',
   zuzana: 'Zuzano',
+  alena: 'Aleno', alex: 'Alexi', alexandr: 'Alexandře', alexandra: 'Alexandro', alice: 'Alice', alzbeta: 'Alžběto',
+  amalie: 'Amálie', andrea: 'Andreo', antonin: 'Antoníne', antonie: 'Antonie', anezka: 'Anežko', artur: 'Arture',
+  beata: 'Beáto', bohumil: 'Bohumile', bohdan: 'Bohdane', bohumila: 'Bohumilo', boris: 'Borisi', bozena: 'Boženo',
+  dagmar: 'Dagmar', dan: 'Dane', daniel: 'Danieli', denis: 'Denisi', denisa: 'Deniso', dita: 'Dito',
+  eduard: 'Eduarde', ela: 'Elo', elen: 'Elen', elena: 'Eleno', emil: 'Emile', emilie: 'Emílie', emma: 'Emmo', ester: 'Ester',
+  gabriela: 'Gabrielo', gustav: 'Gustave', helena: 'Heleno', hynek: 'Hynku', igor: 'Igore', ilona: 'Ilono',
+  irena: 'Ireno', iva: 'Ivo', ivan: 'Ivane', ivana: 'Ivano', iveta: 'Iveto', jachym: 'Jáchyme',
+  jaromir: 'Jaromíre', jaroslava: 'Jaroslavo', jindrich: 'Jindřichu', johana: 'Johano', jonas: 'Jonáši', josefina: 'Josefíno',
+  judita: 'Judito', julie: 'Julie', karina: 'Karino', karin: 'Karin', karla: 'Karlo', katarina: 'Katarino',
+  'katarína': 'Kataríno', kevin: 'Kevine', klaudie: 'Klaudie', kristian: 'Kristiáne', krystof: 'Kryštofe',
+  ladislav: 'Ladislave', lada: 'Lado', 'láďa': 'Láďo', libor: 'Libore', libuse: 'Libuše', linda: 'Lindo', lubos: 'Luboši',
+  ludek: 'Luďku', ludmila: 'Ludmilo', marcela: 'Marcelo', marian: 'Mariane', mariana: 'Mariano',
+  marketa: 'Markéto', matous: 'Matouši', matyas: 'Matyáši', miroslav: 'Miroslave', miroslava: 'Miroslavo',
+  nadezda: 'Naděždo', natalie: 'Natálie', nela: 'Nelo', nina: 'Nino', norbert: 'Norberte', oldrich: 'Oldřichu', olga: 'Olgo',
+  oliver: 'Olivere', otakar: 'Otakare', oto: 'Oto', pavla: 'Pavlo', radim: 'Radime', radka: 'Radko',
+  radoslav: 'Radoslave', radovan: 'Radovane', renata: 'Renato', rene: 'René', robert: 'Roberte', romana: 'Romano',
+  rostislav: 'Rostislave', rudolf: 'Rudolfe', sabina: 'Sabino', samuel: 'Samueli', sandra: 'Sandro', sara: 'Sáro',
+  silvie: 'Silvie', sofie: 'Sofie', stanislav: 'Stanislave', stanislava: 'Stanislavo', stepan: 'Štěpáne', stepanka: 'Štěpánko',
+  sylva: 'Sylvo', tadeas: 'Tadeáši', tamara: 'Tamaro', tatana: 'Taťáno', tibor: 'Tibore',
+  valerie: 'Valerie', vendula: 'Vendulo', vera: 'Věro', viktor: 'Viktore', viktorie: 'Viktorie', vilem: 'Viléme',
+  vitezslav: 'Vítězslave', vladimir: 'Vladimíre', vladimira: 'Vladimíro', vlastimil: 'Vlastimile', vlasta: 'Vlasto',
+  vratislav: 'Vratislave', zbynek: 'Zbyňku', zdenka: 'Zdeňko', zlata: 'Zlato', zofie: 'Žofie',
 };
 
 export function czechSalutation(fullName: unknown): string {
   const nameParts = String(fullName ?? '').trim().split(/\s+/).map((part) => part.replace(/[,.]+$/g, '')).filter(Boolean);
-  const matchedName = nameParts.find((part) => CZECH_VOCATIVES[part.toLocaleLowerCase('cs-CZ')]);
-  const vocative = matchedName ? CZECH_VOCATIVES[matchedName.toLocaleLowerCase('cs-CZ')] : undefined;
-  return vocative ? `Ahoj ${vocative}` : 'Dobrý den';
+  for (const part of nameParts) {
+    const key = part.toLocaleLowerCase('cs-CZ');
+    const normalized = key.normalize('NFD').replace(/\p{M}/gu, '');
+    const vocative = Object.hasOwn(CZECH_VOCATIVES, key) ? CZECH_VOCATIVES[key]
+      : Object.hasOwn(CZECH_VOCATIVES, normalized) ? CZECH_VOCATIVES[normalized] : undefined;
+    if (vocative) return `Ahoj ${vocative}`;
+  }
+  return 'Ahoj';
 }
 
 export function formatLessonDate(value: string): string {
