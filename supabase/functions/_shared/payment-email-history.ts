@@ -23,7 +23,17 @@ async function brevoGet(path: string): Promise<Record<string, unknown>> {
       signal: AbortSignal.timeout(15000),
     });
   } catch { throw new Error('EMAIL_HISTORY_UNAVAILABLE'); }
-  if (!response.ok) throw new Error(response.status === 404 ? 'EMAIL_CONTENT_UNAVAILABLE' : 'EMAIL_HISTORY_UNAVAILABLE');
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    // No keys, recipients, message IDs or original message content in diagnostics.
+    const reason = typeof details.message === 'string' && /start\/end date.*current date/i.test(details.message)
+      ? 'FUTURE_DATE_RANGE' : 'PROVIDER_REJECTED';
+    console.error('email_archive_provider_error', JSON.stringify({
+      stage: path.startsWith('?') ? 'list' : 'content', status: response.status,
+      code: typeof details.code === 'string' ? details.code.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 50) : '', reason,
+    }));
+    throw new Error(response.status === 404 ? 'EMAIL_CONTENT_UNAVAILABLE' : 'EMAIL_HISTORY_UNAVAILABLE');
+  }
   return await response.json();
 }
 
@@ -41,11 +51,13 @@ export async function sentPaymentEmail(reservationId: string) {
   if (!reservation.payment_email_message_id || !reservation.payment_email_sent_at) throw new Error('EMAIL_NOT_SENT');
   const recipient = (reservation.payment_email_recipient || reservation.attendee_email || '').trim().toLowerCase();
   if (!recipient) throw new Error('EMAIL_CONTENT_UNAVAILABLE');
-  // Explicit month-sized date range also covers messages older than Brevo's default 30 days.
+  // Keep the day-boundary buffer, but Brevo rejects any start/end date in the future.
+  // Explicit dates also cover messages older than Brevo's default 30 days.
   const sent = new Date(reservation.payment_email_sent_at);
   if (!Number.isFinite(sent.getTime())) throw new Error('EMAIL_CONTENT_UNAVAILABLE');
   const startDate = new Date(sent.getTime() - 86400000).toISOString().slice(0, 10);
-  const endDate = new Date(sent.getTime() + 86400000).toISOString().slice(0, 10);
+  const endDate = new Date(Math.min(sent.getTime() + 86400000, Date.now())).toISOString().slice(0, 10);
+  if (startDate > endDate) throw new Error('EMAIL_CONTENT_UNAVAILABLE');
   const filter = new URLSearchParams({ messageId: reservation.payment_email_message_id, startDate, endDate, limit: '100' });
   const list = await brevoGet(`?${filter}`);
   const matches = Array.isArray(list.transactionalEmails) ? list.transactionalEmails as Array<Record<string, unknown>> : [];
