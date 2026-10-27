@@ -184,6 +184,11 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
   padding-right:max(4vw,calc((100vw - 1440px)/2));
 }
 .hero{min-height:0;aspect-ratio:16/9}
+.hero h1[data-hero-claim]{font-size:clamp(36px,5vw,64px);line-height:1.02}
+.hero-claim-mobile{display:none}
+.hero-claim-part,.hero-claim-line{display:block}
+.hero-claim-part+ .hero-claim-part{margin-top:.12em}
+.hero-claim-line{white-space:nowrap}
 @media(min-width:1440px){
   .hero-copy{padding-left:72px;padding-right:72px}
 }
@@ -198,8 +203,9 @@ footer>div.footer-inner{display:flex;align-items:center;justify-content:space-be
   .hero>img{position:relative;inset:auto;height:auto;object-fit:contain;filter:none}
   .hero .hero-shade{display:none}
   .hero-copy{max-width:none;padding:32px 24px 38px}
-  .hero-mobile-line{display:block}
-  .hero-mobile-line+br{display:none}
+  .hero h1[data-hero-claim]{font-size:clamp(28px,9.6vw,49px)}
+  .hero-claim-desktop{display:none}
+  .hero-claim-mobile{display:block}
 }
 
 .whatsapp-card{max-width:520px;margin-top:38px;padding:22px;display:grid;grid-template-columns:minmax(0,1fr) 126px;align-items:center;gap:24px;background:#fff;border:1px solid var(--line)}

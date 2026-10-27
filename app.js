@@ -24,6 +24,22 @@ const HERO_CLAIMS = [
   ['Nemusíš vědět, co bude dál.', 'Stačí s důvěrou udělat další nádech.'],
 ];
 
+const HERO_CLAIM_LAYOUTS = [
+  { desktop: [['Jóga není o tom,', 'jak jsi flexibilní.'], ['Ale o tom, jak blízko', 'máš k sobě.']] },
+  { desktop: [['Celý den něco řešíš.'], ['Tady můžeš', 'chvíli jen být.']], mobile: [['Celý den', 'něco řešíš.'], ['Tady můžeš', 'chvíli jen být.']] },
+  { desktop: [['Dech v těle.'], ['Prostor v mysli.']] },
+  { desktop: [['Ne všechno', 'potřebuje výsledek.'], ['Stačí tvůj dobrý pocit.']], mobile: [['Ne všechno', 'potřebuje výsledek.'], ['Stačí tvůj', 'dobrý pocit.']] },
+  { desktop: [['Tady a teď.']] },
+  { desktop: [['Podložka není', 'další úkol.'], ['Je to chvíle,', 'kterou si dopřeješ.']] },
+  { desktop: [['Jóga není o tom,', 'kam až dosáhneš.'], ['Ale o tom,', 'co po cestě potkáš.']] },
+  { desktop: [['Nemusíš čekat,', 'až bude klid.'], ['Můžeš si pro něj přijít.']], mobile: [['Nemusíš čekat,', 'až bude klid.'], ['Můžeš si', 'pro něj přijít.']] },
+  { desktop: [['Tělo v pohybu.'], ['Mysl v přítomnosti.']] },
+  { desktop: [['Nemusíš nikomu', 'nic dokazovat.'], ['Tenhle čas', 'je jen tvůj.']] },
+  { desktop: [['Všechno je,', 'jak má být.']] },
+  { desktop: [['Na podložce nemusíš', 'být lepší než včera.'], ['Stačí být tady dnes.']], mobile: [['Na podložce', 'nemusíš být', 'lepší než včera.'], ['Stačí být tady dnes.']] },
+  { desktop: [['Nemusíš vědět,', 'co bude dál.'], ['Stačí s důvěrou', 'udělat další nádech.']] },
+];
+
 function initializeHeroClaim() {
   const heading = document.querySelector('[data-hero-claim]');
   if (!heading) return;
@@ -35,20 +51,23 @@ function initializeHeroClaim() {
   } catch {
     // Without browser storage, keep a random claim for this page load.
   }
-  const [main, secondary] = HERO_CLAIMS[index];
-  heading.textContent = main;
-  if (main === 'Nemusíš čekat, až bude klid.' || main === 'Všechno je, jak má být.') {
-    const [firstLine, secondLine] = main.split(', ');
-    const continuation = document.createElement('span');
-    continuation.className = 'hero-mobile-line';
-    continuation.textContent = secondLine;
-    heading.textContent = `${firstLine}, `;
-    heading.append(continuation);
-  }
-  if (secondary) {
-    const emphasis = document.createElement('i');
-    emphasis.textContent = secondary;
-    heading.append(document.createElement('br'), emphasis);
+  const layout = HERO_CLAIM_LAYOUTS[index];
+  heading.replaceChildren();
+  for (const size of ['desktop', 'mobile']) {
+    const variant = document.createElement('span');
+    variant.className = `hero-claim-${size}`;
+    (layout[size] || layout.desktop).forEach((lines, partIndex) => {
+      const part = document.createElement(partIndex ? 'i' : 'span');
+      part.className = 'hero-claim-part';
+      lines.forEach((text) => {
+        const line = document.createElement('span');
+        line.className = 'hero-claim-line';
+        line.textContent = text;
+        part.append(line);
+      });
+      variant.append(part);
+    });
+    heading.append(variant);
   }
 }
 const JOURNEY_MILESTONES = [
