@@ -1885,7 +1885,7 @@ function feedbackPanel() {
   }).join('');
   const withoutResponses = feedback.filter((item) => Number(item.total || 0) === 0);
   const emptyLessons = withoutResponses.length ? `<section class="feedback-empty-lessons"><h3>Bez odpovědi</h3><p class="admin-help">U těchto lekcí byla zpětná vazba vyžádána, ale zatím nikdo neodpověděl.</p><div>${withoutResponses.map((item) => `<p><b>${escapeHtml(item.title)}</b><span>${escapeHtml(formatAdminDate(item.starts_at))} · ${escapeHtml(item.teacher)}</span></p>`).join('')}</div></section>` : '';
-  return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Zpětná vazba</h2><p class="admin-help">Anonymní hodnocení z proběhlých lekcí, u kterých byla zpětná vazba vyžádána.</p></div>${adminLessonFilter()}</div>
+  return `<div class="admin-card"><div class="admin-list-heading"><div><p class="admin-help">Anonymní hodnocení z proběhlých lekcí, u kterých byla zpětná vazba vyžádána.</p></div>${adminLessonFilter()}</div>
     <div class="feedback-overview-summary"><strong>${responseCountLabel(totals.total)}</strong><span><b>${totals.great}</b> Skvěle</span><span><b>${totals.good}</b> Dobře</span><span><b>${totals.notRight}</b> Něco mi nesedlo</span></div>
     <div class="feedback-overview-list">${cards || '<p>Tomuto filtru zatím neodpovídá žádná odeslaná zpětná vazba.</p>'}</div>
     ${emptyLessons}
@@ -1894,7 +1894,7 @@ function feedbackPanel() {
 
 function overviewPanel() {
   const upcomingLessons = adminLessons.filter((lesson) => lesson.status === 'published' && new Date(lesson.endsAt) > new Date());
-  return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Naplánované lekce</h2><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p></div>${adminLessonTools()}</div>${lessonTable(filteredAdminLessons(upcomingLessons), 'Tomuto filtru neodpovídá žádná naplánovaná lekce.')}</div>`;
+  return `<div class="admin-card"><div class="admin-list-heading"><div><p class="admin-help">Kliknutím na název lekce nebo obsazenost otevřeš její účastníky.</p></div>${adminLessonTools()}</div>${lessonTable(filteredAdminLessons(upcomingLessons), 'Tomuto filtru neodpovídá žádná naplánovaná lekce.')}</div>`;
 }
 
 function completedLessonsPanel() {
@@ -1904,11 +1904,11 @@ function completedLessonsPanel() {
   const cancelledToggle = cancelledCount
     ? `<button class="button button-small button-secondary" type="button" data-toggle-cancelled-lessons aria-pressed="${adminShowCancelledLessons}">${adminShowCancelledLessons ? 'Skrýt zrušené' : `Zobrazit zrušené (${cancelledCount})`}</button>`
     : '';
-  return `<div class="admin-card"><div class="admin-list-heading"><div><h2>Proběhlé lekce a platby</h2><p class="admin-help">U každé lekce jednou potvrď docházku. Platební nebo příspěvkové e-maily se odešlou automaticky.</p></div><div class="admin-lesson-tools">${adminLessonFilter()}${cancelledToggle}</div></div>${lessonTable(visibleLessons, 'Tomuto filtru neodpovídá žádná proběhlá lekce.')}</div>`;
+  return `<div class="admin-card"><div class="admin-list-heading"><div><p class="admin-help">U každé lekce jednou potvrď docházku. Platební nebo příspěvkové e-maily se odešlou automaticky.</p></div><div class="admin-lesson-tools">${adminLessonFilter()}${cancelledToggle}</div></div>${lessonTable(visibleLessons, 'Tomuto filtru neodpovídá žádná proběhlá lekce.')}</div>`;
 }
 
 function teachersPanel() {
-  return `<div class="admin-card"><h2>Profily lektorů</h2>${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(teacher.name)}"><div><h3>${escapeHtml(teacher.name)}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.email || 'E-mail není nastavený')}</p><p>${escapeHtml(teacher.bio)}</p>${teacher.practice_quote ? `<blockquote>„${escapeHtml(teacher.practice_quote)}“</blockquote>` : ''}</div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
+  return `<div class="admin-card">${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(teacher.name)}"><div><h3>${escapeHtml(teacher.name)}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.email || 'E-mail není nastavený')}</p><p>${escapeHtml(teacher.bio)}</p>${teacher.practice_quote ? `<blockquote>„${escapeHtml(teacher.practice_quote)}“</blockquote>` : ''}</div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
 }
 
 function accountsPanel() {
@@ -1941,7 +1941,7 @@ function accountsPanel() {
 
 function bookingsPanel() {
   const people = Array.from(adminReservations.reduce((map, reservation) => {
-    if (reservation.status === 'cancelled') return map;
+    if (reservation.status === 'cancelled' || !reservation.lessons || reservation.lessons.status === 'cancelled') return map;
     const key = reservation.attendee_email ? reservation.attendee_email.toLowerCase() : `walk-in:${reservation.id}`;
     const current = map.get(key) || { name: reservation.attendee_name, email: reservation.attendee_email, reservations: [] };
     current.reservations.push(reservation);
@@ -1952,7 +1952,7 @@ function bookingsPanel() {
     const latest = [...person.reservations].sort((a, b) => new Date(b.lessons.starts_at) - new Date(a.lessons.starts_at))[0];
     return `<tr><td data-label="Jméno"><b>${escapeHtml(person.name)}</b></td><td data-label="E-mail">${person.email ? escapeHtml(person.email) : 'Bez e-mailu'}</td><td data-label="Počet rezervací">${person.reservations.length}</td><td data-label="Poslední lekce">${escapeHtml(latest.lessons.title)}<br><small>${escapeHtml(formatAdminDate(latest.lessons.starts_at))}</small></td></tr>`;
   }).join('');
-  return `<div class="admin-card"><h2>Účastníci</h2><p class="admin-help">Přehled lidí s aktivní nebo evidovanou účastí za posledních 12 měsíců.</p><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Rezervace</th><th>Poslední lekce</th></tr></thead><tbody>${rows || '<tr><td colspan="4">Zatím nejsou evidováni žádní účastníci.</td></tr>'}</tbody></table></div></div>`;
+  return `<div class="admin-card"><p class="admin-help">Přehled lidí s aktivní nebo evidovanou účastí za posledních 12 měsíců.</p><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Rezervace</th><th>Poslední lekce</th></tr></thead><tbody>${rows || '<tr><td colspan="4">Zatím nejsou evidováni žádní účastníci.</td></tr>'}</tbody></table></div></div>`;
 }
 
 function lessonParticipantsPanel(lessonId, returnTab) {
@@ -1980,7 +1980,7 @@ function lessonParticipantsPanel(lessonId, returnTab) {
 function newsPanel() {
   const toneLabels = { sage: 'Zelená', clay: 'Terakotová', sand: 'Písková', ink: 'Tmavá' };
   const items = adminNews.map((item, index) => `<article class="admin-news-item"><div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary || item.body)}</p><div class="admin-news-meta"><span class="status-pill${item.published_at ? '' : ' done'}">${item.published_at ? 'Zveřejněná' : 'Skrytá'}</span><span class="news-tone-label"><i class="news-tone-swatch tone-${escapeHtml(item.background_tone || 'sage')}"></i>${escapeHtml(toneLabels[item.background_tone] || toneLabels.sage)}</span></div></div><div class="admin-news-actions"><div class="admin-news-order" aria-label="Pořadí novinky"><button class="button button-small button-secondary" type="button" data-move-news="${item.id}" data-move-direction="-1" ${index === 0 ? 'disabled' : ''} title="Posunout nahoru">↑</button><button class="button button-small button-secondary" type="button" data-move-news="${item.id}" data-move-direction="1" ${index === adminNews.length - 1 ? 'disabled' : ''} title="Posunout dolů">↓</button></div><button class="button button-small" data-edit-news="${item.id}">Upravit</button><button class="button button-small button-secondary" data-toggle-news="${item.id}">${item.published_at ? 'Skrýt' : 'Zveřejnit'}</button><button class="text-button danger" data-delete-news="${item.id}">Smazat</button></div></article>`).join('');
-  return `<div class="admin-card"><div class="admin-card-heading"><h2>Novinky a jógové tipy</h2><button class="button button-small" data-add-news>+ Přidat novinku nebo tip</button></div>${items || '<p>Zatím nejsou vytvořené žádné novinky ani tipy.</p>'}</div>`;
+  return `<div class="admin-card"><div class="admin-card-heading"><button class="button button-small" data-add-news>+ Přidat novinku nebo tip</button></div>${items || '<p>Zatím nejsou vytvořené žádné novinky ani tipy.</p>'}</div>`;
 }
 
 function donationSummarySettingsPanel() {
@@ -2038,7 +2038,7 @@ function adminCalendarEvents(from, to) {
 function calendarPanel() {
   const { gridStart, gridEnd } = adminMonthRange(adminCalendarMonth);
   const events = adminCalendarEvents(gridStart, gridEnd);
-  return `<div class="admin-card"><div class="admin-card-heading"><div><h2>Kalendář studia</h2><p class="admin-help">Veřejné lekce i neveřejné rezervace na jednom místě. Každá neveřejná akce automaticky blokuje dalších 15 minut před začátkem i po konci.</p></div><button class="button button-small" data-add-studio-block>+ Neveřejná rezervace</button></div><div class="calendar-toolbar admin-calendar-toolbar"><button class="button button-small button-secondary" data-admin-calendar-move="-1">← Předchozí měsíc</button><strong>${escapeHtml(calendarMonthLabel(adminCalendarMonth))}</strong><button class="button button-small button-secondary" data-admin-calendar-today>Dnes</button><button class="button button-small button-secondary" data-admin-calendar-move="1">Další měsíc →</button></div><div class="admin-month-calendar" aria-label="Měsíční kalendář studia">${adminMonthCalendar(adminCalendarMonth, events)}</div><div class="admin-calendar-agenda" aria-label="Agenda studia pro vybraný měsíc">${adminMonthAgenda(adminCalendarMonth, events)}</div><p class="calendar-legend"><span class="legend-daniela"></span> Daniela Šťastná <span class="legend-petr"></span> Petr Bena <span class="legend-private"></span> Neveřejná rezervace včetně rezervy</p></div>`;
+  return `<div class="admin-card"><div class="admin-card-heading"><div><p class="admin-help">Veřejné lekce i neveřejné rezervace na jednom místě. Každá neveřejná akce automaticky blokuje dalších 15 minut před začátkem i po konci.</p></div><button class="button button-small" data-add-studio-block>+ Neveřejná rezervace</button></div><div class="calendar-toolbar admin-calendar-toolbar"><button class="button button-small button-secondary" data-admin-calendar-move="-1">← Předchozí měsíc</button><strong>${escapeHtml(calendarMonthLabel(adminCalendarMonth))}</strong><button class="button button-small button-secondary" data-admin-calendar-today>Dnes</button><button class="button button-small button-secondary" data-admin-calendar-move="1">Další měsíc →</button></div><div class="admin-month-calendar" aria-label="Měsíční kalendář studia">${adminMonthCalendar(adminCalendarMonth, events)}</div><div class="admin-calendar-agenda" aria-label="Agenda studia pro vybraný měsíc">${adminMonthAgenda(adminCalendarMonth, events)}</div><p class="calendar-legend"><span class="legend-daniela"></span> Daniela Šťastná <span class="legend-petr"></span> Petr Bena <span class="legend-private"></span> Neveřejná rezervace včetně rezervy</p></div>`;
 }
 
 function studioBlockForm(block = null, presetStart = null) {
