@@ -1,4 +1,4 @@
-import { callRpc, supabaseConfig } from './http.ts';
+import { callRpc, instructorDisplayName, supabaseConfig } from './http.ts';
 
 type SentReservation = {
   id: string;
@@ -87,7 +87,7 @@ export async function resendPaymentEmail(original: Awaited<ReturnType<typeof sen
     response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST', headers: { 'api-key': key, accept: 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: `${reservation.lessons.instructors?.name?.split(/\s+/)[0] || 'Jóga na HALLU'}${reservation.lessons.instructors ? ' · Jóga na HALLU' : ''}`, email: senderEmail },
+        sender: { name: `${instructorDisplayName(reservation.lessons.instructors?.name).split(/\s+/)[0] || 'Jóga na HALLU'}${reservation.lessons.instructors ? ' · Jóga na HALLU' : ''}`, email: senderEmail },
         to: [{ email: recipient, name: reservation.attendee_name }], subject, htmlContent: html, tags: ['joga-na-hallu', 'payment-resend'],
       }),
       signal: AbortSignal.timeout(20000),

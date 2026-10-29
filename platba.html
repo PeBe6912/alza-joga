@@ -43,6 +43,13 @@
   </main>
   <script>
     'use strict';
+    function instructorDisplayName(value) {
+      const name = String(value || '').trim();
+      const normalized = name.toLocaleLowerCase('cs-CZ').replace(/\s+/g, ' ');
+      if (['daniela šťastná', 'daniela', 'danča'].includes(normalized)) return 'Danča';
+      if (['petr bena', 'petr'].includes(normalized)) return 'Petr';
+      return name;
+    }
     (async () => {
       const lessonId = new URLSearchParams(location.search).get('lekce');
       const share = document.querySelector('#share');
@@ -77,7 +84,7 @@
         document.querySelector('#lesson-title').textContent = lesson.title;
         const date = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'full', timeZone: 'Europe/Prague' }).format(new Date(lesson.starts_at));
         const time = new Intl.DateTimeFormat('cs-CZ', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Prague' });
-        document.querySelector('#lesson-time').textContent = `${date}\n${time.format(new Date(lesson.starts_at))}–${time.format(new Date(lesson.ends_at))}\nLektor: ${lesson.instructors.name}`;
+        document.querySelector('#lesson-time').textContent = `${date}\n${time.format(new Date(lesson.starts_at))}–${time.format(new Date(lesson.ends_at))}\nLektor: ${instructorDisplayName(lesson.instructors.name)}`;
         if (!donation && (!Number.isFinite(lesson.price_czk) || lesson.price_czk < 0)) throw new Error('INVALID_PRICE');
         document.querySelector('#amount-label').textContent = donation ? 'Doporučený příspěvek' : 'Částka k úhradě';
         document.querySelector('#amount').textContent = `${donation ? 150 : lesson.price_czk} Kč`;
@@ -86,7 +93,7 @@
         document.querySelector('#already-paid').textContent = donation ? 'Pokud jsi už přispěl/a, děkuji. Není potřeba přispívat znovu.' : 'Pokud jsi už zaplatil/a, děkuji. Není potřeba platit znovu.';
         const qr = document.querySelector('#qr');
         qr.src = qrUrl.href;
-        qr.alt = donation ? 'QR kód pro příspěvek Dobrému andělovi' : `QR kód pro platbu lekce – ${lesson.instructors.name}`;
+        qr.alt = donation ? 'QR kód pro příspěvek Dobrému andělovi' : `QR kód pro platbu lekce – ${instructorDisplayName(lesson.instructors.name)}`;
         qr.addEventListener('error', () => { status.textContent = 'QR obrázek se nepodařilo zobrazit. Použij QR kód z e-mailu.'; });
         const download = document.querySelector('#download');
         download.href = qrUrl.href;

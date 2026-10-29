@@ -4,6 +4,7 @@ import {
   corsHeaders,
   czechSalutation,
   escapeHtml,
+  instructorDisplayName,
   formatLessonDate,
   isAllowedOrigin,
   json,
@@ -70,7 +71,7 @@ Deno.serve(async (req: Request) => {
 
     const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || 'https://joga-na-hallu.pages.dev').replace(/\/$/, '');
     const cancelUrl = `${siteUrl}/?cancel=${encodeURIComponent(token)}`;
-    const teacherFirstName = reservation.teacher.trim().split(/\s+/)[0] || 'Tým';
+    const teacherFirstName = instructorDisplayName(reservation.teacher).split(/\s+/)[0] || 'Tým';
     const cancellationHours = Math.max(0, Math.round((new Date(reservation.starts_at).getTime() - new Date(reservation.cancel_before).getTime()) / 3_600_000));
     const languageLabel = reservation.language === 'en' ? 'Angličtina' : 'Čeština';
     const qrTimingCopy = reservation.payment_mode === 'donation'
@@ -85,7 +86,7 @@ Deno.serve(async (req: Request) => {
       htmlContent: `<p>${escapeHtml(czechSalutation(reservation.attendee_name))},</p>
         <p>potvrzuji tvoji rezervaci na lekci <strong>${escapeHtml(reservation.title)}</strong>.</p>
         <p><strong>${escapeHtml(formatLessonDate(reservation.starts_at))}</strong><br>
-        ${escapeHtml(reservation.location)}<br>Lektor: ${escapeHtml(reservation.teacher)}<br>
+        ${escapeHtml(reservation.location)}<br>Lektor: ${escapeHtml(instructorDisplayName(reservation.teacher))}<br>
         Jazyk: <strong>${escapeHtml(languageLabel)}</strong></p>
         <p><strong>Platba:</strong> ${escapeHtml(reservation.payment_note)}</p>
         ${reservation.payment_note.toLocaleLowerCase('cs-CZ').includes('po skončení lekce') ? '' : `<p>${escapeHtml(qrTimingCopy)}</p>`}

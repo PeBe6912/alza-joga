@@ -93,6 +93,7 @@ test('admin email history is read-only; resending is single-recipient and attend
     assert.equal(resend.data.recorded, true);
     const smtp = resend.calls.filter(c => c.url.pathname === '/v3/smtp/email');
     assert.equal(smtp.length, 1);
+    assert.equal(smtp[0].body.sender.name, 'Danča · Jóga na HALLU');
     assert.deepEqual(smtp[0].body.to, [{ email: 'original@example.invalid', name: 'Petr Bena' }]);
     assert.equal(smtp[0].body.htmlContent, html);
     assert.equal(smtp[0].body.subject, 'Původní předmět');

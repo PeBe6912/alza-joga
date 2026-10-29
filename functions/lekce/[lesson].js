@@ -1,3 +1,11 @@
+function instructorDisplayName(value) {
+  const name = String(value || '').trim();
+  const normalized = name.toLocaleLowerCase('cs-CZ').replace(/\s+/g, ' ');
+  if (['daniela šťastná', 'daniela', 'danča'].includes(normalized)) return 'Danča';
+  if (['petr bena', 'petr'].includes(normalized)) return 'Petr';
+  return name;
+}
+
 const SUPABASE_URL = 'https://zltcizbzckyazlxilzwq.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_X1KLjQkjhSe3Sl-McSQNBA_hz9d5HKR';
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
@@ -40,7 +48,7 @@ function lessonMetadata(lesson) {
   const status = lesson.status === 'cancelled' ? ' · zrušeno' : '';
   return {
     title: `${lesson.title} · Jóga na HALLU`,
-    description: `${date} · ${lesson.teacher}${language}${payment}${status}. Rezervace a podrobnosti na webu Jóga na HALLU.`,
+    description: `${date} · ${instructorDisplayName(lesson.teacher)}${language}${payment}${status}. Rezervace a podrobnosti na webu Jóga na HALLU.`,
   };
 }
 
@@ -79,7 +87,7 @@ function structuredData(lesson, canonicalUrl, imageUrl) {
     },
     organizer: {
       '@type': 'Person',
-      name: lesson.teacher,
+      name: instructorDisplayName(lesson.teacher),
       url: new URL(canonicalUrl).origin,
     },
   };
@@ -154,7 +162,7 @@ function lessonSummary(lesson) {
         <p class="eyebrow">Sdílená lekce</p>
         <h1 id="shared-lesson-title">${escapeHtml(lesson.title)}</h1>
         <p class="shared-lesson-lead">${escapeHtml(date)} · ${escapeHtml(time)}</p>
-        <p>${escapeHtml(lesson.teacher)} · ${escapeHtml(lesson.location || 'Jógová místnost, 3. patro, HALL')}</p>
+        <p>${escapeHtml(instructorDisplayName(lesson.teacher))} · ${escapeHtml(lesson.location || 'Jógová místnost, 3. patro, HALL')}</p>
         <div class="shared-lesson-tags"><span>${escapeHtml(language)}</span><span>${escapeHtml(payment)}</span></div>
       </div>
       <div class="shared-lesson-actions">

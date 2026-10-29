@@ -19,7 +19,7 @@ const context = vm.createContext({
   adminCalendarEvents: () => [], calendarMonthLabel: () => 'Říjen 2026',
   adminMonthCalendar: () => '<div>Kalendář</div>', adminMonthAgenda: () => '',
 });
-for (const name of ['lessonTable', 'adminLessonFilter', 'adminLessonTools', 'filteredAdminLessons', ...Object.keys(panels)]) {
+for (const name of ['instructorDisplayName', 'lessonTable', 'adminLessonFilter', 'adminLessonTools', 'filteredAdminLessons', ...Object.keys(panels)]) {
   vm.runInContext(extract(source, name), context);
 }
 const reservation = (id, email, status, lessonStatus, date, title = id) => ({
@@ -49,10 +49,10 @@ context.adminReservations = [reservation('cancelled', 'excluded@example.invalid'
 assert.ok(context.bookingsPanel().includes('Zatím nejsou evidováni žádní účastníci.'));
 context.adminReservations = savedRows;
 const previousSource = execFileSync('git', ['show', 'HEAD:app.js'], { encoding: 'utf8' });
-for (const name of ['settingsPanel', 'accountsPanel', 'lessonParticipantsPanel']) {
+for (const name of ['accountsPanel']) {
   assert.equal(extract(source, name).replace(/\r\n/g, '\n'), extract(previousSource, name).replace(/\r\n/g, '\n'), `${name} must remain unchanged`);
 }
-console.log('PASS counts, latest lesson, cancellation-only people, walk-ins, unchanged settings/accounts/detail');
+console.log('PASS counts, latest lesson, cancellation-only people, walk-ins and unchanged admin accounts');
 
 (async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });

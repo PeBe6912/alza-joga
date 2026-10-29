@@ -3,6 +3,7 @@ import {
   corsHeaders,
   czechSalutation,
   escapeHtml,
+  instructorDisplayName,
   isAllowedOrigin,
   json,
   sendBrevoEmail,
@@ -60,10 +61,10 @@ Deno.serve(async (req: Request) => {
     const instructor = await getInstructorContact(instructorName);
     const emailResult = await sendBrevoEmail({
       toEmail: instructor.email,
-      toName: instructor.name,
+      toName: instructorDisplayName(instructor.name),
       subject: `Poptávka soukromé lekce: ${name}`,
       htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:600px;margin:auto">
-        <p>${escapeHtml(czechSalutation(instructor.name))},</p>
+        <p>${escapeHtml(czechSalutation(instructorDisplayName(instructor.name)))},</p>
         <p>přišla ti nová poptávka soukromé lekce z webu Jóga na HALLU.</p>
         <p><strong>Jméno:</strong> ${escapeHtml(name)}<br>
         <strong>E-mail:</strong> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>${phone ? `<br><strong>Telefon:</strong> ${escapeHtml(phone)}` : ''}</p>

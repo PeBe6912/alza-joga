@@ -75,6 +75,11 @@ test('all transactional email scenarios use approved copy without live services'
     }
     for (const donation of [false, true]) {
       const r = await run('book-lesson', { lessonId: id, name: 'Petr Bena', email: 'student@example.invalid' }, { donation, anonymous: true });
+      const displayName = donation ? 'Petr' : 'Danča';
+      assert.match(r.emails[0].htmlContent, new RegExp(`Lektor: ${displayName}<br>`));
+      assert.match(r.emails[0].htmlContent, new RegExp(`<span style="display:block">${displayName}</span>`));
+      assert.equal(r.emails[0].sender.name, `${displayName} · Jóga na HALLU`);
+      assert.equal(r.emails[0].to[0].name, 'Petr Bena');
       assert.match(r.emails[0].htmlContent, /potvrzuji tvoji rezervaci/);
       assert.match(r.emails[0].htmlContent, /Individuální podmínka lektora/);
       assert.match(r.emails[0].htmlContent, /pošlu/);
@@ -90,6 +95,8 @@ test('all transactional email scenarios use approved copy without live services'
       const r = await run('manage-lesson', { action: 'payment-send', lessonId: id, feedbackRequested: true, attendance: [{ reservationId, outcome: absent ? 'no_show' : 'attended', email: 'student@example.invalid' }] }, { donation, absent, delayed });
       assert.equal(r.emails.length, 2);
       const html = r.emails[0].htmlContent;
+      assert.match(html, new RegExp(`Lektor: ${donation ? 'Petr' : 'Danča'}</p>`));
+      assert.equal(r.emails[0].sender.name, `${donation ? 'Petr' : 'Danča'} · Jóga na HALLU`);
       assert.match(html, /\/platba\?lekce=/);
       assert.match(html, donation ? /Přispět Dobrému andělovi/ : /Zaplatit lekci/);
       assert.equal(html.includes('K 26. říjnu 2026 jsme společně přispěli Dobrému andělovi'), donation);
@@ -155,6 +162,8 @@ test('all transactional email scenarios use approved copy without live services'
     }
     const contact = await run('contact-instructor', { instructorName: 'Daniela Šťastná', name: 'Petr Bena', email: 'student@example.invalid', phone: '', message: 'Text soukromé poptávky <script>TEST</script>', consent: true, openedAt: Date.now() - 5000 }, { anonymous: true });
     assert.match(contact.emails[0].htmlContent, /&lt;script&gt;/);
+    assert.match(contact.emails[0].htmlContent, /Ahoj Dančo/);
+    assert.equal(contact.emails[0].to[0].name, 'Danča');
     assert.equal(contact.emails.length, 1);
     for (const name of Object.keys(handlers)) {
       const res = await handlers[name](new Request('https://supabase.example.invalid', { method: 'GET' }));

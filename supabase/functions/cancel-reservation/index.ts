@@ -3,6 +3,7 @@ import {
   corsHeaders,
   czechSalutation,
   escapeHtml,
+  instructorDisplayName,
   formatLessonDate,
   isAllowedOrigin,
   json,
@@ -40,7 +41,7 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!cancellation.already_cancelled) {
-      const teacherFirstName = cancellation.teacher.trim().split(/\s+/)[0] || '';
+      const teacherFirstName = instructorDisplayName(cancellation.teacher).split(/\s+/)[0] || '';
       await sendBrevoEmail({
         toEmail: cancellation.attendee_email,
         toName: cancellation.attendee_name,

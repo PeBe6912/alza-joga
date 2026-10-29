@@ -5,7 +5,7 @@ const CONTENT = `# Jóga na HALLU
 ## Hlavní informace
 
 - Místo: jógová místnost, 3. patro, budova HALL
-- Lektoři: Daniela Šťastná a Petr Bena
+- Lektoři: Danča a Petr
 - Délka skupinové lekce: 60 minut
 - Kapacita skupinové lekce: maximálně 20 osob
 - Vybavení: podložky a pomůcky jsou k dispozici na místě

@@ -1,5 +1,12 @@
 const SUPABASE_URL = 'https://zltcizbzckyazlxilzwq.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_X1KLjQkjhSe3Sl-McSQNBA_hz9d5HKR';
+function instructorDisplayName(value) {
+  const name = String(value || '').trim();
+  const normalized = name.toLocaleLowerCase('cs-CZ').replace(/\s+/g, ' ');
+  if (['daniela šťastná', 'daniela', 'danča'].includes(normalized)) return 'Danča';
+  if (['petr bena', 'petr'].includes(normalized)) return 'Petr';
+  return name;
+}
 const PUBLIC_SETTING_DEFAULTS = {
   cancellation_hours: 24,
   booking_grace_minutes: 15,
@@ -331,7 +338,7 @@ function calendarEventCard(event, { admin = false } = {}) {
     : '';
   const instructorClass = event.kind === 'public' ? instructorCalendarClass(event.teacher) : '';
   const teacher = event.kind === 'public' && event.teacher
-    ? `<span class="calendar-event-teacher">${escapeHtml(event.teacher)}</span>`
+    ? `<span class="calendar-event-teacher">Lektor: ${escapeHtml(instructorDisplayName(event.teacher))}</span>`
     : '';
   return `<article class="calendar-event calendar-event-${event.kind}${instructorClass}"><strong>${escapeHtml(event.title)}</strong>${teacher}<span>${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
 }
@@ -432,7 +439,7 @@ async function shareLesson(lesson) {
   const url = lessonShareUrl(lesson);
   if (navigator.share) {
     try {
-      await navigator.share({ title: `${lesson.title} · Jóga na HALLU`, text: `${lesson.date} · ${lesson.time} · ${lesson.teacher}`, url });
+      await navigator.share({ title: `${lesson.title} · Jóga na HALLU`, text: `${lesson.date} · ${lesson.time} · ${instructorDisplayName(lesson.teacher)}`, url });
       return;
     } catch (error) {
       if (error.name === 'AbortError') return;
@@ -478,7 +485,7 @@ function calendarLessonData(item, source = 'lesson') {
     startsAt,
     endsAt,
     location: item.location || 'Jógová místnost, 3. patro, HALL',
-    description: `Lektor: ${item.teacher}\nJóga na HALLU`,
+    description: `Lektor: ${instructorDisplayName(item.teacher)}\nJóga na HALLU`,
     url: lessonUrl,
   };
 }
@@ -584,7 +591,7 @@ function renderLessons(filter = 'all') {
     const languageLabel = lesson.language === 'en' ? '<span class="language-badge">Lekce v angličtině</span>' : '';
     return `<article class="class-row">
       <div class="class-date"><strong>${lesson.day}</strong><span>${lesson.date}</span></div>
-      <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${escapeHtml(lesson.teacher)}</small><b class="class-time-compact">${escapeHtml(lesson.time)}</b><br><span>${typeLabel}</span>${languageLabel}</div>
+      <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>Lektor: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small><b class="class-time-compact">${escapeHtml(lesson.time)}</b><br><span>${typeLabel}</span>${languageLabel}</div>
       <div class="class-meta"><b>${escapeHtml(lesson.time)}</b><span>HALL · 3. patro</span><span>${escapeHtml(lesson.price)}</span></div>
       <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${attendanceLabel(lesson)}</small><a class="text-button class-share" href="${escapeHtml(lessonShareUrl(lesson))}" data-share-lesson="${lesson.id}" aria-label="Sdílet lekci ${escapeHtml(lesson.title)}">Sdílet lekci</a></div>
     </article>`;
@@ -611,7 +618,7 @@ function renderNextClass() {
     card.innerHTML = '<p>Nové termíny připravujeme.</p>';
     return;
   }
-  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)}</p><div class="spots"><span>${attendanceLabel(lesson)}</span><a href="#lekce">Rezervovat →</a></div>`;
+  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(lesson.time)} · ${escapeHtml(instructorDisplayName(lesson.teacher))}</p><div class="spots"><span>${attendanceLabel(lesson)}</span><a href="#lekce">Rezervovat →</a></div>`;
 }
 
 document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
@@ -643,7 +650,7 @@ async function openBooking(id) {
   const languageNote = lesson.language === 'en' ? '<span class="language-badge">Lekce v angličtině</span>' : '';
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="booking-form">
     <p class="eyebrow">Rezervace místa</p><h2>${escapeHtml(lesson.title)}</h2>
-    <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(lesson.teacher)}</small><br>${languageNote}</span><span>${escapeHtml(lesson.price)}</span></div>
+    <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small><br>${languageNote}</span><span>${escapeHtml(lesson.price)}</span></div>
     <p class="form-hint">Bezplatné zrušení je možné nejpozději ${settingNumber('cancellation_hours')} hodin před začátkem.</p>
     <div class="form-grid">
       ${signedIn ? '' : `<div class="field"><label for="name">Jméno a příjmení</label><input id="name" name="name" required autocomplete="name"></div>
@@ -755,7 +762,7 @@ async function loadSharedLesson(id) {
 }
 
 function showSharedLessonStatus(lesson, message) {
-  document.querySelector('#booking-content').innerHTML = `<article class="booking-panel"><p class="eyebrow">Sdílená lekce</p><h2>${escapeHtml(lesson?.title || 'Lekce nenalezena')}</h2>${lesson ? `<div class="booking-summary"><span><b>${escapeHtml(lesson.day)} ${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(lesson.teacher)}</small></span><span>${escapeHtml(lesson.price)}</span></div>` : ''}<p class="form-hint">${escapeHtml(message)}</p>${lesson ? `<button class="button" type="button" data-share-lesson="${lesson.id}">Sdílet lekci</button>` : '<a class="button" href="/#lekce">Vybrat jinou lekci</a>'}</article>`;
+  document.querySelector('#booking-content').innerHTML = `<article class="booking-panel"><p class="eyebrow">Sdílená lekce</p><h2>${escapeHtml(lesson?.title || 'Lekce nenalezena')}</h2>${lesson ? `<div class="booking-summary"><span><b>${escapeHtml(lesson.day)} ${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small></span><span>${escapeHtml(lesson.price)}</span></div>` : ''}<p class="form-hint">${escapeHtml(message)}</p>${lesson ? `<button class="button" type="button" data-share-lesson="${lesson.id}">Sdílet lekci</button>` : '<a class="button" href="/#lekce">Vybrat jinou lekci</a>'}</article>`;
   bindLessonShareButtons(document.querySelector('#booking-content'));
   dialog.showModal();
 }
@@ -899,10 +906,10 @@ function renderPublicTeachers() {
   grid.innerHTML = teachers.map((teacher, index) => {
     const photoOrientation = teacher.name.trim().toLocaleLowerCase('cs-CZ').startsWith('petr ') ? 'portrait' : 'landscape';
     return `<article class="teacher-card${index % 2 ? ' reverse' : ''}">
-    <div class="teacher-photo teacher-photo-${photoOrientation}"><img src="${escapeHtml(teacher.photo)}" alt="Lektor jógy ${escapeHtml(teacher.name)}"></div>
+    <div class="teacher-photo teacher-photo-${photoOrientation}"><img src="${escapeHtml(teacher.photo)}" alt="Lektor jógy ${escapeHtml(instructorDisplayName(teacher.name))}"></div>
     <div class="teacher-card-copy">
       <p class="teacher-kicker">${escapeHtml(teacher.styles)}</p>
-      <h3>${escapeHtml(teacher.name)}</h3>
+      <h3>${escapeHtml(instructorDisplayName(teacher.name))}</h3>
       <p>${escapeHtml(teacher.bio)}</p>
       ${teacher.quote ? `<blockquote>„${escapeHtml(teacher.quote)}“</blockquote>` : ''}
     </div>
@@ -954,7 +961,7 @@ function openNewsDetail(id) {
 function openPrivateLessonInquiry(instructorName) {
   const openedAt = Date.now();
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="private-lesson-form">
-    <p class="eyebrow">Soukromá lekce</p><h2>${escapeHtml(instructorName)}</h2>
+    <p class="eyebrow">Soukromá lekce</p><h2>${escapeHtml(instructorDisplayName(instructorName))}</h2>
     <p class="form-hint">Napiš krátce, o jakou lekci máš zájem. Zpráva přijde přímo vybranému lektorovi.</p>
     <div class="form-grid">
       <div class="field"><label for="private-name">Jméno a příjmení</label><input id="private-name" name="name" maxlength="120" autocomplete="name" required></div>
@@ -990,7 +997,7 @@ function openPrivateLessonInquiry(instructorName) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Poptávku se nepodařilo odeslat.');
       closeDialog();
-      showToast(`Poptávka byla odeslána lektorovi ${instructorName}.`);
+      showToast(`Poptávka byla odeslána lektorovi ${instructorDisplayName(instructorName)}.`);
     } catch (error) {
       button.disabled = false;
       button.textContent = 'Odeslat poptávku';
@@ -1234,7 +1241,7 @@ function accountLessonCard(reservation, upcoming) {
     ? `<button class="account-payment-qr" type="button" data-account-payment="${reservation.id}" aria-label="Zvětšit QR kód k platbě"><img src="${escapeHtml(reservation.paymentQrUrl)}" alt=""><span>${escapeHtml(paymentLabel)}</span></button>`
     : '';
   const calendarAction = upcoming && reservation.status === 'confirmed' ? calendarControls(reservation.id, 'account', true) : '';
-  return `<article class="account-lesson-card${reservation.status === 'cancelled' ? ' is-cancelled' : ''}"><div class="account-lesson-date"><strong>${escapeHtml(day)}</strong><span>${escapeHtml(month)}</span></div><div class="account-lesson-details"><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(reservation.teacher)} · ${escapeHtml(reservation.location)}</p></div><div class="account-lesson-actions"><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span>${calendarAction}${paymentQr}${canCancel ? `<button class="text-button" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</div></article>`;
+  return `<article class="account-lesson-card${reservation.status === 'cancelled' ? ' is-cancelled' : ''}"><div class="account-lesson-date"><strong>${escapeHtml(day)}</strong><span>${escapeHtml(month)}</span></div><div class="account-lesson-details"><h3>${escapeHtml(reservation.title)}</h3><p>${escapeHtml(date)}<br>${escapeHtml(instructorDisplayName(reservation.teacher))} · ${escapeHtml(reservation.location)}</p></div><div class="account-lesson-actions"><span class="status-pill${reservation.status === 'cancelled' ? ' warn' : ''}">${status}</span>${calendarAction}${paymentQr}${canCancel ? `<button class="text-button" type="button" data-account-cancel="${reservation.id}">Zrušit rezervaci</button>` : ''}</div></article>`;
 }
 
 function openAccountPaymentQr(reservationId) {
@@ -1834,13 +1841,13 @@ function lessonTable(sourceLessons = adminLessons, emptyMessage = 'Nejsou naplá
     const payment = lesson.paymentMode === 'donation' ? 'Dobrovolný příspěvek' : `${lesson.priceCzk ?? 0} Kč`;
     const weekday = new Intl.DateTimeFormat('cs-CZ', { weekday: 'long', timeZone: 'Europe/Prague' }).format(new Date(lesson.iso));
     const weekdayDate = `${weekday.charAt(0).toLocaleUpperCase('cs-CZ')}${weekday.slice(1)} ${lesson.date}`;
-    return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(weekdayDate)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">Angličtina</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(lesson.teacher)}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span>${feedbackLabel ? `<button class="feedback-lesson-state" type="button" data-payment-lesson="${lesson.id}">${escapeHtml(feedbackLabel)}</button>` : ''}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
+    return `<tr class="${cancelled ? 'is-cancelled' : ''}"><td data-label="Termín"><b>${escapeHtml(weekdayDate)}</b><br>${escapeHtml(lesson.time)}</td><td data-label="Lekce"><button class="admin-lesson-link" data-open-participants="${lesson.id}">${escapeHtml(lesson.title)}</button>${lesson.language === 'en' ? '<br><span class="language-badge">Angličtina</span>' : ''}<br><small>${escapeHtml(payment)}</small></td><td data-label="Lektor">${escapeHtml(instructorDisplayName(lesson.teacher))}</td><td data-label="Stav"><span class="status-pill${cancelled ? ' warn' : ended ? ' done' : ''}">${status}</span>${feedbackLabel ? `<button class="feedback-lesson-state" type="button" data-payment-lesson="${lesson.id}">${escapeHtml(feedbackLabel)}</button>` : ''}</td><td data-label="Obsazeno"><button class="admin-count-link" data-open-participants="${lesson.id}">${lesson.booked}/${lesson.capacity}</button>${attendanceStatus}</td><td class="lesson-actions" data-label="Akce">${actions}</td></tr>`;
   }).join('');
   return `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Termín</th><th>Lekce</th><th>Lektor</th><th>Stav</th><th>Obsazeno</th><th>Akce</th></tr></thead><tbody>${rows || `<tr><td colspan="6">${escapeHtml(emptyMessage)}</td></tr>`}</tbody></table></div>`;
 }
 
 function adminLessonFilter() {
-  const options = adminInstructors.map((teacher) => `<option value="${escapeHtml(teacher.id)}" ${adminLessonInstructorFilter === teacher.id ? 'selected' : ''}>${escapeHtml(teacher.name)}</option>`).join('');
+  const options = adminInstructors.map((teacher) => `<option value="${escapeHtml(teacher.id)}" ${adminLessonInstructorFilter === teacher.id ? 'selected' : ''}>${escapeHtml(instructorDisplayName(teacher.name))}</option>`).join('');
   return `<div class="admin-lesson-filter field"><label for="admin-lesson-instructor">Filtrovat podle lektora</label><select id="admin-lesson-instructor" data-admin-lesson-instructor><option value="all">Všichni lektoři</option>${options}</select></div>`;
 }
 
@@ -1879,12 +1886,12 @@ function feedbackPanel() {
       </div>`;
     }).join('');
     return `<article class="feedback-overview-item">
-      <div class="feedback-overview-heading"><div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(formatAdminDate(item.starts_at))} · ${escapeHtml(item.teacher)}</p></div><span class="status-pill${responses ? '' : ' done'}">${escapeHtml(responseLabel)}</span></div>
+      <div class="feedback-overview-heading"><div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(formatAdminDate(item.starts_at))} · ${escapeHtml(instructorDisplayName(item.teacher))}</p></div><span class="status-pill${responses ? '' : ' done'}">${escapeHtml(responseLabel)}</span></div>
       <div class="feedback-response-list">${responseCards}</div>
     </article>`;
   }).join('');
   const withoutResponses = feedback.filter((item) => Number(item.total || 0) === 0);
-  const emptyLessons = withoutResponses.length ? `<section class="feedback-empty-lessons"><h3>Bez odpovědi</h3><p class="admin-help">U těchto lekcí byla zpětná vazba vyžádána, ale zatím nikdo neodpověděl.</p><div>${withoutResponses.map((item) => `<p><b>${escapeHtml(item.title)}</b><span>${escapeHtml(formatAdminDate(item.starts_at))} · ${escapeHtml(item.teacher)}</span></p>`).join('')}</div></section>` : '';
+  const emptyLessons = withoutResponses.length ? `<section class="feedback-empty-lessons"><h3>Bez odpovědi</h3><p class="admin-help">U těchto lekcí byla zpětná vazba vyžádána, ale zatím nikdo neodpověděl.</p><div>${withoutResponses.map((item) => `<p><b>${escapeHtml(item.title)}</b><span>${escapeHtml(formatAdminDate(item.starts_at))} · ${escapeHtml(instructorDisplayName(item.teacher))}</span></p>`).join('')}</div></section>` : '';
   return `<div class="admin-card"><div class="admin-list-heading"><div><p class="admin-help">Anonymní hodnocení z proběhlých lekcí, u kterých byla zpětná vazba vyžádána.</p></div>${adminLessonFilter()}</div>
     <div class="feedback-overview-summary"><strong>${responseCountLabel(totals.total)}</strong><span><b>${totals.great}</b> Skvěle</span><span><b>${totals.good}</b> Dobře</span><span><b>${totals.notRight}</b> Něco mi nesedlo</span></div>
     <div class="feedback-overview-list">${cards || '<p>Tomuto filtru zatím neodpovídá žádná odeslaná zpětná vazba.</p>'}</div>
@@ -1908,7 +1915,7 @@ function completedLessonsPanel() {
 }
 
 function teachersPanel() {
-  return `<div class="admin-card">${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(teacher.name)}"><div><h3>${escapeHtml(teacher.name)}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.email || 'E-mail není nastavený')}</p><p>${escapeHtml(teacher.bio)}</p>${teacher.practice_quote ? `<blockquote>„${escapeHtml(teacher.practice_quote)}“</blockquote>` : ''}</div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
+  return `<div class="admin-card">${adminInstructors.map((teacher) => `<article class="admin-teacher"><img src="${escapeHtml(teacher.photo_url || '')}" alt="${escapeHtml(instructorDisplayName(teacher.name))}"><div><h3>${escapeHtml(instructorDisplayName(teacher.name))}</h3><p><b>${escapeHtml((teacher.styles || []).join(' · '))}</b></p><p>${escapeHtml(teacher.email || 'E-mail není nastavený')}</p><p>${escapeHtml(teacher.bio)}</p>${teacher.practice_quote ? `<blockquote>„${escapeHtml(teacher.practice_quote)}“</blockquote>` : ''}</div><button class="button button-small" data-edit-teacher="${teacher.id}">Upravit profil</button></article>`).join('')}</div>`;
 }
 
 function accountsPanel() {
@@ -1974,7 +1981,7 @@ function lessonParticipantsPanel(lessonId, returnTab) {
     const status = r.status === 'cancelled' ? 'Zrušeno' : r.late_cancelled_at && r.status === 'no_show' ? 'Pozdní storno' : r.status === 'attended' ? 'Účast potvrzena' : r.status === 'no_show' ? r.payment_waived_at ? 'Nedorazil/a · bez platby' : 'Nedorazil/a' : 'Přihlášen/a';
     return `<tr><td data-label="Jméno"><b>${escapeHtml(r.attendee_name)}</b></td><td data-label="E-mail">${escapeHtml(r.attendee_email || 'Bez e-mailu')}</td><td data-label="Stav"><span class="status-pill${r.status === 'cancelled' ? ' done' : ''}">${status}</span>${canCancel && r.status === 'confirmed' ? `<div class="participant-email-actions"><button class="button button-small button-secondary" data-cancel-reservation="${r.id}" data-lesson-id="${lesson.id}" data-return-tab="${returnTab}">Zrušit rezervaci</button></div>` : ''}</td><td data-label="Rezervace a změny"><div>Rezervováno: ${escapeHtml(timestamp(r.created_at))}</div>${r.cancelled_at || r.late_cancelled_at || r.status === 'cancelled' ? `<div>Zrušeno: ${escapeHtml(timestamp(r.cancelled_at || r.late_cancelled_at))}</div>` : ''}</td>${completed ? `<td data-label="Platební e-mail">${paymentCell(r)}</td>` : ''}</tr>`;
   }).join('') || `<tr><td colspan="${completed ? 5 : 4}">Na tuto lekci zatím není nikdo přihlášený.</td></tr>`}</tbody></table></div>`;
-  return `<div class="admin-card"><button class="text-button admin-detail-back" data-return-tab="${returnTab}">← Zpět</button><h2>${escapeHtml(lesson.title)}</h2><p class="admin-help">${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)} · ${escapeHtml(lesson.teacher)} · Přihlášeno ${lesson.booked ?? active.length}/${lesson.capacity}</p><h3>Účastníci (${active.length})</h3>${table(active)}${cancelled.length ? `<section class="cancelled-reservations"><h3>Zrušené rezervace (${cancelled.length})</h3><p class="admin-help">Pozdní storno uvolňuje místo. Pro docházku a platby zůstává evidované podle pravidel lekce.</p>${table(cancelled)}</section>` : ''}<p class="admin-help">Časy jsou uvedené v časovém pásmu Praha. U starších pozdních storen nemusí být čas zrušení evidovaný. Odeslání e-mailu neznamená potvrzení doručení ani zaplacení.</p></div>`;
+  return `<div class="admin-card"><button class="text-button admin-detail-back" data-return-tab="${returnTab}">← Zpět</button><h2>${escapeHtml(lesson.title)}</h2><p class="admin-help">${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)} · ${escapeHtml(instructorDisplayName(lesson.teacher))} · Přihlášeno ${lesson.booked ?? active.length}/${lesson.capacity}</p><h3>Účastníci (${active.length})</h3>${table(active)}${cancelled.length ? `<section class="cancelled-reservations"><h3>Zrušené rezervace (${cancelled.length})</h3><p class="admin-help">Pozdní storno uvolňuje místo. Pro docházku a platby zůstává evidované podle pravidel lekce.</p>${table(cancelled)}</section>` : ''}<p class="admin-help">Časy jsou uvedené v časovém pásmu Praha. U starších pozdních storen nemusí být čas zrušení evidovaný. Odeslání e-mailu neznamená potvrzení doručení ani zaplacení.</p></div>`;
 }
 
 function newsPanel() {
@@ -2000,7 +2007,7 @@ function donationSummarySettingsPanel() {
 
 function settingsPanel() {
   const instructorSettings = adminInstructors.map((teacher) => `<div class="settings-instructor">
-    <h4>${escapeHtml(teacher.name)}</h4>
+    <h4>${escapeHtml(instructorDisplayName(teacher.name))}</h4>
     <div class="field"><label for="setting-mode-${teacher.id}">Výchozí typ lekce</label><select id="setting-mode-${teacher.id}" name="teacherMode-${teacher.id}"><option value="paid" ${teacher.payment_mode === 'paid' ? 'selected' : ''}>Placená</option><option value="donation" ${teacher.payment_mode === 'donation' ? 'selected' : ''}>Dobrovolný příspěvek</option></select></div>
     <div class="field"><label for="setting-price-${teacher.id}">Výchozí cena v Kč</label><input id="setting-price-${teacher.id}" name="teacherPrice-${teacher.id}" type="number" min="0" max="10000" value="${teacher.price_czk ?? Number(adminSettings.default_paid_price)}" required></div>
     <div class="field"><label for="setting-paid-qr-${teacher.id}">QR pro placenou lekci</label><input id="setting-paid-qr-${teacher.id}" name="teacherPaidQr-${teacher.id}" value="${escapeHtml(teacher.paid_qr_url || '')}" placeholder="assets/qr-platba.jpg"></div>
@@ -2038,7 +2045,7 @@ function adminCalendarEvents(from, to) {
 function calendarPanel() {
   const { gridStart, gridEnd } = adminMonthRange(adminCalendarMonth);
   const events = adminCalendarEvents(gridStart, gridEnd);
-  return `<div class="admin-card"><div class="admin-card-heading"><div><p class="admin-help">Veřejné lekce i neveřejné rezervace na jednom místě. Každá neveřejná akce automaticky blokuje dalších 15 minut před začátkem i po konci.</p></div><button class="button button-small" data-add-studio-block>+ Neveřejná rezervace</button></div><div class="calendar-toolbar admin-calendar-toolbar"><button class="button button-small button-secondary" data-admin-calendar-move="-1">← Předchozí měsíc</button><strong>${escapeHtml(calendarMonthLabel(adminCalendarMonth))}</strong><button class="button button-small button-secondary" data-admin-calendar-today>Dnes</button><button class="button button-small button-secondary" data-admin-calendar-move="1">Další měsíc →</button></div><div class="admin-month-calendar" aria-label="Měsíční kalendář studia">${adminMonthCalendar(adminCalendarMonth, events)}</div><div class="admin-calendar-agenda" aria-label="Agenda studia pro vybraný měsíc">${adminMonthAgenda(adminCalendarMonth, events)}</div><p class="calendar-legend"><span class="legend-daniela"></span> Daniela Šťastná <span class="legend-petr"></span> Petr Bena <span class="legend-private"></span> Neveřejná rezervace včetně rezervy</p></div>`;
+  return `<div class="admin-card"><div class="admin-card-heading"><div><p class="admin-help">Veřejné lekce i neveřejné rezervace na jednom místě. Každá neveřejná akce automaticky blokuje dalších 15 minut před začátkem i po konci.</p></div><button class="button button-small" data-add-studio-block>+ Neveřejná rezervace</button></div><div class="calendar-toolbar admin-calendar-toolbar"><button class="button button-small button-secondary" data-admin-calendar-move="-1">← Předchozí měsíc</button><strong>${escapeHtml(calendarMonthLabel(adminCalendarMonth))}</strong><button class="button button-small button-secondary" data-admin-calendar-today>Dnes</button><button class="button button-small button-secondary" data-admin-calendar-move="1">Další měsíc →</button></div><div class="admin-month-calendar" aria-label="Měsíční kalendář studia">${adminMonthCalendar(adminCalendarMonth, events)}</div><div class="admin-calendar-agenda" aria-label="Agenda studia pro vybraný měsíc">${adminMonthAgenda(adminCalendarMonth, events)}</div><p class="calendar-legend"><span class="legend-daniela"></span> Danča <span class="legend-petr"></span> Petr <span class="legend-private"></span> Neveřejná rezervace včetně rezervy</p></div>`;
 }
 
 function studioBlockForm(block = null, presetStart = null) {
@@ -2401,9 +2408,9 @@ function openTeacherEditor(id) {
   const teacher = adminInstructors.find((item) => item.id === id);
   if (!teacher) return;
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="teacher-form">
-    <p class="eyebrow">Profil lektora</p><h2>${escapeHtml(teacher.name)}</h2>
+    <p class="eyebrow">Profil lektora</p><h2>${escapeHtml(instructorDisplayName(teacher.name))}</h2>
     <div class="form-grid">
-      <div class="field full"><label for="teacher-name">Jméno</label><input id="teacher-name" name="name" value="${escapeHtml(teacher.name)}" maxlength="120" required></div>
+      <div class="field full"><label for="teacher-name">Jméno</label><input id="teacher-name" name="name" value="${escapeHtml(instructorDisplayName(teacher.name))}" maxlength="120" required></div>
       <div class="field full"><label for="teacher-email">E-mail pro souhrny po lekci</label><input id="teacher-email" name="email" type="email" value="${escapeHtml(teacher.email || '')}" maxlength="320" required><small>Po odeslání platebních údajů dostane lektor na tuto adresu souhrn.</small></div>
       <div class="field full"><label for="teacher-styles">Styly jógy</label><input id="teacher-styles" name="styles" value="${escapeHtml((teacher.styles || []).join(', '))}" placeholder="Power, Vinyasa, Hatha"></div>
       <div class="field full"><label for="teacher-bio">Medailonek</label><textarea id="teacher-bio" name="bio" rows="7" required>${escapeHtml(teacher.bio)}</textarea></div>
@@ -2436,7 +2443,7 @@ function openTeacherEditor(id) {
         action: 'update-instructor-profile',
         instructorId: id,
         email: data.get('email').trim(),
-        name: data.get('name').trim(),
+        name: data.get('name').trim() === instructorDisplayName(teacher.name) ? teacher.name : data.get('name').trim(),
         styles: String(data.get('styles')).split(',').map((item) => item.trim()).filter(Boolean),
         bio: data.get('bio').trim(),
         practiceQuote: data.get('practiceQuote').trim(),
@@ -2584,7 +2591,7 @@ async function openPaymentEmails(lessonId) {
     </div>` : '';
     document.querySelector('#booking-content').innerHTML = `<form class="booking-panel payment-panel" id="payment-email-form">
       <p class="eyebrow">Docházka a platby</p><h2>${escapeHtml(preview.title)}</h2>
-      <p>Lektor: <b>${escapeHtml(preview.teacher)}</b> · ${escapeHtml(formatAdminDate(preview.starts_at))}</p>
+      <p>Lektor: <b>${escapeHtml(instructorDisplayName(preview.teacher))}</b> · ${escapeHtml(formatAdminDate(preview.starts_at))}</p>
       <p class="form-hint">Souhrn odeslání dostane lektor na <b>${escapeHtml(preview.instructor_email || 'nenastavený e-mail')}</b>.</p>
       <div class="payment-preview">${qrPath ? `<img src="${escapeHtml(qrPath)}" alt="${escapeHtml(paymentText)}">` : '<div class="payment-qr-missing">QR kód chybí</div>'}<div><b>${escapeHtml(paymentText)}</b><p>${escapeHtml(preview.payment_note || '')}</p>${qrPath ? '' : '<p class="attendance-note">Nejdřív doplň QR kód v profilu lektora.</p>'}</div></div>
       <div class="payment-list-heading"><b>Potvrď skutečnou účast</b><span>${unsentCount} neodeslaných plateb</span></div>
@@ -2714,7 +2721,7 @@ async function openLessonFeedback(token) {
     document.querySelector('#booking-content').innerHTML = `<form class="booking-panel lesson-feedback-form" id="lesson-feedback-form">
       <p class="eyebrow">Zpětná vazba po lekci</p>
       <h2>Jaká pro tebe lekce byla?</h2>
-      <p><b>${escapeHtml(feedback.title)}</b><br>${escapeHtml(formatAdminDate(feedback.starts_at))} · ${escapeHtml(feedback.teacher)}</p>
+      <p><b>${escapeHtml(feedback.title)}</b><br>${escapeHtml(formatAdminDate(feedback.starts_at))} · ${escapeHtml(instructorDisplayName(feedback.teacher))}</p>
       ${feedback.submitted ? '<p class="feedback-saved-note">Odpověď už je uložená. Můžeš ji zde upravit.</p>' : ''}
       <fieldset class="feedback-rating"><legend>Celkově</legend>
         <label><input type="radio" name="rating" value="great" ${feedback.rating === 'great' ? 'checked' : ''} required><span>Skvěle</span></label>
@@ -2775,7 +2782,7 @@ function openNewLesson() {
   const earliestStart = new Date();
   earliestStart.setSeconds(0, 0);
   earliestStart.setMinutes(earliestStart.getMinutes() + 1);
-  const instructorOptions = adminInstructors.map((instructor) => `<option value="${instructor.id}">${escapeHtml(instructor.name)}</option>`).join('');
+  const instructorOptions = adminInstructors.map((instructor) => `<option value="${instructor.id}">${escapeHtml(instructorDisplayName(instructor.name))}</option>`).join('');
   const initialPaymentMode = adminInstructors[0].payment_mode === 'donation' ? 'donation' : 'paid';
   const initialPrice = adminInstructors[0].price_czk ?? Number(adminSettings.default_paid_price);
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="new-lesson-form">
@@ -2875,7 +2882,7 @@ async function createLessons(event) {
 function openLessonEditor(id) {
   const lesson = adminLessons.find((item) => item.id === id);
   if (!lesson) return;
-  const instructorOptions = adminInstructors.map((instructor) => `<option value="${instructor.id}" ${instructor.id === lesson.instructorId ? 'selected' : ''}>${escapeHtml(instructor.name)}</option>`).join('');
+  const instructorOptions = adminInstructors.map((instructor) => `<option value="${instructor.id}" ${instructor.id === lesson.instructorId ? 'selected' : ''}>${escapeHtml(instructorDisplayName(instructor.name))}</option>`).join('');
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="lesson-edit-form">
     <p class="eyebrow">Úprava lekce</p><h2>Upravit vypsanou lekci</h2>
     <div class="form-grid">

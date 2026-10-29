@@ -1,3 +1,11 @@
+export function instructorDisplayName(value?: string | null): string {
+  const name = String(value || '').trim();
+  const normalized = name.toLocaleLowerCase('cs-CZ').replace(/\s+/g, ' ');
+  if (['daniela šťastná', 'daniela', 'danča'].includes(normalized)) return 'Danča';
+  if (['petr bena', 'petr'].includes(normalized)) return 'Petr';
+  return name;
+}
+
 const allowedOrigins = new Set([
   'http://127.0.0.1:3000',
   'http://127.0.0.1:4173',
@@ -90,7 +98,7 @@ export function escapeHtml(value: unknown): string {
 
 const CZECH_VOCATIVES: Record<string, string> = {
   adam: 'Adame', ales: 'Aleši', 'aleš': 'Aleši', aneta: 'Aneto', anna: 'Anno', barbora: 'Barboro',
-  daniela: 'Danielo', david: 'Davide', dominik: 'Dominiku', dominika: 'Dominiko', eliska: 'Eliško', 'eliška': 'Eliško',
+  daniela: 'Danielo', 'danča': 'Dančo', danca: 'Dančo', david: 'Davide', dominik: 'Dominiku', dominika: 'Dominiko', eliska: 'Eliško', 'eliška': 'Eliško',
   eva: 'Evo', filip: 'Filipe', frantisek: 'Františku', 'františek': 'Františku', hana: 'Hano', jakub: 'Jakube',
   jan: 'Jane', jana: 'Jano', jaroslav: 'Jaroslave', jiri: 'Jiří', 'jiří': 'Jiří', jitka: 'Jitko', josef: 'Josefe',
   karel: 'Karle', karolina: 'Karolíno', 'karolína': 'Karolíno', katerina: 'Kateřino', 'kateřina': 'Kateřino',

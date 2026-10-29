@@ -2,6 +2,7 @@ import {
   callRpc,
   czechSalutation,
   escapeHtml,
+  instructorDisplayName,
   formatLessonDate,
   isAllowedOrigin,
   sendBrevoEmail,
@@ -188,7 +189,7 @@ async function adminDisplayName(adminUser: AdminUser): Promise<string> {
 }
 
 function formalAdminGreeting(displayName: string): string {
-  const informalGreeting = czechSalutation(displayName);
+  const informalGreeting = czechSalutation(instructorDisplayName(displayName));
   return informalGreeting.startsWith('Ahoj ') ? `Dobrý den, ${informalGreeting.slice(5)}` : 'Dobrý den';
 }
 
@@ -329,7 +330,7 @@ Deno.serve(async (req: Request) => {
       const cancellation = await callRpc<AdminReservationCancellation>('admin_cancel_reservation', {
         p_reservation_id: reservationId,
       });
-      const teacherFirstName = cancellation.teacher.trim().split(/\s+/)[0] || 'Tým';
+      const teacherFirstName = instructorDisplayName(cancellation.teacher).split(/\s+/)[0] || 'Tým';
       const cancellationCopy = cancellation.late_cancellation
         ? `<p>potvrzuji pozdní zrušení tvé rezervace na lekci <strong>${escapeHtml(cancellation.title)}</strong>.</p>
           <p>QR kód pro platbu nebo dobrovolný příspěvek ti pošlu e-mailem po skončení lekce.</p>`
@@ -485,7 +486,7 @@ Deno.serve(async (req: Request) => {
         p_feedback_requested: feedbackRequested,
       });
 
-      const teacherFirstName = batch.teacher.trim().split(/\s+/)[0] || 'Tým';
+      const teacherFirstName = instructorDisplayName(batch.teacher).split(/\s+/)[0] || 'Tým';
       const senderName = `${teacherFirstName} · Jóga na HALLU`;
       const donation = batch.payment_mode === 'donation';
       const participantsToEmail = batch.participants.filter((participant) => (
@@ -528,12 +529,12 @@ Deno.serve(async (req: Request) => {
           htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:560px;margin:auto">
             <p>${escapeHtml(czechSalutation(participant.name))},</p>
             ${attendanceCopy}
-            <p style="padding:18px 20px;background:#f5f1e9;border-left:3px solid #b87854"><strong>${escapeHtml(batch.title)}</strong><br>${escapeHtml(formatLessonDate(batch.starts_at))}<br>Lektor: ${escapeHtml(batch.teacher)}</p>
+            <p style="padding:18px 20px;background:#f5f1e9;border-left:3px solid #b87854"><strong>${escapeHtml(batch.title)}</strong><br>${escapeHtml(formatLessonDate(batch.starts_at))}<br>Lektor: ${escapeHtml(instructorDisplayName(batch.teacher))}</p>
             <p>${escapeHtml(paymentCopy)}</p>
             ${donation && donationSummary ? `<p><strong>${escapeHtml(donationSummary)} Děkuji, že pomáháš.</strong></p>` : ''}
             <p style="margin:26px 0 12px"><a href="${escapeHtml(paymentUrl)}" style="display:block;padding:15px 22px;border-radius:28px;background:#3e5648;color:#fff;text-align:center;text-decoration:none;font-weight:700">${donation ? 'Přispět Dobrému andělovi' : 'Zaplatit lekci'}</a></p>
             <p style="font-size:14px;color:#66706b">Na mobilu můžeš QR sdílet do podporované bankovní aplikace nebo si ho uložit.</p>
-            <p style="text-align:center;margin:28px 0"><a href="${qrUrl}"><img src="${qrUrl}" width="280" alt="${donation ? 'QR kód pro dobrovolný příspěvek' : `QR kód pro platbu ${batch.price_czk ?? 0} Kč – ${escapeHtml(batch.teacher)}`}" style="max-width:100%;height:auto;border:0"></a></p>
+            <p style="text-align:center;margin:28px 0"><a href="${qrUrl}"><img src="${qrUrl}" width="280" alt="${donation ? 'QR kód pro dobrovolný příspěvek' : `QR kód pro platbu ${batch.price_czk ?? 0} Kč – ${escapeHtml(instructorDisplayName(batch.teacher))}`}" style="max-width:100%;height:auto;border:0"></a></p>
             <p style="font-size:13px;color:#66706b">Pokud se obrázek v e-mailu nezobrazí, <a href="${qrUrl}">otevři QR kód v prohlížeči</a>.</p>
             <p style="font-size:14px;color:#66706b">Platíš z počítače? QR kód načti telefonem.<br>Pokud jsi už ${donation ? 'přispěl/a' : 'zaplatil/a'}, nemusíš nic dalšího dělat.</p>
             ${feedbackCopy}
@@ -560,7 +561,7 @@ Deno.serve(async (req: Request) => {
       }).join('');
       const summaryResult = participantsToEmail.length ? await sendBrevoEmail({
         toEmail: batch.instructor_email || '',
-        toName: batch.teacher,
+        toName: instructorDisplayName(batch.teacher),
         subject: `Souhrn platebních e-mailů: ${batch.title}`,
         senderName,
         htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:640px;margin:auto">
@@ -672,15 +673,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const teacherFirstName = change.teacher.trim().split(/\s+/)[0] || 'Tým';
+    const teacherFirstName = instructorDisplayName(change.teacher).split(/\s+/)[0] || 'Tým';
     const results = await Promise.all(change.participants.map((participant) => {
       const rescheduled = change.action === 'reschedule';
       const updated = change.action === 'update';
       const paymentLabel = (mode?: 'paid' | 'donation', price?: number | null) => mode === 'donation' ? 'dobrovolný příspěvek' : `${price ?? 0} Kč`;
       const details = updated
-        ? `<p><strong>Původně:</strong> ${escapeHtml(change.old_title || change.title)} · ${escapeHtml(change.old_teacher || change.teacher)}<br>
+        ? `<p><strong>Původně:</strong> ${escapeHtml(change.old_title || change.title)} · ${escapeHtml(instructorDisplayName(change.old_teacher || change.teacher))}<br>
           ${escapeHtml(formatLessonDate(change.old_starts_at))} · ${escapeHtml(change.old_language === 'en' ? 'anglicky' : 'česky')} · ${escapeHtml(paymentLabel(change.old_payment_mode, change.old_price_czk))}</p>
-          <p><strong>Nově:</strong> ${escapeHtml(change.title)} · ${escapeHtml(change.teacher)}<br>
+          <p><strong>Nově:</strong> ${escapeHtml(change.title)} · ${escapeHtml(instructorDisplayName(change.teacher))}<br>
           ${escapeHtml(formatLessonDate(change.new_starts_at))} · ${escapeHtml(change.new_language === 'en' ? 'anglicky' : 'česky')} · ${escapeHtml(paymentLabel(change.new_payment_mode, change.new_price_czk))}</p>`
         : rescheduled
         ? `<p>Původní termín: <s>${escapeHtml(formatLessonDate(change.old_starts_at))}</s><br>
