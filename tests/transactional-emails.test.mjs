@@ -145,6 +145,10 @@ test('all transactional email scenarios use approved copy without live services'
       const r = await run('manage-lesson', { action, lessonId: id, instructorId: id, title: 'Ranní flow', startsAt: '2026-10-27T08:00:00Z', endsAt: '2026-10-27T09:00:00Z', capacity: 20, language: 'cs', paymentMode: 'paid', priceCzk: 150, minimumAttendance: 5 });
       assert.equal(r.emails.length, 1);
       assert.match(r.emails[0].htmlContent, action === 'cancel' ? /Omlouvám se/ : /Těším se/);
+      if (action === 'update') {
+        assert.match(r.emails[0].htmlContent, /Původně:<\/strong>[^<]+<br>\s*[^<]+<br>Lektor: Petr<br>/);
+        assert.match(r.emails[0].htmlContent, /Nově:<\/strong>[^<]+<br>\s*[^<]+<br>Lektorka: Danča<br>/);
+      }
     }
     for (const existing of [false, true]) {
       const r = await run('account', { action: 'register', fullName: 'Petr Bena', email: 'student@example.invalid', password: 'test-password-long' }, { anonymous: true, existing });

@@ -679,10 +679,12 @@ Deno.serve(async (req: Request) => {
       const updated = change.action === 'update';
       const paymentLabel = (mode?: 'paid' | 'donation', price?: number | null) => mode === 'donation' ? 'dobrovolný příspěvek' : `${price ?? 0} Kč`;
       const details = updated
-        ? `<p><strong>Původně:</strong> ${escapeHtml(change.old_title || change.title)} · ${escapeHtml(instructorDisplayName(change.old_teacher || change.teacher))}<br>
-          ${escapeHtml(formatLessonDate(change.old_starts_at))} · ${escapeHtml(change.old_language === 'en' ? 'anglicky' : 'česky')} · ${escapeHtml(paymentLabel(change.old_payment_mode, change.old_price_czk))}</p>
-          <p><strong>Nově:</strong> ${escapeHtml(change.title)} · ${escapeHtml(instructorDisplayName(change.teacher))}<br>
-          ${escapeHtml(formatLessonDate(change.new_starts_at))} · ${escapeHtml(change.new_language === 'en' ? 'anglicky' : 'česky')} · ${escapeHtml(paymentLabel(change.new_payment_mode, change.new_price_czk))}</p>`
+        ? `<p><strong>Původně:</strong> ${escapeHtml(change.old_title || change.title)}<br>
+          ${escapeHtml(formatLessonDate(change.old_starts_at))}<br>${instructorDisplayName(change.old_teacher || change.teacher) === 'Danča' ? 'Lektorka' : 'Lektor'}: ${escapeHtml(instructorDisplayName(change.old_teacher || change.teacher))}<br>
+          ${escapeHtml(change.old_language === 'en' ? 'anglicky' : 'česky')} · ${escapeHtml(paymentLabel(change.old_payment_mode, change.old_price_czk))}</p>
+          <p><strong>Nově:</strong> ${escapeHtml(change.title)}<br>
+          ${escapeHtml(formatLessonDate(change.new_starts_at))}<br>${teacherFirstName === 'Danča' ? 'Lektorka' : 'Lektor'}: ${escapeHtml(instructorDisplayName(change.teacher))}<br>
+          ${escapeHtml(change.new_language === 'en' ? 'anglicky' : 'česky')} · ${escapeHtml(paymentLabel(change.new_payment_mode, change.new_price_czk))}</p>`
         : rescheduled
         ? `<p>Původní termín: <s>${escapeHtml(formatLessonDate(change.old_starts_at))}</s><br>
           Nový termín: <strong>${escapeHtml(formatLessonDate(change.new_starts_at))}</strong></p>`

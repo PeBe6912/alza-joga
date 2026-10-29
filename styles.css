@@ -73,7 +73,7 @@ dialog{border:0;border-radius:12px;padding:0;width:min(560px,calc(100% - 30px));
 .class-action small{text-align:center}
 .class-action .class-share{display:flex;justify-content:center;width:max-content;margin:7px auto 0;padding:0;color:var(--sage-dark);font-size:12px;font-weight:600;text-align:center;text-decoration:underline;text-underline-offset:3px}
 .booking-share{display:flex;margin:14px auto 0;color:var(--sage-dark);font-weight:600;text-decoration:underline;text-underline-offset:3px}
-.class-time-compact{display:none}
+.class-time-compact{display:block;margin-top:7px;color:var(--ink);font-size:14px}
 .class-list-more{display:flex;justify-content:center;padding:28px 0 4px}
 .class-list-empty{padding:28px 8px;color:var(--muted);border-bottom:1px solid var(--line)}
 @media(max-width:900px){.class-time-compact{display:block;margin-top:7px;color:var(--ink);font-size:14px}}

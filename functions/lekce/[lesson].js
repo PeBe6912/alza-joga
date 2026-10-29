@@ -162,7 +162,7 @@ function lessonSummary(lesson) {
         <p class="eyebrow">Sdílená lekce</p>
         <h1 id="shared-lesson-title">${escapeHtml(lesson.title)}</h1>
         <p class="shared-lesson-lead">${escapeHtml(date)} · ${escapeHtml(time)}</p>
-        <p>${escapeHtml(instructorDisplayName(lesson.teacher))} · ${escapeHtml(lesson.location || 'Jógová místnost, 3. patro, HALL')}</p>
+        <p>${instructorDisplayName(lesson.teacher) === 'Danča' ? 'Lektorka' : 'Lektor'}: ${escapeHtml(instructorDisplayName(lesson.teacher))}<br>${escapeHtml(lesson.location || 'Jógová místnost, 3. patro, HALL')}</p>
         <div class="shared-lesson-tags"><span>${escapeHtml(language)}</span><span>${escapeHtml(payment)}</span></div>
       </div>
       <div class="shared-lesson-actions">

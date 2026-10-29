@@ -43,17 +43,26 @@ const id = '11111111-1111-4111-8111-111111111111';
       assert.deepEqual(await page.locator('#teachers-grid h3').allTextContents(), ['Danča', 'Petr']);
       await page.addScriptTag({ content: `const classList=document.createElement('div');classList.className='class-list';document.body.append(classList);const LESSON_PAGE_SIZE=6;let lessonDisplayLimit=6;let lessons=teachers.map((teacher,index)=>({id:String(index),title:'Ranní flow',teacher:teacher.name,type:'paid',day:'Po',date:'2. 11.',time:'7:45–8:45',price:'150 Kč',capacity:16,booked:1}));function spotsLeft(){return 15}function attendanceLabel(){return 'Přihlášeno 1 / 16'}function lessonShareUrl(){return '#lekce'}function bindLessonShareButtons(){}function openBooking(){}${extract(source, 'renderLessons')}\nrenderLessons();` });
       assert.deepEqual(await page.locator('.class-teacher small').allTextContents(), ['Lektorka: Danča', 'Lektor: Petr']);
+      for (const row of await page.locator('.class-teacher').all()) {
+        assert.equal(await row.locator('.class-time-compact').isVisible(), true);
+        const time = await row.locator('.class-time-compact').boundingBox();
+        const teacher = await row.locator('small').boundingBox();
+        assert.ok(teacher.y >= time.y + time.height, 'Lesson time must precede instructor');
+      }
+      assert.equal(await page.locator('.class-meta b').count(), 0);
       assert.deepEqual(await page.locator('.calendar-event-teacher').allTextContents(), ['Lektorka: Danča', 'Lektor: Petr']);
       await page.addScriptTag({ content: `const nextCard=document.createElement('div');nextCard.id='next-class-card';document.body.append(nextCard);${extract(source, 'renderNextClass')}\nrenderNextClass();` });
-      assert.equal(await page.locator('#next-class-card p').innerText(), 'Lektorka: Danča\n7:45–8:45');
+      assert.equal(await page.locator('#next-class-card p').innerText(), '7:45–8:45\nLektorka: Danča');
       await page.evaluate(() => { lessons.reverse(); renderNextClass(); });
-      assert.equal(await page.locator('#next-class-card p').innerText(), 'Lektor: Petr\n7:45–8:45');
+      assert.equal(await page.locator('#next-class-card p').innerText(), '7:45–8:45\nLektor: Petr');
       assert.equal(await page.locator('.calendar-instructor-daniela').count(), 1);
       assert.equal(await page.locator('.calendar-instructor-petr').count(), 1);
       for (const event of await page.locator('.calendar-event').all()) {
         const title = await event.locator('strong').boundingBox();
         const teacher = await event.locator('.calendar-event-teacher').boundingBox();
-        assert.ok(teacher.y >= title.y + title.height);
+        const time = await event.locator('.calendar-event-time').boundingBox();
+        assert.ok(time.y >= title.y + title.height);
+        assert.ok(teacher.y >= time.y + time.height);
       }
       await page.evaluate(() => openTeacherEditor('teacher'));
       assert.equal(await page.locator('#teacher-name').inputValue(), 'Danča');
