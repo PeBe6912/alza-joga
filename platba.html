@@ -84,7 +84,7 @@
         document.querySelector('#lesson-title').textContent = lesson.title;
         const date = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'full', timeZone: 'Europe/Prague' }).format(new Date(lesson.starts_at));
         const time = new Intl.DateTimeFormat('cs-CZ', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Prague' });
-        document.querySelector('#lesson-time').textContent = `${date}\n${time.format(new Date(lesson.starts_at))}–${time.format(new Date(lesson.ends_at))}\nLektor: ${instructorDisplayName(lesson.instructors.name)}`;
+        document.querySelector('#lesson-time').textContent = `${date}\n${time.format(new Date(lesson.starts_at))}–${time.format(new Date(lesson.ends_at))}\n${instructorDisplayName(lesson.instructors.name) === 'Danča' ? 'Lektorka' : 'Lektor'}: ${instructorDisplayName(lesson.instructors.name)}`;
         if (!donation && (!Number.isFinite(lesson.price_czk) || lesson.price_czk < 0)) throw new Error('INVALID_PRICE');
         document.querySelector('#amount-label').textContent = donation ? 'Doporučený příspěvek' : 'Částka k úhradě';
         document.querySelector('#amount').textContent = `${donation ? 150 : lesson.price_czk} Kč`;

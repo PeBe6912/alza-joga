@@ -76,7 +76,7 @@ test('all transactional email scenarios use approved copy without live services'
     for (const donation of [false, true]) {
       const r = await run('book-lesson', { lessonId: id, name: 'Petr Bena', email: 'student@example.invalid' }, { donation, anonymous: true });
       const displayName = donation ? 'Petr' : 'Danča';
-      assert.match(r.emails[0].htmlContent, new RegExp(`Lektor: ${displayName}<br>`));
+      assert.match(r.emails[0].htmlContent, new RegExp(`${donation ? 'Lektor' : 'Lektorka'}: ${displayName}<br>`));
       assert.match(r.emails[0].htmlContent, new RegExp(`<span style="display:block">${displayName}</span>`));
       assert.equal(r.emails[0].sender.name, `${displayName} · Jóga na HALLU`);
       assert.equal(r.emails[0].to[0].name, 'Petr Bena');
@@ -95,7 +95,7 @@ test('all transactional email scenarios use approved copy without live services'
       const r = await run('manage-lesson', { action: 'payment-send', lessonId: id, feedbackRequested: true, attendance: [{ reservationId, outcome: absent ? 'no_show' : 'attended', email: 'student@example.invalid' }] }, { donation, absent, delayed });
       assert.equal(r.emails.length, 2);
       const html = r.emails[0].htmlContent;
-      assert.match(html, new RegExp(`Lektor: ${donation ? 'Petr' : 'Danča'}</p>`));
+      assert.match(html, new RegExp(`${donation ? 'Lektor: Petr' : 'Lektorka: Danča'}</p>`));
       assert.equal(r.emails[0].sender.name, `${donation ? 'Petr' : 'Danča'} · Jóga na HALLU`);
       assert.match(html, /\/platba\?lekce=/);
       assert.match(html, donation ? /Přispět Dobrému andělovi/ : /Zaplatit lekci/);

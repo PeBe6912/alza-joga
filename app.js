@@ -7,6 +7,10 @@ function instructorDisplayName(value) {
   if (['petr bena', 'petr'].includes(normalized)) return 'Petr';
   return name;
 }
+function instructorRole(value) {
+  return instructorDisplayName(value) === 'Danča' ? 'Lektorka' : 'Lektor';
+}
+
 const PUBLIC_SETTING_DEFAULTS = {
   cancellation_hours: 24,
   booking_grace_minutes: 15,
@@ -338,7 +342,7 @@ function calendarEventCard(event, { admin = false } = {}) {
     : '';
   const instructorClass = event.kind === 'public' ? instructorCalendarClass(event.teacher) : '';
   const teacher = event.kind === 'public' && event.teacher
-    ? `<span class="calendar-event-teacher">Lektor: ${escapeHtml(instructorDisplayName(event.teacher))}</span>`
+    ? `<span class="calendar-event-teacher">${instructorRole(event.teacher)}: ${escapeHtml(instructorDisplayName(event.teacher))}</span>`
     : '';
   return `<article class="calendar-event calendar-event-${event.kind}${instructorClass}"><strong>${escapeHtml(event.title)}</strong>${teacher}<span>${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
 }
@@ -485,7 +489,7 @@ function calendarLessonData(item, source = 'lesson') {
     startsAt,
     endsAt,
     location: item.location || 'Jógová místnost, 3. patro, HALL',
-    description: `Lektor: ${instructorDisplayName(item.teacher)}\nJóga na HALLU`,
+    description: `${instructorRole(item.teacher)}: ${instructorDisplayName(item.teacher)}\nJóga na HALLU`,
     url: lessonUrl,
   };
 }
@@ -591,7 +595,7 @@ function renderLessons(filter = 'all') {
     const languageLabel = lesson.language === 'en' ? '<span class="language-badge">Lekce v angličtině</span>' : '';
     return `<article class="class-row">
       <div class="class-date"><strong>${lesson.day}</strong><span>${lesson.date}</span></div>
-      <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>Lektor: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small><b class="class-time-compact">${escapeHtml(lesson.time)}</b><br><span>${typeLabel}</span>${languageLabel}</div>
+      <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><small>${instructorRole(lesson.teacher)}: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small><b class="class-time-compact">${escapeHtml(lesson.time)}</b><br><span>${typeLabel}</span>${languageLabel}</div>
       <div class="class-meta"><b>${escapeHtml(lesson.time)}</b><span>HALL · 3. patro</span><span>${escapeHtml(lesson.price)}</span></div>
       <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${attendanceLabel(lesson)}</small><a class="text-button class-share" href="${escapeHtml(lessonShareUrl(lesson))}" data-share-lesson="${lesson.id}" aria-label="Sdílet lekci ${escapeHtml(lesson.title)}">Sdílet lekci</a></div>
     </article>`;
@@ -618,7 +622,7 @@ function renderNextClass() {
     card.innerHTML = '<p>Nové termíny připravujeme.</p>';
     return;
   }
-  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(lesson.time)} · ${escapeHtml(instructorDisplayName(lesson.teacher))}</p><div class="spots"><span>${attendanceLabel(lesson)}</span><a href="#lekce">Rezervovat →</a></div>`;
+  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p>${instructorRole(lesson.teacher)}: ${escapeHtml(instructorDisplayName(lesson.teacher))}<br>${escapeHtml(lesson.time)}</p><div class="spots"><span>${attendanceLabel(lesson)}</span><a href="#lekce">Rezervovat →</a></div>`;
 }
 
 document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
@@ -650,7 +654,7 @@ async function openBooking(id) {
   const languageNote = lesson.language === 'en' ? '<span class="language-badge">Lekce v angličtině</span>' : '';
   document.querySelector('#booking-content').innerHTML = `<form class="booking-panel" id="booking-form">
     <p class="eyebrow">Rezervace místa</p><h2>${escapeHtml(lesson.title)}</h2>
-    <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small><br>${languageNote}</span><span>${escapeHtml(lesson.price)}</span></div>
+    <div class="booking-summary"><span><b>${lesson.day} ${lesson.date}</b><br>${escapeHtml(lesson.time)}<br><small>${instructorRole(lesson.teacher)}: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small><br>${languageNote}</span><span>${escapeHtml(lesson.price)}</span></div>
     <p class="form-hint">Bezplatné zrušení je možné nejpozději ${settingNumber('cancellation_hours')} hodin před začátkem.</p>
     <div class="form-grid">
       ${signedIn ? '' : `<div class="field"><label for="name">Jméno a příjmení</label><input id="name" name="name" required autocomplete="name"></div>
@@ -762,7 +766,7 @@ async function loadSharedLesson(id) {
 }
 
 function showSharedLessonStatus(lesson, message) {
-  document.querySelector('#booking-content').innerHTML = `<article class="booking-panel"><p class="eyebrow">Sdílená lekce</p><h2>${escapeHtml(lesson?.title || 'Lekce nenalezena')}</h2>${lesson ? `<div class="booking-summary"><span><b>${escapeHtml(lesson.day)} ${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}<br><small>S lektorem: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small></span><span>${escapeHtml(lesson.price)}</span></div>` : ''}<p class="form-hint">${escapeHtml(message)}</p>${lesson ? `<button class="button" type="button" data-share-lesson="${lesson.id}">Sdílet lekci</button>` : '<a class="button" href="/#lekce">Vybrat jinou lekci</a>'}</article>`;
+  document.querySelector('#booking-content').innerHTML = `<article class="booking-panel"><p class="eyebrow">Sdílená lekce</p><h2>${escapeHtml(lesson?.title || 'Lekce nenalezena')}</h2>${lesson ? `<div class="booking-summary"><span><b>${escapeHtml(lesson.day)} ${escapeHtml(lesson.date)}</b><br>${escapeHtml(lesson.time)}<br><small>${instructorRole(lesson.teacher)}: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small></span><span>${escapeHtml(lesson.price)}</span></div>` : ''}<p class="form-hint">${escapeHtml(message)}</p>${lesson ? `<button class="button" type="button" data-share-lesson="${lesson.id}">Sdílet lekci</button>` : '<a class="button" href="/#lekce">Vybrat jinou lekci</a>'}</article>`;
   bindLessonShareButtons(document.querySelector('#booking-content'));
   dialog.showModal();
 }
@@ -906,7 +910,7 @@ function renderPublicTeachers() {
   grid.innerHTML = teachers.map((teacher, index) => {
     const photoOrientation = teacher.name.trim().toLocaleLowerCase('cs-CZ').startsWith('petr ') ? 'portrait' : 'landscape';
     return `<article class="teacher-card${index % 2 ? ' reverse' : ''}">
-    <div class="teacher-photo teacher-photo-${photoOrientation}"><img src="${escapeHtml(teacher.photo)}" alt="Lektor jógy ${escapeHtml(instructorDisplayName(teacher.name))}"></div>
+    <div class="teacher-photo teacher-photo-${photoOrientation}"><img src="${escapeHtml(teacher.photo)}" alt="${instructorRole(teacher.name)} jógy ${escapeHtml(instructorDisplayName(teacher.name))}"></div>
     <div class="teacher-card-copy">
       <p class="teacher-kicker">${escapeHtml(teacher.styles)}</p>
       <h3>${escapeHtml(instructorDisplayName(teacher.name))}</h3>
@@ -2591,7 +2595,7 @@ async function openPaymentEmails(lessonId) {
     </div>` : '';
     document.querySelector('#booking-content').innerHTML = `<form class="booking-panel payment-panel" id="payment-email-form">
       <p class="eyebrow">Docházka a platby</p><h2>${escapeHtml(preview.title)}</h2>
-      <p>Lektor: <b>${escapeHtml(instructorDisplayName(preview.teacher))}</b> · ${escapeHtml(formatAdminDate(preview.starts_at))}</p>
+      <p>${instructorRole(preview.teacher)}: <b>${escapeHtml(instructorDisplayName(preview.teacher))}</b> · ${escapeHtml(formatAdminDate(preview.starts_at))}</p>
       <p class="form-hint">Souhrn odeslání dostane lektor na <b>${escapeHtml(preview.instructor_email || 'nenastavený e-mail')}</b>.</p>
       <div class="payment-preview">${qrPath ? `<img src="${escapeHtml(qrPath)}" alt="${escapeHtml(paymentText)}">` : '<div class="payment-qr-missing">QR kód chybí</div>'}<div><b>${escapeHtml(paymentText)}</b><p>${escapeHtml(preview.payment_note || '')}</p>${qrPath ? '' : '<p class="attendance-note">Nejdřív doplň QR kód v profilu lektora.</p>'}</div></div>
       <div class="payment-list-heading"><b>Potvrď skutečnou účast</b><span>${unsentCount} neodeslaných plateb</span></div>

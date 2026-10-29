@@ -529,7 +529,7 @@ Deno.serve(async (req: Request) => {
           htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:560px;margin:auto">
             <p>${escapeHtml(czechSalutation(participant.name))},</p>
             ${attendanceCopy}
-            <p style="padding:18px 20px;background:#f5f1e9;border-left:3px solid #b87854"><strong>${escapeHtml(batch.title)}</strong><br>${escapeHtml(formatLessonDate(batch.starts_at))}<br>Lektor: ${escapeHtml(instructorDisplayName(batch.teacher))}</p>
+            <p style="padding:18px 20px;background:#f5f1e9;border-left:3px solid #b87854"><strong>${escapeHtml(batch.title)}</strong><br>${escapeHtml(formatLessonDate(batch.starts_at))}<br>${teacherFirstName === 'Danča' ? 'Lektorka' : 'Lektor'}: ${escapeHtml(instructorDisplayName(batch.teacher))}</p>
             <p>${escapeHtml(paymentCopy)}</p>
             ${donation && donationSummary ? `<p><strong>${escapeHtml(donationSummary)} Děkuji, že pomáháš.</strong></p>` : ''}
             <p style="margin:26px 0 12px"><a href="${escapeHtml(paymentUrl)}" style="display:block;padding:15px 22px;border-radius:28px;background:#3e5648;color:#fff;text-align:center;text-decoration:none;font-weight:700">${donation ? 'Přispět Dobrému andělovi' : 'Zaplatit lekci'}</a></p>

@@ -86,7 +86,7 @@ Deno.serve(async (req: Request) => {
       htmlContent: `<p>${escapeHtml(czechSalutation(reservation.attendee_name))},</p>
         <p>potvrzuji tvoji rezervaci na lekci <strong>${escapeHtml(reservation.title)}</strong>.</p>
         <p><strong>${escapeHtml(formatLessonDate(reservation.starts_at))}</strong><br>
-        ${escapeHtml(reservation.location)}<br>Lektor: ${escapeHtml(instructorDisplayName(reservation.teacher))}<br>
+        ${escapeHtml(reservation.location)}<br>${teacherFirstName === 'Danča' ? 'Lektorka' : 'Lektor'}: ${escapeHtml(instructorDisplayName(reservation.teacher))}<br>
         Jazyk: <strong>${escapeHtml(languageLabel)}</strong></p>
         <p><strong>Platba:</strong> ${escapeHtml(reservation.payment_note)}</p>
         ${reservation.payment_note.toLocaleLowerCase('cs-CZ').includes('po skončení lekce') ? '' : `<p>${escapeHtml(qrTimingCopy)}</p>`}
