@@ -5,6 +5,7 @@ const ALLOWED_TOPICS = new Set([
   'Náročnost',
   'Vysvětlení pozic',
   'Skladba lekce',
+  'Dopomoci',
   'Atmosféra',
   'Hudba',
   'Organizace',

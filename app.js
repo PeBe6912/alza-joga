@@ -2720,7 +2720,7 @@ async function openLessonFeedback(token) {
   dialog.showModal();
   try {
     const feedback = await feedbackRequest({ action: 'load', token });
-    const topics = ['Tempo lekce', 'Náročnost', 'Vysvětlení pozic', 'Skladba lekce', 'Atmosféra', 'Hudba', 'Organizace'];
+    const topics = ['Tempo lekce', 'Náročnost', 'Vysvětlení pozic', 'Skladba lekce', 'Dopomoci', 'Atmosféra', 'Hudba', 'Organizace'];
     const selectedTopics = new Set(feedback.topics || []);
     document.querySelector('#booking-content').innerHTML = `<form class="booking-panel lesson-feedback-form" id="lesson-feedback-form">
       <p class="eyebrow">Zpětná vazba po lekci</p>
