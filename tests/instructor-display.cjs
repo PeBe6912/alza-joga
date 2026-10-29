@@ -53,8 +53,11 @@ const id = '11111111-1111-4111-8111-111111111111';
       assert.deepEqual(await page.locator('.calendar-event-teacher').allTextContents(), ['Lektorka: Danča', 'Lektor: Petr']);
       await page.addScriptTag({ content: `const nextCard=document.createElement('div');nextCard.id='next-class-card';document.body.append(nextCard);${extract(source, 'renderNextClass')}\nrenderNextClass();` });
       assert.equal(await page.locator('#next-class-card p').innerText(), '7:45–8:45\nLektorka: Danča');
+      assert.equal(await page.locator('#next-class-card p strong').innerText(), '7:45–8:45');
+      assert.ok(await page.locator('#next-class-card p').evaluate(element => Number(getComputedStyle(element.querySelector('strong')).fontWeight) > Number(getComputedStyle(element).fontWeight)));
       await page.evaluate(() => { lessons.reverse(); renderNextClass(); });
       assert.equal(await page.locator('#next-class-card p').innerText(), '7:45–8:45\nLektor: Petr');
+      assert.equal(await page.locator('#next-class-card p strong').innerText(), '7:45–8:45');
       assert.equal(await page.locator('.calendar-instructor-daniela').count(), 1);
       assert.equal(await page.locator('.calendar-instructor-petr').count(), 1);
       for (const event of await page.locator('.calendar-event').all()) {

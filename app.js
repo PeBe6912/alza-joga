@@ -622,7 +622,7 @@ function renderNextClass() {
     card.innerHTML = '<p>Nové termíny připravujeme.</p>';
     return;
   }
-  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p>${escapeHtml(lesson.time)}<br>${instructorRole(lesson.teacher)}: ${escapeHtml(instructorDisplayName(lesson.teacher))}</p><div class="spots"><span>${attendanceLabel(lesson)}</span><a href="#lekce">Rezervovat →</a></div>`;
+  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p><strong>${escapeHtml(lesson.time)}</strong><br>${instructorRole(lesson.teacher)}: ${escapeHtml(instructorDisplayName(lesson.teacher))}</p><div class="spots"><span>${attendanceLabel(lesson)}</span><a href="#lekce">Rezervovat →</a></div>`;
 }
 
 document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
