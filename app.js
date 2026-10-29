@@ -1382,7 +1382,7 @@ async function renderAccountDashboard() {
   if (accountRecoveryMode) activeAccountTab = 'settings';
   const now = new Date();
   const upcoming = data.reservations.filter((item) => new Date(item.startsAt) >= now && item.status !== 'cancelled').sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
-  const history = data.reservations.filter((item) => new Date(item.startsAt) < now || item.status === 'cancelled').sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
+  const history = data.reservations.filter((item) => new Date(item.startsAt) < now && item.status !== 'cancelled').sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
   const relation = data.profile.relation === 'guest' ? 'Host / externista' : 'Zaměstnanec Alzy';
   const lessonsPanel = `<div class="account-dashboard-content"><section class="account-card account-reservations"><div class="account-card-heading"><div><p class="eyebrow">Co tě čeká</p><h2>Naplánované lekce</h2></div>${upcoming.length ? '<a class="text-button" href="#lekce">Vybrat další lekci</a>' : ''}</div><div class="account-lesson-list">${upcoming.map((item) => accountLessonCard(item, true)).join('') || '<div class="account-empty-state"><h3>Zatím nemáš naplánovanou žádnou lekci</h3><p>Vyber si termín, který ti vyhovuje.</p><a class="button button-small" href="#lekce">Vybrat lekci</a></div>'}</div></section><section class="account-card account-history"><div class="account-card-heading"><div><p class="eyebrow">Tvoje praxe</p><h2>Historie lekcí</h2></div></div><div class="account-lesson-list">${history.map((item) => accountLessonCard(item, false)).join('') || '<p class="account-empty">Historie je zatím prázdná.</p>'}</div></section></div>`;
   const journey = journeyPanel(data);
