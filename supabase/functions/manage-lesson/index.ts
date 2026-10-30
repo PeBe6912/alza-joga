@@ -513,10 +513,11 @@ Deno.serve(async (req: Request) => {
               <p>Bezplatné zrušení je možné nejpozději ${batch.cancellation_hours} hodin před začátkem. Při pozdějším zrušení nebo neúčasti se lekce hradí.</p>`
           : `<p>${practiceCopy}</p>`;
         const feedbackCopy = !absent && feedbackRequested && participant.feedback_token
-          ? `<div style="margin:28px 0;padding:20px;background:#f5f1e9;border-left:4px solid #b87854">
-              <p style="margin:0 0 14px"><strong>Jaká pro tebe lekce byla?</strong><br>Krátká anonymní zpětná vazba mi pomůže další lekce vyladit.</p>
-              <p style="margin:0"><a href="${escapeHtml(`${publicSiteUrl}/?feedback=${participant.feedback_token}`)}" style="display:inline-block;padding:12px 18px;border-radius:24px;background:#3e5648;color:#fff;text-decoration:none;font-weight:700">Ohodnotit lekci</a></p>
-            </div>`
+          ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:36px 0 30px;border-collapse:collapse"><tr><td style="padding:24px 20px;background:#f5f1e9;border-top:4px solid #b87854">
+              <h2 style="margin:0 0 12px;font:400 27px/1.2 Georgia,serif;color:#1f2824">Jaká pro tebe ${practiceCopy.includes('dnešní') ? 'dnešní ' : ''}lekce byla?</h2>
+              <p style="margin:0 0 20px;font-size:15px;line-height:1.6">Co ti vyhovovalo a co by příště mohlo být jinak? Tvoje anonymní zpětná vazba mi pomůže další lekce vyladit.</p>
+              <a href="${escapeHtml(`${publicSiteUrl}/?feedback=${participant.feedback_token}`)}" style="display:block;padding:15px 12px;border-radius:28px;background:#3e5648;color:#fff;text-align:center;text-decoration:none;font-size:16px;font-weight:700">Dát zpětnou vazbu</a>
+            </td></tr></table>`
           : '';
         const result = await sendBrevoEmail({
           toEmail: recipientEmail,
@@ -529,6 +530,7 @@ Deno.serve(async (req: Request) => {
           htmlContent: `<div style="font-family:Arial,sans-serif;color:#1f2824;line-height:1.6;max-width:560px;margin:auto">
             <p>${escapeHtml(czechSalutation(participant.name))},</p>
             ${attendanceCopy}
+            ${feedbackCopy ? `<p style="color:#66706b;font-size:14px">Níže najdeš ${donation ? 'možnost přispět Dobrému andělovi' : 'platbu za lekci'} i možnost napsat mi, jaká pro tebe byla.</p>` : ''}
             <p style="padding:18px 20px;background:#f5f1e9;border-left:3px solid #b87854"><strong>${escapeHtml(batch.title)}</strong><br>${escapeHtml(formatLessonDate(batch.starts_at))}<br>${teacherFirstName === 'Danča' ? 'Lektorka' : 'Lektor'}: ${escapeHtml(instructorDisplayName(batch.teacher))}</p>
             <p>${escapeHtml(paymentCopy)}</p>
             ${donation && donationSummary ? `<p><strong>${escapeHtml(donationSummary)} Děkuji, že pomáháš.</strong></p>` : ''}

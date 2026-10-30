@@ -101,7 +101,13 @@ test('all transactional email scenarios use approved copy without live services'
       assert.match(html, donation ? /Přispět Dobrému andělovi/ : /Zaplatit lekci/);
       assert.equal(html.includes('K 26. říjnu 2026 jsme společně přispěli Dobrému andělovi'), donation);
       if (donation) assert.match(html.replaceAll('\u00a0', ' '), /11 075 Kč\. Děkuji, že pomáháš\./);
-      assert.equal(html.includes('Ohodnotit lekci'), !absent);
+      assert.equal(html.includes('Dát zpětnou vazbu'), !absent);
+      assert.equal(html.includes('i možnost napsat mi, jaká pro tebe byla.'), !absent);
+      assert.equal(html.includes('Tvoje anonymní zpětná vazba mi pomůže'), !absent);
+      if (!absent) {
+        assert.ok(html.indexOf('/platba?lekce=') < html.indexOf('/?feedback='));
+        assert.match(html, /display:block;padding:15px 12px[^>]*>Dát zpětnou vazbu/);
+      }
       assert.equal(html.includes('dnešní společnou'), !absent && !delayed);
       if (donation) assert.doesNotMatch(html, /lekce se hradí|se lekce hradí|povinn/);
       else if (absent) assert.match(html, /se lekce hradí/);
