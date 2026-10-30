@@ -9,6 +9,30 @@ const ALLOWED_TOPICS = new Set([
   'Atmosféra',
   'Hudba',
   'Organizace',
+  'Tempo lekce: Pomalé',
+  'Tempo lekce: Akorát',
+  'Tempo lekce: Rychlé',
+  'Náročnost: Nízká',
+  'Náročnost: Akorát',
+  'Náročnost: Vysoká',
+  'Vysvětlení pozic: Málo podrobné',
+  'Vysvětlení pozic: Srozumitelné',
+  'Vysvětlení pozic: Příliš podrobné',
+  'Skladba lekce: Málo pestrá',
+  'Skladba lekce: Vyhovovala mi',
+  'Skladba lekce: Příliš střídání',
+  'Dopomoci: Uvítám více',
+  'Dopomoci: Vyhovovaly mi',
+  'Dopomoci: Raději bez nich',
+  'Atmosféra: Příjemná',
+  'Atmosféra: Neutrální',
+  'Atmosféra: Nepříjemná',
+  'Hudba: Vyhovovala mi',
+  'Hudba: Rušila mě',
+  'Hudba: Raději bez ní',
+  'Organizace: Bez problémů',
+  'Organizace: Drobné zádrhele',
+  'Organizace: Větší problémy',
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -34,7 +58,8 @@ Deno.serve(async (req: Request) => {
       const topics = Array.isArray(body.topics) ? [...new Set(body.topics.map((topic: unknown) => String(topic)))] : [];
       const comment = String(body.comment ?? '').trim();
       if (!['great', 'good', 'not_right'].includes(rating)
-        || topics.length > ALLOWED_TOPICS.size
+        || topics.length > 8
+        || new Set(topics.map((topic) => topic.split(': ')[0])).size !== topics.length
         || topics.some((topic) => !ALLOWED_TOPICS.has(topic))
         || comment.length > 1500) {
         throw new Error('INVALID_FEEDBACK');

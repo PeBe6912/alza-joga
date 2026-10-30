@@ -2720,25 +2720,43 @@ async function openLessonFeedback(token) {
   dialog.showModal();
   try {
     const feedback = await feedbackRequest({ action: 'load', token });
-    const topics = ['Tempo lekce', 'Náročnost', 'Vysvětlení pozic', 'Skladba lekce', 'Dopomoci', 'Atmosféra', 'Hudba', 'Organizace'];
+    const areas = [
+      ['Tempo lekce', ['Pomalé', 'Akorát', 'Rychlé']],
+      ['Náročnost', ['Nízká', 'Akorát', 'Vysoká']],
+      ['Vysvětlení pozic', ['Málo podrobné', 'Srozumitelné', 'Příliš podrobné']],
+      ['Skladba lekce', ['Málo pestrá', 'Vyhovovala mi', 'Příliš střídání']],
+      ['Dopomoci', ['Uvítám více', 'Vyhovovaly mi', 'Raději bez nich']],
+      ['Atmosféra', ['Příjemná', 'Neutrální', 'Nepříjemná']],
+      ['Hudba', ['Vyhovovala mi', 'Rušila mě', 'Raději bez ní']],
+      ['Organizace', ['Bez problémů', 'Drobné zádrhele', 'Větší problémy']],
+    ];
     const selectedTopics = new Set(feedback.topics || []);
     document.querySelector('#booking-content').innerHTML = `<form class="booking-panel lesson-feedback-form" id="lesson-feedback-form">
       <p class="eyebrow">Zpětná vazba po lekci</p>
       <h2>Jaká pro tebe lekce byla?</h2>
       <p><b>${escapeHtml(feedback.title)}</b><br>${escapeHtml(formatAdminDate(feedback.starts_at))}<br>${instructorRole(feedback.teacher)}: ${escapeHtml(instructorDisplayName(feedback.teacher))}</p>
+      <p>Zpětná vazba se zobrazí anonymně. Pomůže zjistit, co ti vyhovovalo a co by příště mohlo být jinak.</p>
       ${feedback.submitted ? '<p class="feedback-saved-note">Odpověď už je uložená. Můžeš ji zde upravit.</p>' : ''}
-      <fieldset class="feedback-rating"><legend>Celkově</legend>
-        <label><input type="radio" name="rating" value="great" ${feedback.rating === 'great' ? 'checked' : ''} required><span>Skvěle</span></label>
-        <label><input type="radio" name="rating" value="good" ${feedback.rating === 'good' ? 'checked' : ''}><span>Dobře</span></label>
+      <fieldset class="feedback-rating"><legend>Celkově <small>Povinné</small></legend>
+        <label><input type="radio" name="rating" value="great" ${feedback.rating === 'great' ? 'checked' : ''} required><span>Skvělá</span></label>
+        <label><input type="radio" name="rating" value="good" ${feedback.rating === 'good' ? 'checked' : ''}><span>Dobrá</span></label>
         <label><input type="radio" name="rating" value="not_right" ${feedback.rating === 'not_right' ? 'checked' : ''}><span>Něco mi nesedlo</span></label>
       </fieldset>
-      <fieldset class="feedback-topics"><legend>Čeho se tvoje hodnocení týká? <small>Volitelné</small></legend>
-        ${topics.map((topic) => `<label><input type="checkbox" name="topics" value="${escapeHtml(topic)}" ${selectedTopics.has(topic) ? 'checked' : ''}><span>${escapeHtml(topic)}</span></label>`).join('')}
-      </fieldset>
+      <div class="feedback-details"><h3>Co konkrétně?</h3><p>Nepovinné. Vyber jen to, k čemu chceš něco doplnit. Výběr zrušíš opětovným klepnutím.</p>
+        ${areas.map(([area, options]) => `<fieldset class="feedback-area"><legend>${escapeHtml(area)}${area === 'Dopomoci' ? '<small>Pokud proběhly.</small>' : ''}</legend><div class="feedback-choices">
+          ${options.map((option) => { const value = `${area}: ${option}`; return `<button type="button" class="feedback-choice" data-area="${escapeHtml(area)}" data-value="${escapeHtml(value)}" aria-pressed="${selectedTopics.has(value)}">${escapeHtml(option)}</button>`; }).join('')}
+        </div>${selectedTopics.has(area) ? `<p class="feedback-legacy" data-legacy-topic="${escapeHtml(area)}">Dříve označeno bez upřesnění.</p>` : ''}</fieldset>`).join('')}
+      </div>
       <label class="field"><span>Komentář <small>Volitelné</small></span><textarea name="comment" rows="4" maxlength="1500" placeholder="Co ti vyhovovalo nebo co by příště mohlo být jinak?">${escapeHtml(feedback.comment || '')}</textarea></label>
       <p class="form-hint">Odpověď se lektorovi zobrazí anonymně.</p>
       <button class="button" type="submit">Odeslat zpětnou vazbu</button>
     </form>`;
+    document.querySelectorAll('.feedback-choice').forEach((button) => button.addEventListener('click', () => {
+      const selected = button.getAttribute('aria-pressed') === 'true';
+      button.closest('fieldset').querySelectorAll('.feedback-choice').forEach((choice) => choice.setAttribute('aria-pressed', 'false'));
+      button.setAttribute('aria-pressed', String(!selected));
+      button.closest('fieldset').querySelector('[data-legacy-topic]')?.remove();
+    }));
     document.querySelector('#lesson-feedback-form').addEventListener('submit', async (event) => {
       event.preventDefault();
       const button = event.target.querySelector('[type="submit"]');
@@ -2750,7 +2768,10 @@ async function openLessonFeedback(token) {
           action: 'submit',
           token,
           rating: data.get('rating'),
-          topics: data.getAll('topics'),
+          topics: [
+            ...Array.from(event.target.querySelectorAll('.feedback-choice[aria-pressed="true"]'), (choice) => choice.dataset.value),
+            ...Array.from(event.target.querySelectorAll('[data-legacy-topic]'), (note) => note.dataset.legacyTopic),
+          ],
           comment: data.get('comment'),
         });
         document.querySelector('#booking-content').innerHTML = `<div class="booking-panel feedback-thanks"><p class="eyebrow">Děkujeme</p><h2>Děkujeme za zpětnou vazbu.</h2><p>Pomáhá nám vytvářet lekce, na kterých se budeš cítit dobře.</p><button class="button" type="button" data-close-feedback>Zavřít</button></div>`;
