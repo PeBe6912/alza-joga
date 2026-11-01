@@ -3028,10 +3028,10 @@ async function confirmLowAttendance(id) {
   const lesson = adminLessons.find((item) => item.id === id);
   if (!lesson || !confirm(`Potvrdit, že lekce „${lesson.title}“ se koná i s ${lesson.booked} přihlášenými?`)) return;
   try {
-    await manageLesson({ lessonId: id, action: 'confirm-low-attendance' });
+    const result = await manageLesson({ lessonId: id, action: 'confirm-low-attendance' });
     await loadAdminLessons();
     renderAdmin('overview');
-    showToast('Uloženo: lekce se koná i v menším počtu.');
+    showToast(`Lekce se koná i v menším počtu. Potvrzení odesláno: ${result.notified ?? 0}.${result.failed ? ` Nepodařilo se potvrdit odeslání: ${result.failed}.` : ''}`);
   } catch (error) {
     showToast(error.message);
   }

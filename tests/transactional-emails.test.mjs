@@ -46,6 +46,8 @@ test('all transactional email scenarios use approved copy without live services'
         case 'reserve_lesson': return Response.json(lesson());
         case 'cancel_reservation': case 'account_cancel_reservation': case 'admin_cancel_reservation': return Response.json(lesson());
         case 'admin_payment_email_preview': case 'admin_record_attendance': return Response.json(batch());
+        case 'admin_confirm_low_attendance': return Response.json({ ...batch(), booked_count:4, minimum_attendance:5 });
+        case 'record_lesson_confirmation_email': return Response.json(null);
         case 'admin_update_lesson': return Response.json(change('update'));
         case 'admin_update_donation_summary': return Response.json({ amount_czk: body.p_amount_czk, as_of: body.p_as_of });
         case 'admin_change_lesson': return Response.json(change(body.p_action));
@@ -114,6 +116,12 @@ test('all transactional email scenarios use approved copy without live services'
       assert.doesNotMatch(r.emails[1].htmlContent, /<span style="display:block">/);
       assert.match(r.emails[1].htmlContent, /rozesílání platebních e-mailů/);
     }
+    const confirmed = await run('manage-lesson', { action: 'confirm-low-attendance', lessonId: id });
+    assert.equal(confirmed.result.notified, 1);
+    assert.equal(confirmed.result.failed, 0);
+    assert.match(confirmed.emails[0].subject, /^Lekce se koná:/);
+    assert.match(confirmed.emails[0].htmlContent, /Lektorka: Danča/);
+    assert.deepEqual(confirmed.writes, ['admin_confirm_low_attendance','record_lesson_confirmation_email']);
     const waived = await run('manage-lesson', { action: 'payment-send', lessonId: id, attendance: [{ reservationId, outcome: 'waived', email: 'student@example.invalid' }] }, { waived: true });
     assert.equal(waived.emails.length, 0);
     const unset = await run('manage-lesson', { action: 'payment-send', lessonId: id, attendance: [{ reservationId, outcome: 'attended', email: 'student@example.invalid' }] }, { donation: true, noSummary: true });

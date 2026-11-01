@@ -10,6 +10,7 @@ import {
   supabaseConfig,
 } from '../_shared/http.ts';
 import { sentPaymentEmail, resendPaymentEmail } from '../_shared/payment-email-history.ts';
+import { confirmLessonAndNotify } from '../_shared/lesson-confirmation.ts';
 
 type Participant = { name: string; email: string };
 
@@ -622,9 +623,7 @@ Deno.serve(async (req: Request) => {
     const lessonId = String(body.lessonId ?? '');
     if (!/^[0-9a-f-]{36}$/i.test(lessonId)) throw new Error('INVALID_LESSON');
     if (action === 'confirm-low-attendance') {
-      const confirmation = await callRpc<{ booked_count: number; minimum_attendance: number }>('admin_confirm_low_attendance', {
-        p_lesson_id: lessonId,
-      });
+      const confirmation = await confirmLessonAndNotify(lessonId);
       return json(req, { ok: true, action, ...confirmation });
     }
     let change: LessonChange;
