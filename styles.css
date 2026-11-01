@@ -566,6 +566,12 @@ dialog:has(.lesson-feedback-form){width:min(980px,calc(100% - 24px))}
 .calendar-event{display:grid;gap:4px;padding:11px;border-left:4px solid var(--sage-dark);background:#e4eee8;font-size:12px;line-height:1.35}
 .calendar-event span,.calendar-event small{color:var(--muted)}
 .calendar-event .calendar-event-teacher{color:var(--ink);font-weight:500}
+.lesson-confirmation-badge{display:inline-block;width:fit-content;max-width:100%;padding:4px 9px;border-radius:20px;background:#e4eee8;color:#3e5648;font-size:11px;line-height:1.4;font-weight:600;white-space:normal}
+.class-action>.lesson-confirmation-badge{margin-top:7px}
+.next-class .spots{gap:10px;align-items:flex-start}
+.next-class .spots>span{display:grid;gap:7px}
+.next-class .spots>a{white-space:nowrap}
+.calendar-event .lesson-confirmation-badge{color:#3e5648;background:#fff;margin-top:4px}
 .calendar-event-public.calendar-instructor-petr{border-left-color:var(--sage-dark);background:#e4eee8}
 .calendar-event-public.calendar-instructor-daniela{border-left-color:var(--clay);background:#f3e5dc}
 .calendar-event-private{border-left-color:#8b918e;background:#eceeed;color:#454b48}

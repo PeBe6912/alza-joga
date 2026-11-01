@@ -344,7 +344,7 @@ function calendarEventCard(event, { admin = false } = {}) {
   const teacher = event.kind === 'public' && event.teacher
     ? `<span class="calendar-event-teacher">${instructorRole(event.teacher)}: ${escapeHtml(instructorDisplayName(event.teacher))}</span>`
     : '';
-  return `<article class="calendar-event calendar-event-${event.kind}${instructorClass}"><strong>${escapeHtml(event.title)}</strong><span class="calendar-event-time">${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${teacher}${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
+  return `<article class="calendar-event calendar-event-${event.kind}${instructorClass}"><strong>${escapeHtml(event.title)}</strong><span class="calendar-event-time">${escapeHtml(shortTime(occupiedStart))}–${escapeHtml(shortTime(occupiedEnd))}</span>${teacher}${event.kind === 'public' ? lessonConfirmationBadge(event) : ''}${admin && event.kind === 'private' ? `<small>Akce ${escapeHtml(shortTime(event.startsAt))}–${escapeHtml(shortTime(event.endsAt))} · rezerva 15 min</small>` : ''}${actions}</article>`;
 }
 
 function calendarDays(start, events, { admin = false } = {}) {
@@ -400,6 +400,12 @@ function adminMonthAgenda(month, events) {
 
 function attendanceLabel(lesson) {
   return `Přihlášeno ${lesson.booked} / ${lesson.capacity}`;
+}
+
+function lessonConfirmationBadge(lesson) {
+  return lesson.lowAttendanceConfirmedAt && lesson.status !== 'cancelled' && new Date(lesson.endsAt) > new Date()
+    ? '<span class="lesson-confirmation-badge">✓ Lekce se koná</span>'
+    : '';
 }
 
 function lessonShareSlug(lesson) {
@@ -597,7 +603,7 @@ function renderLessons(filter = 'all') {
       <div class="class-date"><strong>${lesson.day}</strong><span>${lesson.date}</span></div>
       <div class="class-teacher"><h3>${escapeHtml(lesson.title)}</h3><b class="class-time-compact">${escapeHtml(lesson.time)}</b><small>${instructorRole(lesson.teacher)}: ${escapeHtml(instructorDisplayName(lesson.teacher))}</small><br><span>${typeLabel}</span>${languageLabel}</div>
       <div class="class-meta"><span>HALL · 3. patro</span><span>${escapeHtml(lesson.price)}</span></div>
-      <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${attendanceLabel(lesson)}</small><a class="text-button class-share" href="${escapeHtml(lessonShareUrl(lesson))}" data-share-lesson="${lesson.id}" aria-label="Sdílet lekci ${escapeHtml(lesson.title)}">Sdílet lekci</a></div>
+      <div class="class-action"><button class="button" data-book="${lesson.id}" ${places <= 0 ? 'disabled' : ''}>${places <= 0 ? 'Obsazeno' : 'Rezervovat'}</button><small>${attendanceLabel(lesson)}</small>${lessonConfirmationBadge(lesson)}<a class="text-button class-share" href="${escapeHtml(lessonShareUrl(lesson))}" data-share-lesson="${lesson.id}" aria-label="Sdílet lekci ${escapeHtml(lesson.title)}">Sdílet lekci</a></div>
     </article>`;
   }).join('');
   const remaining = filtered.length - visible.length;
@@ -622,7 +628,7 @@ function renderNextClass() {
     card.innerHTML = '<p>Nové termíny připravujeme.</p>';
     return;
   }
-  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p><strong>${escapeHtml(lesson.time)}</strong><br>${instructorRole(lesson.teacher)}: ${escapeHtml(instructorDisplayName(lesson.teacher))}</p><div class="spots"><span>${attendanceLabel(lesson)}</span><a href="#lekce">Rezervovat →</a></div>`;
+  card.innerHTML = `<div class="date"><span>NEJBLIŽŠÍ LEKCE</span><span>${lesson.date}</span></div><h3>${escapeHtml(lesson.title)}</h3><p><strong>${escapeHtml(lesson.time)}</strong><br>${instructorRole(lesson.teacher)}: ${escapeHtml(instructorDisplayName(lesson.teacher))}</p><div class="spots"><span>${attendanceLabel(lesson)}${lessonConfirmationBadge(lesson)}</span><a href="#lekce">Rezervovat →</a></div>`;
 }
 
 document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
@@ -828,7 +834,7 @@ async function loadPublicStudioBlocks() {
       order: 'starts_at.asc',
     });
     const lessonQuery = new URLSearchParams({
-      select: 'id,title,starts_at,ends_at,instructors(name)',
+      select: 'id,title,starts_at,ends_at,low_attendance_confirmed_at,instructors(name)',
       status: 'eq.published',
       starts_at: `lt.${rangeEnd.toISOString()}`,
       ends_at: `gt.${publicCalendarStart.toISOString()}`,
@@ -852,6 +858,7 @@ async function loadPublicStudioBlocks() {
         id: lesson.id,
         kind: 'public',
         title: lesson.title,
+        lowAttendanceConfirmedAt: lesson.low_attendance_confirmed_at || null,
         teacher,
         startsAt: lesson.starts_at,
         endsAt: lesson.ends_at,
