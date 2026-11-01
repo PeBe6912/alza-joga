@@ -567,7 +567,7 @@ dialog:has(.lesson-feedback-form){width:min(980px,calc(100% - 24px))}
 .calendar-event span,.calendar-event small{color:var(--muted)}
 .calendar-event .calendar-event-teacher{color:var(--ink);font-weight:500}
 .lesson-confirmation-badge{display:inline-block;width:fit-content;max-width:100%;padding:4px 9px;border-radius:20px;background:#e4eee8;color:#3e5648;font-size:11px;line-height:1.4;font-weight:600;white-space:normal}
-.class-action>.lesson-confirmation-badge{margin-top:7px}
+.class-action>.lesson-confirmation-badge{display:block;margin:7px auto 0;text-align:center}
 .next-class .spots{gap:10px;align-items:flex-start}
 .next-class .spots>span{display:grid;gap:7px}
 .next-class .spots>a{white-space:nowrap}
